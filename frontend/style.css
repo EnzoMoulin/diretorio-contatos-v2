@@ -1,0 +1,14 @@
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; margin: 0; padding: 0 16px 40px; max-width: 900px; }
+header small { font-weight: normal; opacity: .7; }
+.card { border: 1px solid #8884; border-radius: 12px; padding: 16px; margin: 16px 0; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+input { padding: 8px; border: 1px solid #8886; border-radius: 8px; }
+input[type="search"] { width: 100%; }
+button { padding: 8px 14px; border-radius: 8px; border: 1px solid #8886; cursor: pointer; }
+table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #8883; }
+.hint { opacity: .8; }
+#hist { max-height: 220px; overflow: auto; padding-left: 18px; }
+footer { opacity: .7; margin-top: 24px; }

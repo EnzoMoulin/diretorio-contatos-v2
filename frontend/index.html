@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diretório de Contatos — Demo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Diretório de Contatos <small>demo para portfólio</small></h1>
+  <p>Consulta pública + gestão interna + histórico de alterações. Dados fictícios.</p>
+</header>
+<main>
+  <section class="card">
+    <h2>Buscar</h2>
+    <input id="q" type="search" placeholder="nome, setor, telefone ou e-mail…" autocomplete="off">
+    <table>
+      <thead><tr><th>Nome</th><th>Setor</th><th>Telefone</th><th>E-mail</th></tr></thead>
+      <tbody id="lista"></tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h2>Área interna (demo)</h2>
+    <p class="hint">Login de demonstração: <code>admin</code> / <code>admin123</code>. Token fica só no seu navegador.</p>
+    <div class="row">
+      <input id="user" value="admin" aria-label="usuário">
+      <input id="pass" type="password" value="admin123" aria-label="senha">
+      <button id="login">Entrar</button>
+      <span id="status"></span>
+    </div>
+    <h3>Adicionar / editar</h3>
+    <div class="row">
+      <input id="f-nome" placeholder="Nome*">
+      <input id="f-setor" placeholder="Setor">
+      <input id="f-tel" placeholder="Telefone">
+      <input id="f-email" placeholder="E-mail">
+      <button id="salvar">Salvar novo</button>
+    </div>
+    <h3>Histórico (últimas 50)</h3>
+    <ul id="hist"></ul>
+  </section>
+</main>
+<footer>Feito com Python stdlib + HTML/CSS/JS · sem dependências · dados de exemplo</footer>
+<script src="app.js"></script>
+</body>
+</html>
