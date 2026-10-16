@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diretório de Contatos — Acesso interno</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-container">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>Diretório</h2>
+      <span>acesso interno · demo</span>
+    </div>
+    <nav class="sidebar-menu">
+      <button class="menu-item active" data-view="consulta">🔍 Consulta</button>
+      <button class="menu-item hidden" data-view="solicitacoes" id="menu-sol">📝 Solicitações de acesso <span id="ped-count" class="badge"></span></button>
+      <button class="menu-item hidden" data-view="registro" id="menu-reg">🕘 Registro de alterações</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <button id="btn-entrar" class="btn-primary wide">🔑 Acesso administrativo</button>
+      <button id="btn-pedir" class="btn-ghost wide">📝 Solicitar acesso</button>
+      <button id="btn-sair" class="btn-ghost wide hidden">🚪 Sair do acesso administrativo</button>
+      <p class="hint" id="estado-hint">Consulta sem login. Com cadastro, entre para gerenciar seus locais.</p>
+    </div>
+  </aside>
+  <main class="main-content">
+    <section class="card" id="view-consulta">
+      <h1>Consulta</h1>
+      <p class="hint" id="escopo-hint"></p>
+      <input id="q" type="search" placeholder="Buscar por nome, cargo, telefone, e-mail ou setor…" autocomplete="off">
+      <div class="consulta-grid">
+        <div>
+          <div id="map"></div>
+          <p class="hint" id="map-msg">Clique em um município com contatos para filtrar.</p>
+          <p class="breadcrumb" id="crumb">Selecione um local ou busque</p>
+          <div class="cascade">
+            <select id="sel-loc" aria-label="Localidade"><option value="">Localidade…</option></select>
+            <select id="sel-uni" aria-label="Unidade" disabled><option value="">Unidade…</option></select>
+            <select id="sel-set" aria-label="Setor" disabled><option value="">Setor…</option></select>
+          </div>
+          <div class="create-box hidden" id="create-box">
+            <h3>Novo contato neste setor</h3>
+            <div class="form-grid">
+              <input id="f-nome" placeholder="Nome*">
+              <input id="f-cargo" placeholder="Cargo">
+              <input id="f-tel" placeholder="Telefone">
+              <input id="f-email" placeholder="E-mail">
+              <button id="salvar" class="btn-primary">Salvar</button>
+              <span id="save-status"></span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <table>
+            <thead><tr><th>Nome</th><th>Cargo</th><th>Local</th><th>Telefone</th><th>E-mail</th><th></th></tr></thead>
+            <tbody id="lista"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    <section class="card hidden" id="view-solicitacoes">
+      <h1>Solicitações de acesso</h1>
+      <ul id="pedidos" class="rows"></ul>
+    </section>
+    <section class="card hidden" id="view-registro">
+      <h1>Registro de alterações</h1>
+      <ul id="hist"></ul>
+    </section>
+    <footer>Python stdlib + HTML/CSS/JS · Leaflet + GeoJSON público · dados de exemplo</footer>
+  </main>
+</div>
+<div class="modal hidden" id="modal-login">
+  <div class="modal-box">
+    <h2>Acesso administrativo</h2>
+    <p class="hint">Entre com sua conta cadastrada. Demo: admin@empresa-exemplo.com.br / admin123.</p>
+    <label>E-mail ou usuário<input id="user" value="admin@empresa-exemplo.com.br" autocomplete="username"></label>
+    <label>Senha<input id="pass" type="password" value="admin123" autocomplete="current-password"></label>
+    <div class="modal-actions">
+      <button id="l-cancel" class="btn-ghost">Cancelar</button>
+      <button id="login" class="btn-primary">Entrar</button>
+    </div>
+    <p class="hint" id="l-status"></p>
+  </div>
+</div>
+<div class="modal hidden" id="modal-pedido">
+  <div class="modal-box">
+    <h2>Solicitar acesso administrativo</h2>
+    <p class="hint" id="ped-hint">Exigido e-mail institucional @empresa-exemplo.com.br (equivale ao vínculo da intranet).</p>
+    <label>Nome*<input id="p-nome"></label>
+    <label>E-mail institucional*<input id="p-email" placeholder="voce@empresa-exemplo.com.br"></label>
+    <label>Usuário desejado*<input id="p-user"></label>
+    <label>Local de acesso<select id="p-loc"></select></label>
+    <label>Motivo<input id="p-motivo"></label>
+    <div class="modal-actions">
+      <button id="p-cancel" class="btn-ghost">Cancelar</button>
+      <button id="p-enviar" class="btn-primary">Enviar pedido</button>
+    </div>
+    <p class="hint" id="p-status"></p>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="mapa.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

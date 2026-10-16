@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diretório de Contatos — Consulta pública</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-container">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>Diretório</h2>
+      <span>de Contatos · demo</span>
+    </div>
+    <nav class="sidebar-menu">
+      <button class="menu-item active" data-view="consulta">🔍 Consulta</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <p class="hint">Consulta pública — dados fictícios da Empresa Exemplo.</p>
+    </div>
+  </aside>
+  <main class="main-content">
+    <section class="card" id="view-consulta">
+      <h1>Consulta pública</h1>
+      <input id="q" type="search" placeholder="Buscar por nome, cargo, telefone, e-mail ou setor…" autocomplete="off">
+      <div class="consulta-grid">
+        <div>
+          <div id="map"></div>
+          <p class="hint" id="map-msg">Clique em um município com contatos para filtrar. GeoJSON público (IBGE).</p>
+          <p class="breadcrumb" id="crumb">Selecione um local ou busque</p>
+          <div class="cascade">
+            <select id="sel-loc" aria-label="Localidade"><option value="">Localidade…</option></select>
+            <select id="sel-uni" aria-label="Unidade" disabled><option value="">Unidade…</option></select>
+            <select id="sel-set" aria-label="Setor" disabled><option value="">Setor…</option></select>
+          </div>
+        </div>
+        <div>
+          <table>
+            <thead><tr><th>Nome</th><th>Cargo</th><th>Local</th><th>Telefone</th><th>E-mail</th></tr></thead>
+            <tbody id="lista"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    <footer>Python stdlib + HTML/CSS/JS · Leaflet + GeoJSON público · dados de exemplo</footer>
+  </main>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="mapa.js"></script>
+<script src="public.js"></script>
+</body>
+</html>
