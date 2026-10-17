@@ -16,6 +16,7 @@
     </div>
     <nav class="sidebar-menu">
       <button class="menu-item active" data-view="consulta">🔍 Consulta</button>
+      <button class="menu-item" data-view="config">⚙️ Configurações</button>
     </nav>
     <div class="sidebar-bottom">
       <p class="hint">Consulta pública — dados fictícios da Empresa Exemplo.</p>
@@ -37,12 +38,21 @@
           </div>
         </div>
         <div>
+          <div class="print-head">
+            <button class="btn-ghost dark noprint" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+          </div>
           <table>
             <thead><tr><th>Nome</th><th>Cargo</th><th>Local</th><th>Telefone</th><th>E-mail</th></tr></thead>
             <tbody id="lista"></tbody>
           </table>
         </div>
       </div>
+    </section>
+    <section class="card hidden" id="view-config">
+      <h1>⚙️ Configurações</h1>
+      <h3>Aparência</h3>
+      <button id="tema-toggle" class="btn-ghost dark">🌙 Alternar tema claro/escuro</button>
+      <p class="hint">A preferência fica salva neste navegador.</p>
     </section>
     <footer>Python stdlib + HTML/CSS/JS · Leaflet + GeoJSON público · dados de exemplo</footer>
   </main>

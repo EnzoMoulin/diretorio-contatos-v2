@@ -75,13 +75,30 @@ async function buscar() {
   $('lista').innerHTML = lista.map(c =>
     `<tr><td>${esc(c.nome)}</td><td>${esc(c.cargo)}</td>` +
     `<td>${esc(c.localidade)} · ${esc(c.unidade)} · ${esc(c.setor)}</td>` +
-    `<td>${esc(c.telefone)}</td><td>${esc(c.email)}</td></tr>`
+    `<td>${esc(c.telefone)}</td><td><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></td></tr>`
   ).join('') || '<tr><td colspan="5">Nenhum contato.</td></tr>';
 }
 
 $('q').addEventListener('input', buscar);
 
+function aplicarTema() {
+  document.body.dataset.theme = localStorage.getItem('demo-theme') || 'light';
+}
+$('tema-toggle').onclick = () => {
+  localStorage.setItem('demo-theme',
+    (localStorage.getItem('demo-theme') || 'light') === 'light' ? 'dark' : 'light');
+  aplicarTema();
+};
 (async () => {
+  aplicarTema();
+  document.querySelectorAll('.menu-item[data-view]').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.menu-item[data-view]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      ['consulta', 'config'].forEach(v => $('view-' + v).classList.add('hidden'));
+      $('view-' + btn.dataset.view).classList.remove('hidden');
+    };
+  });
   locs = await (await fetch('/api/localidades')).json();
   await loadLocs();
   $('sel-loc').onchange = onLoc;

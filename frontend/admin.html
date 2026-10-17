@@ -16,10 +16,15 @@
     </div>
     <nav class="sidebar-menu">
       <button class="menu-item active" data-view="consulta">🔍 Consulta</button>
+      <button class="menu-item hidden" data-view="dashboard" id="menu-dash">📊 Dashboard</button>
       <button class="menu-item hidden" data-view="solicitacoes" id="menu-sol">📝 Solicitações de acesso <span id="ped-count" class="badge"></span></button>
       <button class="menu-item hidden" data-view="registro" id="menu-reg">🕘 Registro de alterações</button>
+      <button class="menu-item" data-view="manual">📖 Manual do Usuário</button>
+      <button class="menu-item hidden" data-view="notificacoes" id="menu-notif">🔔 Notificações <span id="notif-count" class="badge"></span></button>
+      <button class="menu-item" data-view="config" id="menu-conf">⚙️ Configurações</button>
     </nav>
     <div class="sidebar-bottom">
+      <p class="hint hidden" id="who-line"></p>
       <button id="btn-entrar" class="btn-primary wide">🔑 Acesso administrativo</button>
       <button id="btn-pedir" class="btn-ghost wide">📝 Solicitar acesso</button>
       <button id="btn-sair" class="btn-ghost wide hidden">🚪 Sair do acesso administrativo</button>
@@ -38,8 +43,11 @@
           <p class="breadcrumb" id="crumb">Selecione um local ou busque</p>
           <div class="cascade">
             <select id="sel-loc" aria-label="Localidade"><option value="">Localidade…</option></select>
+            <button id="sol-loc" class="btn-ghost dark hidden">Solicitar acesso a este município</button>
             <select id="sel-uni" aria-label="Unidade" disabled><option value="">Unidade…</option></select>
+            <button id="sol-uni" class="btn-ghost dark hidden">Solicitar acesso a esta unidade</button>
             <select id="sel-set" aria-label="Setor" disabled><option value="">Setor…</option></select>
+            <button id="sol-set" class="btn-ghost dark hidden">Solicitar acesso a este setor</button>
           </div>
           <div class="create-box hidden" id="create-box">
             <h3>Novo contato neste setor</h3>
@@ -54,6 +62,9 @@
           </div>
         </div>
         <div>
+          <div class="print-head">
+            <button class="btn-ghost dark noprint" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+          </div>
           <table>
             <thead><tr><th>Nome</th><th>Cargo</th><th>Local</th><th>Telefone</th><th>E-mail</th><th></th></tr></thead>
             <tbody id="lista"></tbody>
@@ -67,7 +78,74 @@
     </section>
     <section class="card hidden" id="view-registro">
       <h1>Registro de alterações</h1>
+      <button class="btn-ghost dark noprint" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
       <ul id="hist"></ul>
+    </section>
+    <section class="card hidden" id="view-dashboard">
+      <h1>Dashboard</h1>
+      <button class="btn-ghost dark noprint" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+      <p class="hint" id="dash-sub">Somente seus escopos.</p>
+      <div class="dash-grid" id="dash-cards"></div>
+      <h3>Contatos por município (seu acesso)</h3>
+      <div id="dash-mun"></div>
+      <h3>Últimas alterações</h3>
+      <ul id="dash-ult"></ul>
+    </section>
+    <section class="card hidden" id="view-manual">
+      <h1>📖 Manual do Usuário</h1>
+      <p class="hint">Guia rápido — da consulta à gestão. Consulta inicial: selecione um local no mapa ou nos menus, ou digite uma busca.</p>
+      <h3>🗺️ 01 — Localizar</h3>
+      <ol>
+        <li>Clique em um município com contatos no <b>mapa</b> para filtrar, ou</li>
+        <li>Use os <b>menus em cascata</b>: Localidade → Unidade → Setor. O caminho aparece acima dos menus.</li>
+      </ol>
+      <h3>🔍 02 — Buscar</h3>
+      <p>O campo de busca alcança todos os níveis: nome, cargo, telefone, e-mail, setor, unidade e município. Pode combinar busca + nível selecionado.</p>
+      <h3>🔑 03 — Acesso administrativo</h3>
+      <ol>
+        <li>Sem cadastro: clique em <b>Solicitar acesso</b> e preencha o formulário (exigido e-mail institucional <code>@empresa-exemplo.com.br</code>).</li>
+        <li>Com cadastro: clique em <b>Acesso administrativo</b> e entre com e-mail + senha.</li>
+        <li>Logado, os locais editáveis vêm marcados com <b>✓</b>; nos demais, só consulta.</li>
+        <li><b>Sair do acesso administrativo</b> volta à consulta, sem sair do acesso interno.</li>
+      </ol>
+      <h3>✏️ 04 — Gerenciar contatos</h3>
+      <ol>
+        <li><b>Criar</b>: selecione o setor e use o formulário "Novo contato neste setor".</li>
+        <li><b>Editar/Remover</b>: botões em cada linha, só onde você tem cobertura.</li>
+        <li>Sem cobertura no nível selecionado, aparece <b>Solicitar acesso</b>: município inteiro (todas as unidades e setores), unidade inteira (todos os setores) ou só o setor.</li>
+      </ol>
+      <h3>📝 05 — Solicitações e registro</h3>
+      <p>Na aba <b>Solicitações de acesso</b>, o admin aprova pedidos (o novo usuário entra com senha inicial). A aba <b>Registro de alterações</b> mostra criar / editar / remover / pedidos / aprovações.</p>
+      <h3>💡 06 — Dicas</h3>
+      <ul>
+        <li>Em telas menores, mapa e painel se reorganizam sozinhos.</li>
+        <li>Na aba <b>Configurações</b> dá para trocar a senha e alternar o tema claro/escuro.</li>
+      </ul>
+    </section>
+    <section class="card hidden" id="view-config">
+      <h1>⚙️ Configurações</h1>
+      <div id="conf-logado" class="hidden">
+      <h3>Sua conta</h3>
+      <p class="hint" id="conf-conta"></p>
+      <h3>Trocar senha</h3>
+      <div class="form-grid">
+        <input id="s-atual" type="password" placeholder="Senha atual" autocomplete="current-password">
+        <input id="s-nova" type="password" placeholder="Nova senha (6+ caracteres)" autocomplete="new-password">
+        <button id="s-salvar" class="btn-primary">Salvar nova senha</button>
+        <span id="s-status"></span>
+      </div>
+      </div>
+      <h3>Aparência</h3>
+      <button id="tema-toggle" class="btn-ghost dark">🌙 Alternar tema claro/escuro</button>
+      <p class="hint">A preferência fica salva neste navegador.</p>
+    </section>
+    <section class="card hidden" id="view-notificacoes">
+      <h1>🔔 Notificações</h1>
+      <div id="notif-logado" class="hidden">
+        <button id="btn-todas-lidas" class="btn-ghost dark">Marcar todas como lidas</button>
+        <ul id="notifs" class="rows"></ul>
+      </div>
+      <p class="hint" id="notif-entrar">Entre com sua conta para ver suas notificações.</p>
     </section>
     <footer>Python stdlib + HTML/CSS/JS · Leaflet + GeoJSON público · dados de exemplo</footer>
   </main>
@@ -91,7 +169,7 @@
     <p class="hint" id="ped-hint">Exigido e-mail institucional @empresa-exemplo.com.br (equivale ao vínculo da intranet).</p>
     <label>Nome*<input id="p-nome"></label>
     <label>E-mail institucional*<input id="p-email" placeholder="voce@empresa-exemplo.com.br"></label>
-    <label>Usuário desejado*<input id="p-user"></label>
+    <label>Usuário desejado <span class="hint">(opcional — padrão: início do e-mail)</span><input id="p-user"></label>
     <label>Local de acesso<select id="p-loc"></select></label>
     <label>Motivo<input id="p-motivo"></label>
     <div class="modal-actions">
@@ -99,6 +177,32 @@
       <button id="p-enviar" class="btn-primary">Enviar pedido</button>
     </div>
     <p class="hint" id="p-status"></p>
+  </div>
+</div>
+<div class="modal hidden" id="modal-edit">
+  <div class="modal-box">
+    <h2>Editar contato</h2>
+    <label>Nome*<input id="e-nome"></label>
+    <label>Cargo<input id="e-cargo"></label>
+    <label>Telefone<input id="e-tel"></label>
+    <label>E-mail<input id="e-email"></label>
+    <div class="modal-actions">
+      <button id="e-cancel" class="btn-ghost">Cancelar</button>
+      <button id="e-salvar" class="btn-primary">Salvar</button>
+    </div>
+    <p class="hint" id="e-status"></p>
+  </div>
+</div>
+<div class="modal hidden" id="modal-conf">
+  <div class="modal-box">
+    <h2>Solicitar acesso</h2>
+    <p id="conf-texto"></p>
+    <label>Motivo<input id="c-motivo"></label>
+    <div class="modal-actions">
+      <button id="c-cancel" class="btn-ghost">Cancelar</button>
+      <button id="c-enviar" class="btn-primary">Confirmar solicitação</button>
+    </div>
+    <p class="hint" id="c-status"></p>
   </div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
