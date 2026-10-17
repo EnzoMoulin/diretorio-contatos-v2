@@ -82,11 +82,13 @@ async function buscar() {
 $('q').addEventListener('input', buscar);
 
 function aplicarTema() {
-  document.body.dataset.theme = localStorage.getItem('demo-theme') || 'light';
+  const dark = (localStorage.getItem('demo-theme') || 'light') === 'dark';
+  document.body.dataset.theme = dark ? 'dark' : 'light';
+  const t = $('toggle-dark-mode');
+  if (t) t.checked = dark;
 }
-$('tema-toggle').onclick = () => {
-  localStorage.setItem('demo-theme',
-    (localStorage.getItem('demo-theme') || 'light') === 'light' ? 'dark' : 'light');
+$('toggle-dark-mode').onchange = (e) => {
+  localStorage.setItem('demo-theme', e.target.checked ? 'dark' : 'light');
   aplicarTema();
 };
 (async () => {

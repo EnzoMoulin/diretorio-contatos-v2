@@ -216,8 +216,7 @@ async function refresh() {
   $('menu-notif').classList.toggle('hidden', !dentro);
   $('menu-sol').classList.toggle('hidden', !dentro);
   $('menu-reg').classList.toggle('hidden', !dentro);
-  $('who-line').classList.toggle('hidden', !dentro);
-  if (dentro) $('who-line').textContent = '👤 ' + me.usuario;
+  $('who-line').textContent = dentro ? '👤 ' + me.usuario : 'Sem acesso administrativo';
   $('btn-entrar').classList.toggle('hidden', dentro);
   $('btn-sair').classList.toggle('hidden', !dentro);
   $('btn-pedir').onclick = dentro ? abrirPedidoMais : abrirPedidoNovo;
@@ -374,11 +373,13 @@ $('s-salvar').onclick = async () => {
   if (r.ok) { $('s-atual').value = ''; $('s-nova').value = ''; }
 };
 function aplicarTema() {
-  document.body.dataset.theme = localStorage.getItem('demo-theme') || 'light';
+  const dark = (localStorage.getItem('demo-theme') || 'light') === 'dark';
+  document.body.dataset.theme = dark ? 'dark' : 'light';
+  const t = $('toggle-dark-mode');
+  if (t) t.checked = dark;
 }
-$('tema-toggle').onclick = () => {
-  localStorage.setItem('demo-theme',
-    (localStorage.getItem('demo-theme') || 'light') === 'light' ? 'dark' : 'light');
+$('toggle-dark-mode').onchange = (e) => {
+  localStorage.setItem('demo-theme', e.target.checked ? 'dark' : 'light');
   aplicarTema();
 };
 aplicarTema();

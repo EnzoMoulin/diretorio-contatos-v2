@@ -11,48 +11,97 @@
 <div class="app-container">
   <aside class="sidebar">
     <div class="sidebar-header">
-      <h2>Diretório</h2>
-      <span>de Contatos · demo</span>
+      <div class="sidebar-brand-mark" aria-hidden="true">DC</div>
+      <div class="sidebar-brand-copy">
+        <h2>Diretório de Contatos</h2>
+        <span>Consulta pública · demo</span>
+      </div>
     </div>
-    <nav class="sidebar-menu">
-      <button class="menu-item active" data-view="consulta">🔍 Consulta</button>
-      <button class="menu-item" data-view="config">⚙️ Configurações</button>
+    <nav class="sidebar-menu" aria-label="Navegação principal">
+      <button class="menu-item active" data-view="consulta"><span class="icon">☎</span><span>Consulta</span></button>
+      <button class="menu-item" data-view="config"><span class="icon">⚙</span><span>Configurações</span></button>
     </nav>
-    <div class="sidebar-bottom">
-      <p class="hint">Consulta pública — dados fictícios da Empresa Exemplo.</p>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">Consulta pública</div>
+      <p class="hint">Dados fictícios da Empresa Exemplo.</p>
     </div>
   </aside>
   <main class="main-content">
-    <section class="card" id="view-consulta">
-      <h1>Consulta pública</h1>
-      <input id="q" type="search" placeholder="Buscar por nome, cargo, telefone, e-mail ou setor…" autocomplete="off">
-      <div class="consulta-grid">
-        <div>
-          <div id="map"></div>
-          <p class="hint" id="map-msg">Clique em um município com contatos para filtrar. GeoJSON público (IBGE).</p>
-          <p class="breadcrumb" id="crumb">Selecione um local ou busque</p>
-          <div class="cascade">
-            <select id="sel-loc" aria-label="Localidade"><option value="">Localidade…</option></select>
-            <select id="sel-uni" aria-label="Unidade" disabled><option value="">Unidade…</option></select>
-            <select id="sel-set" aria-label="Setor" disabled><option value="">Setor…</option></select>
+    <section id="view-consulta">
+      <div class="consulta-layout">
+        <div class="fc-panel">
+          <div class="fc-head">
+            <div>
+              <h2 class="fc-title">Consulta pública</h2>
+              <p class="fc-subtitle">Selecione um local no mapa ao lado ou nos menus abaixo.</p>
+            </div>
+            <div class="fc-toolbar">
+              <button type="button" class="fc-btn noprint" onclick="window.print()" title="Imprimir / Salvar PDF">🖨️ Imprimir / Salvar PDF</button>
+            </div>
           </div>
-        </div>
-        <div>
-          <div class="print-head">
-            <button class="btn-ghost dark noprint" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
-          </div>
+          <input id="q" class="fc-search" type="search" placeholder="Buscar por nome, cargo, telefone, e-mail ou setor…" autocomplete="off">
+          <p class="fc-subtitle" id="crumb">Selecione um local ou busque</p>
+          <select id="sel-loc" class="fc-select" aria-label="Localidade"><option value="">Localidade…</option></select>
+          <select id="sel-uni" class="fc-select" aria-label="Unidade" disabled><option value="">Unidade…</option></select>
+          <select id="sel-set" class="fc-select" aria-label="Setor" disabled><option value="">Setor…</option></select>
           <table>
             <thead><tr><th>Nome</th><th>Cargo</th><th>Local</th><th>Telefone</th><th>E-mail</th></tr></thead>
             <tbody id="lista"></tbody>
           </table>
         </div>
+        <section id="consulta-mapa" aria-label="Mapa dos municípios">
+          <div id="map" role="region" aria-label="Mapa interativo dos municípios"></div>
+          <p class="hint" id="map-msg">Clique em um município com contatos para filtrar. GeoJSON público (IBGE).</p>
+        </section>
       </div>
     </section>
-    <section class="card hidden" id="view-config">
-      <h1>⚙️ Configurações</h1>
-      <h3>Aparência</h3>
-      <button id="tema-toggle" class="btn-ghost dark">🌙 Alternar tema claro/escuro</button>
-      <p class="hint">A preferência fica salva neste navegador.</p>
+    <section class="hidden" id="view-config">
+      <div class="config-hero">
+        <div class="config-hero-icon">⚙</div>
+        <div class="config-hero-text">
+          <h2>Configurações</h2>
+          <p>Aparência e informações do ambiente.</p>
+        </div>
+      </div>
+      <div class="config-grid">
+        <div class="config-card">
+          <div class="config-card-header">
+            <div class="config-card-icon config-card-icon--violet">🎨</div>
+            <div><h3>Aparência</h3><span class="config-card-subtitle">Personalize a exibição</span></div>
+          </div>
+          <div class="config-card-body">
+            <div class="config-aparencia-row">
+              <div class="config-aparencia-text">
+                <strong>Modo escuro</strong>
+                <p>Alterne entre tema claro e escuro. A preferência fica salva neste navegador.</p>
+              </div>
+              <label class="switch">
+                <input id="toggle-dark-mode" type="checkbox">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="config-preview">
+              <div class="config-preview-box"><span class="config-preview-dot" style="background:#fff;border:1px solid #e2e8f0;"></span><span>Claro</span></div>
+              <div class="config-preview-box config-preview-dark"><span class="config-preview-dot" style="background:#0f172a;"></span><span>Escuro</span></div>
+            </div>
+            <div class="config-hint">Dica: o modo escuro reduz o cansaço visual em ambientes com pouca luz.</div>
+          </div>
+        </div>
+        <div class="config-card">
+          <div class="config-card-header">
+            <div class="config-card-icon config-card-icon--blue">🖥</div>
+            <div><h3>Sistema</h3><span class="config-card-subtitle">Identidade e ambiente</span></div>
+          </div>
+          <div class="config-card-body">
+            <div class="config-kv">
+              <div class="config-row"><span class="config-label">Nome</span><span class="config-value">Diretório de Contatos — Demo</span></div>
+              <div class="config-row"><span class="config-label">Versão</span><span class="config-value"><span class="config-badge-versao">demo</span></span></div>
+              <div class="config-row"><span class="config-label">Ambiente</span><span class="config-value"><span class="config-env-dot"></span>Python stdlib</span></div>
+              <div class="config-row"><span class="config-label">Implantação</span><span class="config-value config-value-muted">API local + páginas estáticas</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
     <footer>Python stdlib + HTML/CSS/JS · Leaflet + GeoJSON público · dados de exemplo</footer>
   </main>

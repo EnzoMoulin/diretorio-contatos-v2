@@ -11,44 +11,50 @@
 <div class="app-container">
   <aside class="sidebar">
     <div class="sidebar-header">
-      <h2>Diretório</h2>
-      <span>acesso interno · demo</span>
+      <div class="sidebar-brand-mark" aria-hidden="true">DC</div>
+      <div class="sidebar-brand-copy">
+        <h2>Diretório de Contatos</h2>
+        <span>Acesso interno · demo</span>
+      </div>
     </div>
-    <nav class="sidebar-menu">
-      <button class="menu-item active" data-view="consulta">🔍 Consulta</button>
-      <button class="menu-item hidden" data-view="dashboard" id="menu-dash">📊 Dashboard</button>
-      <button class="menu-item hidden" data-view="solicitacoes" id="menu-sol">📝 Solicitações de acesso <span id="ped-count" class="badge"></span></button>
-      <button class="menu-item hidden" data-view="registro" id="menu-reg">🕘 Registro de alterações</button>
-      <button class="menu-item" data-view="manual">📖 Manual do Usuário</button>
-      <button class="menu-item hidden" data-view="notificacoes" id="menu-notif">🔔 Notificações <span id="notif-count" class="badge"></span></button>
-      <button class="menu-item" data-view="config" id="menu-conf">⚙️ Configurações</button>
+    <nav class="sidebar-menu" aria-label="Navegação principal">
+      <button class="menu-item hidden" data-view="dashboard" id="menu-dash"><span class="icon">📊</span><span>Dashboard</span></button>
+      <button class="menu-item active" data-view="consulta"><span class="icon">☎</span><span>Consulta</span></button>
+      <button class="menu-item hidden" data-view="solicitacoes" id="menu-sol"><span class="icon">◎</span><span>Solicitações de acesso</span><span id="ped-count" class="badge"></span></button>
+      <button class="menu-item hidden" data-view="notificacoes" id="menu-notif"><span class="icon">🔔</span><span>Notificações</span><span id="notif-count" class="badge"></span></button>
+      <button class="menu-item hidden" data-view="registro" id="menu-reg"><span class="icon">≡</span><span>Registro de alterações</span></button>
+      <button class="menu-item" data-view="config" id="menu-conf"><span class="icon">⚙</span><span>Configurações</span></button>
+      <button class="menu-item" data-view="manual"><span class="icon">?</span><span>Manual do Usuário</span></button>
     </nav>
-    <div class="sidebar-bottom">
-      <p class="hint hidden" id="who-line"></p>
-      <button id="btn-entrar" class="btn-primary wide">🔑 Acesso administrativo</button>
-      <button id="btn-pedir" class="btn-ghost wide">📝 Solicitar acesso</button>
-      <button id="btn-sair" class="btn-ghost wide hidden">🚪 Sair do acesso administrativo</button>
+    <div class="sidebar-footer">
+      <div id="who-line" class="sidebar-user">Sem acesso administrativo</div>
+      <button id="btn-entrar" class="sidebar-status-btn primary">🔑 Acesso administrativo</button>
+      <button id="btn-pedir" class="sidebar-status-btn">📝 Solicitar acesso</button>
+      <button id="btn-sair" class="sidebar-status-btn hidden">🚪 Sair do acesso administrativo</button>
       <p class="hint" id="estado-hint">Consulta sem login. Com cadastro, entre para gerenciar seus locais.</p>
     </div>
   </aside>
   <main class="main-content">
-    <section class="card" id="view-consulta">
-      <h1>Consulta</h1>
-      <p class="hint" id="escopo-hint"></p>
-      <input id="q" type="search" placeholder="Buscar por nome, cargo, telefone, e-mail ou setor…" autocomplete="off">
-      <div class="consulta-grid">
-        <div>
-          <div id="map"></div>
-          <p class="hint" id="map-msg">Clique em um município com contatos para filtrar.</p>
-          <p class="breadcrumb" id="crumb">Selecione um local ou busque</p>
-          <div class="cascade">
-            <select id="sel-loc" aria-label="Localidade"><option value="">Localidade…</option></select>
-            <button id="sol-loc" class="btn-ghost dark hidden">Solicitar acesso a este município</button>
-            <select id="sel-uni" aria-label="Unidade" disabled><option value="">Unidade…</option></select>
-            <button id="sol-uni" class="btn-ghost dark hidden">Solicitar acesso a esta unidade</button>
-            <select id="sel-set" aria-label="Setor" disabled><option value="">Setor…</option></select>
-            <button id="sol-set" class="btn-ghost dark hidden">Solicitar acesso a este setor</button>
+    <section id="view-consulta">
+      <div class="consulta-layout">
+        <div class="fc-panel">
+          <div class="fc-head">
+            <div>
+              <h2 class="fc-title">Consulta</h2>
+              <p class="fc-subtitle" id="escopo-hint">Selecione um local no mapa ao lado ou nos menus abaixo.</p>
+            </div>
+            <div class="fc-toolbar">
+              <button type="button" class="fc-btn noprint" onclick="window.print()" title="Imprimir / Salvar PDF">🖨️ Imprimir / Salvar PDF</button>
+            </div>
           </div>
+          <input id="q" class="fc-search" type="search" placeholder="Buscar por nome, cargo, telefone, e-mail ou setor…" autocomplete="off">
+          <p class="fc-subtitle" id="crumb">Selecione um local ou busque</p>
+          <select id="sel-loc" class="fc-select" aria-label="Localidade"><option value="">Localidade…</option></select>
+          <button id="sol-loc" class="fc-access hidden">Solicitar acesso a este município</button>
+          <select id="sel-uni" class="fc-select" aria-label="Unidade" disabled><option value="">Unidade…</option></select>
+          <button id="sol-uni" class="fc-access hidden">Solicitar acesso a esta unidade</button>
+          <select id="sel-set" class="fc-select" aria-label="Setor" disabled><option value="">Setor…</option></select>
+          <button id="sol-set" class="fc-access hidden">Solicitar acesso a este setor</button>
           <div class="create-box hidden" id="create-box">
             <h3>Novo contato neste setor</h3>
             <div class="form-grid">
@@ -60,26 +66,16 @@
               <span id="save-status"></span>
             </div>
           </div>
-        </div>
-        <div>
-          <div class="print-head">
-            <button class="btn-ghost dark noprint" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
-          </div>
           <table>
             <thead><tr><th>Nome</th><th>Cargo</th><th>Local</th><th>Telefone</th><th>E-mail</th><th></th></tr></thead>
             <tbody id="lista"></tbody>
           </table>
         </div>
+        <section id="consulta-mapa" aria-label="Mapa dos municípios">
+          <div id="map" role="region" aria-label="Mapa interativo dos municípios"></div>
+          <p class="hint" id="map-msg">Clique em um município com contatos para filtrar.</p>
+        </section>
       </div>
-    </section>
-    <section class="card hidden" id="view-solicitacoes">
-      <h1>Solicitações de acesso</h1>
-      <ul id="pedidos" class="rows"></ul>
-    </section>
-    <section class="card hidden" id="view-registro">
-      <h1>Registro de alterações</h1>
-      <button class="btn-ghost dark noprint" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
-      <ul id="hist"></ul>
     </section>
     <section class="card hidden" id="view-dashboard">
       <h1>Dashboard</h1>
@@ -91,53 +87,9 @@
       <h3>Últimas alterações</h3>
       <ul id="dash-ult"></ul>
     </section>
-    <section class="card hidden" id="view-manual">
-      <h1>📖 Manual do Usuário</h1>
-      <p class="hint">Guia rápido — da consulta à gestão. Consulta inicial: selecione um local no mapa ou nos menus, ou digite uma busca.</p>
-      <h3>🗺️ 01 — Localizar</h3>
-      <ol>
-        <li>Clique em um município com contatos no <b>mapa</b> para filtrar, ou</li>
-        <li>Use os <b>menus em cascata</b>: Localidade → Unidade → Setor. O caminho aparece acima dos menus.</li>
-      </ol>
-      <h3>🔍 02 — Buscar</h3>
-      <p>O campo de busca alcança todos os níveis: nome, cargo, telefone, e-mail, setor, unidade e município. Pode combinar busca + nível selecionado.</p>
-      <h3>🔑 03 — Acesso administrativo</h3>
-      <ol>
-        <li>Sem cadastro: clique em <b>Solicitar acesso</b> e preencha o formulário (exigido e-mail institucional <code>@empresa-exemplo.com.br</code>).</li>
-        <li>Com cadastro: clique em <b>Acesso administrativo</b> e entre com e-mail + senha.</li>
-        <li>Logado, os locais editáveis vêm marcados com <b>✓</b>; nos demais, só consulta.</li>
-        <li><b>Sair do acesso administrativo</b> volta à consulta, sem sair do acesso interno.</li>
-      </ol>
-      <h3>✏️ 04 — Gerenciar contatos</h3>
-      <ol>
-        <li><b>Criar</b>: selecione o setor e use o formulário "Novo contato neste setor".</li>
-        <li><b>Editar/Remover</b>: botões em cada linha, só onde você tem cobertura.</li>
-        <li>Sem cobertura no nível selecionado, aparece <b>Solicitar acesso</b>: município inteiro (todas as unidades e setores), unidade inteira (todos os setores) ou só o setor.</li>
-      </ol>
-      <h3>📝 05 — Solicitações e registro</h3>
-      <p>Na aba <b>Solicitações de acesso</b>, o admin aprova pedidos (o novo usuário entra com senha inicial). A aba <b>Registro de alterações</b> mostra criar / editar / remover / pedidos / aprovações.</p>
-      <h3>💡 06 — Dicas</h3>
-      <ul>
-        <li>Em telas menores, mapa e painel se reorganizam sozinhos.</li>
-        <li>Na aba <b>Configurações</b> dá para trocar a senha e alternar o tema claro/escuro.</li>
-      </ul>
-    </section>
-    <section class="card hidden" id="view-config">
-      <h1>⚙️ Configurações</h1>
-      <div id="conf-logado" class="hidden">
-      <h3>Sua conta</h3>
-      <p class="hint" id="conf-conta"></p>
-      <h3>Trocar senha</h3>
-      <div class="form-grid">
-        <input id="s-atual" type="password" placeholder="Senha atual" autocomplete="current-password">
-        <input id="s-nova" type="password" placeholder="Nova senha (6+ caracteres)" autocomplete="new-password">
-        <button id="s-salvar" class="btn-primary">Salvar nova senha</button>
-        <span id="s-status"></span>
-      </div>
-      </div>
-      <h3>Aparência</h3>
-      <button id="tema-toggle" class="btn-ghost dark">🌙 Alternar tema claro/escuro</button>
-      <p class="hint">A preferência fica salva neste navegador.</p>
+    <section class="card hidden" id="view-solicitacoes">
+      <h1>Solicitações de acesso</h1>
+      <ul id="pedidos" class="rows"></ul>
     </section>
     <section class="card hidden" id="view-notificacoes">
       <h1>🔔 Notificações</h1>
@@ -146,6 +98,202 @@
         <ul id="notifs" class="rows"></ul>
       </div>
       <p class="hint" id="notif-entrar">Entre com sua conta para ver suas notificações.</p>
+    </section>
+    <section class="card hidden" id="view-registro">
+      <h1>Registro de alterações</h1>
+      <button class="btn-ghost dark noprint" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+      <ul id="hist"></ul>
+    </section>
+    <section class="hidden" id="view-config">
+      <div class="config-hero">
+        <div class="config-hero-icon">⚙</div>
+        <div class="config-hero-text">
+          <h2>Configurações</h2>
+          <p>Conta, aparência e informações do ambiente.</p>
+        </div>
+      </div>
+      <div class="config-grid">
+        <div class="config-card">
+          <div class="config-card-header">
+            <div class="config-card-icon config-card-icon--violet">🎨</div>
+            <div><h3>Aparência</h3><span class="config-card-subtitle">Personalize a exibição</span></div>
+          </div>
+          <div class="config-card-body">
+            <div class="config-aparencia-row">
+              <div class="config-aparencia-text">
+                <strong>Modo escuro</strong>
+                <p>Alterne entre tema claro e escuro. A preferência fica salva neste navegador.</p>
+              </div>
+              <label class="switch">
+                <input id="toggle-dark-mode" type="checkbox">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="config-preview">
+              <div class="config-preview-box"><span class="config-preview-dot" style="background:#fff;border:1px solid #e2e8f0;"></span><span>Claro</span></div>
+              <div class="config-preview-box config-preview-dark"><span class="config-preview-dot" style="background:#0f172a;"></span><span>Escuro</span></div>
+            </div>
+            <div class="config-hint">Dica: o modo escuro reduz o cansaço visual em ambientes com pouca luz.</div>
+          </div>
+        </div>
+        <div class="config-card hidden" id="conf-logado">
+          <div class="config-card-header">
+            <div class="config-card-icon config-card-icon--emerald">👤</div>
+            <div><h3>Sua conta</h3><span class="config-card-subtitle">Acesso administrativo</span></div>
+          </div>
+          <div class="config-card-body">
+            <div class="config-kv">
+              <div class="config-row"><span class="config-label">Conta</span><span class="config-value" id="conf-conta"></span></div>
+            </div>
+            <h3 style="margin:14px 0 8px;font-size:14px">Trocar senha</h3>
+            <div class="form-grid">
+              <input id="s-atual" type="password" placeholder="Senha atual" autocomplete="current-password">
+              <input id="s-nova" type="password" placeholder="Nova senha (6+ caracteres)" autocomplete="new-password">
+              <button id="s-salvar" class="btn-primary">Salvar nova senha</button>
+              <span id="s-status"></span>
+            </div>
+          </div>
+        </div>
+        <div class="config-card">
+          <div class="config-card-header">
+            <div class="config-card-icon config-card-icon--blue">🖥</div>
+            <div><h3>Sistema</h3><span class="config-card-subtitle">Identidade e ambiente</span></div>
+          </div>
+          <div class="config-card-body">
+            <div class="config-kv">
+              <div class="config-row"><span class="config-label">Nome</span><span class="config-value">Diretório de Contatos — Demo</span></div>
+              <div class="config-row"><span class="config-label">Versão</span><span class="config-value"><span class="config-badge-versao">demo</span></span></div>
+              <div class="config-row"><span class="config-label">Ambiente</span><span class="config-value"><span class="config-env-dot"></span>Python stdlib</span></div>
+              <div class="config-row"><span class="config-label">Implantação</span><span class="config-value config-value-muted">API local + páginas estáticas</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="hidden" id="view-manual">
+      <div class="manual-container">
+        <div class="manual-hero">
+          <h2>Bem-vindo ao Diretório de Contatos — Demo</h2>
+          <p>Consulta sem login, gestão com permissões por município, unidade e setor, e trilha de auditoria. Este manual cobre todos os fluxos com passos numerados e dicas.</p>
+          <div class="manual-hero-meta">
+            <span>⚡ Consulta sem login</span>
+            <span>🔒 Escopo por nível</span>
+            <span>📋 Auditoria completa</span>
+          </div>
+        </div>
+        <div class="panel manual-toc-panel">
+          <h3>📑 Índice — clique para navegar</h3>
+          <div class="manual-toc-grid">
+            <a href="#m-perfis"><span class="toc-num">01</span> Perfis e visão geral</a>
+            <a href="#m-consultar"><span class="toc-num">02</span> Consultar contatos</a>
+            <a href="#m-acesso"><span class="toc-num">03</span> Acesso e solicitação</a>
+            <a href="#m-gerenciar"><span class="toc-num">04</span> Gerenciar contatos</a>
+            <a href="#m-escopo"><span class="toc-num">05</span> Escopo por nível</a>
+            <a href="#m-aprovar"><span class="toc-num">06</span> Aprovar solicitações</a>
+            <a href="#m-notif"><span class="toc-num">07</span> Notificações</a>
+            <a href="#m-registro"><span class="toc-num">08</span> Registro de alterações</a>
+            <a href="#m-dash"><span class="toc-num">09</span> Dashboard</a>
+            <a href="#m-config"><span class="toc-num">10</span> Configurações</a>
+            <a href="#m-imprimir"><span class="toc-num">11</span> Imprimir / PDF</a>
+            <a href="#m-faq"><span class="toc-num">12</span> Perguntas frequentes</a>
+          </div>
+        </div>
+        <div class="manual-roles-grid" id="m-perfis">
+          <div class="manual-role-card">
+            <span class="role-ic">👁️</span><h4>Visitante</h4>
+            <p>Consulta tudo, sem login. Sem botões de gestão.</p>
+            <div style="margin-top:10px"><span class="manual-badge badge-visitante">👁️ Consulta</span></div>
+          </div>
+          <div class="manual-role-card" style="border-color:#bfdbfe">
+            <span class="role-ic">✏️</span><h4>Com acesso</h4>
+            <p>Logado, edita contatos somente nos níveis liberados para ele.</p>
+            <div style="margin-top:10px"><span class="manual-badge badge-conteudo">✏️ Edita com escopo</span></div>
+          </div>
+          <div class="manual-role-card" style="border-color:#1e293b">
+            <span class="role-ic">🛡️</span><h4>Admin</h4>
+            <p>Acesso ilimitado: todos os escopos, solicitações e registros.</p>
+            <div style="margin-top:10px"><span class="manual-badge badge-sistema">🛡️ Acesso total</span></div>
+          </div>
+        </div>
+        <table class="manual-table" aria-label="Comparativo de perfis">
+          <thead><tr><th>Recurso</th><th style="text-align:center">👁️ Visitante</th><th style="text-align:center">✏️ Com acesso</th><th style="text-align:center">🛡️ Admin</th></tr></thead>
+          <tbody>
+            <tr><td>Consultar e buscar</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td></tr>
+            <tr><td>Mapa e navegação por níveis</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td></tr>
+            <tr><td>Solicitar acesso</td><td style="text-align:center">✅</td><td style="text-align:center">✅ mais níveis</td><td style="text-align:center">—</td></tr>
+            <tr><td>Criar / editar / remover</td><td style="text-align:center">—</td><td style="text-align:center">✅ no escopo</td><td style="text-align:center">✅ tudo</td></tr>
+            <tr><td>Aprovar solicitações</td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center">✅</td></tr>
+            <tr><td>Dashboard e notificações</td><td style="text-align:center">—</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td></tr>
+            <tr><td>Registro de alterações</td><td style="text-align:center">—</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td></tr>
+            <tr><td>Configurações / modo escuro</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td></tr>
+          </tbody>
+        </table>
+        <section id="m-consultar" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>🔍 02 — Consultar contatos</h3><p>Acesso livre, sem login. Mapa, menus e busca combináveis.</p></div></div>
+          <ol class="manual-steps">
+            <li><span class="manual-step-num">1</span><div><strong>Clique no mapa ou nos menus</strong><p>Clique num município com contatos no <code>mapa à direita</code> ou use os menus <code>Localidade → Unidade → Setor</code> no painel.</p></div></li>
+            <li><span class="manual-step-num">2</span><div><strong>Busque por qualquer nível</strong><p>O campo de busca alcança nome, cargo, telefone, e-mail, setor, unidade e município — pode combinar busca + nível.</p></div></li>
+            <li><span class="manual-step-num">3</span><div><strong>Use os contatos</strong><p><code>E-mail</code> abre seu app de e-mail (<code>mailto:</code>). Valores vazios aparecem como "—".</p></div></li>
+          </ol>
+          <div class="manual-tip"><span>💡</span><div><strong>Dica:</strong> a tabela começa vazia de propósito — filtre primeiro para não navegar numa lista gigante.</div></div>
+        </section>
+        <section id="m-acesso" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>🔑 03 — Acesso e solicitação</h3><p>Sem cadastro a visão é só consulta; com cadastro, gestão no seu escopo.</p></div></div>
+          <ol class="manual-steps">
+            <li><span class="manual-step-num">1</span><div><strong>Sem cadastro: Solicitar acesso</strong><p>Preencha nome, e-mail institucional <code>@empresa-exemplo.com.br</code> e o local. Usuário é opcional — vira o início do e-mail.</p></div></li>
+            <li><span class="manual-step-num">2</span><div><strong>Com cadastro: Acesso administrativo</strong><p>Entre com e-mail + senha. Os níveis editáveis vêm marcados com <code>✓</code>.</p></div></li>
+            <li><span class="manual-step-num">3</span><div><strong>Sair do acesso administrativo</strong><p>Volta à consulta sem sair do acesso interno.</p></div></li>
+          </ol>
+        </section>
+        <section id="m-gerenciar" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>☎️ 04 — Gerenciar contatos</h3><p>Criar, editar e remover dentro do seu escopo, direto na consulta.</p></div></div>
+          <ol class="manual-steps">
+            <li><span class="manual-step-num">1</span><div><strong>Criar</strong><p>Selecione o setor e use <span class="manual-kbd">Novo contato neste setor</span>. Fora do escopo, o formulário nem aparece.</p></div></li>
+            <li><span class="manual-step-num">2</span><div><strong>Editar / remover</strong><p>Botões em cada linha, só onde há cobertura. O servidor barra o resto (403).</p></div></li>
+          </ol>
+        </section>
+        <section id="m-escopo" class="panel manual-section" style="border-left:4px solid #2563eb">
+          <div class="manual-section-head"><div><h3>🏛️ 05 — Escopo por nível</h3><p>O pilar de permissão: município cobre tudo abaixo; unidade cobre seus setores.</p></div></div>
+          <ol class="manual-steps">
+            <li><span class="manual-step-num">1</span><div><strong>Herança</strong><p>Município → todas as unidades e setores dentro. Unidade → todos os setores dentro. Setor → só ele.</p></div></li>
+            <li><span class="manual-step-num">2</span><div><strong>Solicitar por nível</strong><p>Ao lado de cada menu sem cobertura há <code>Solicitar acesso</code>, com confirmação explicando a cobertura integral.</p></div></li>
+          </ol>
+        </section>
+        <section id="m-aprovar" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>👥 06 — Aprovar solicitações</h3><p>Fila de pedidos pendentes; ao aprovar, o usuário já entra com escopo.</p></div></div>
+          <ol class="manual-steps">
+            <li><span class="manual-step-num">1</span><div><strong>Abra Solicitações de acesso</strong><p>O pedido mostra nome, e-mail, usuário e o nível pedido (município, unidade ou setor).</p></div></li>
+            <li><span class="manual-step-num">2</span><div><strong>Aprove</strong><p>O novo usuário entra com a senha inicial e recebe uma notificação avisando.</p></div></li>
+          </ol>
+        </section>
+        <section id="m-notif" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>🔔 07 — Notificações</h3><p>Solicitações chegam aos admins; aprovação e mudanças chegam a quem interessa.</p></div></div>
+          <ol class="manual-steps">
+            <li><span class="manual-step-num">1</span><div><strong>Badge de não lidas</strong><p>A aba mostra a contagem. Marque uma por uma ou <span class="manual-kbd">todas como lidas</span>.</p></div></li>
+          </ol>
+        </section>
+        <section id="m-registro" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>📋 08 — Registro de alterações</h3><p>Auditoria: criar, editar, remover, pedidos e aprovações com data.</p></div></div>
+          <div class="manual-info"><span>ℹ️</span><div>Nada é apagado do registro — nem a remoção de um contato.</div></div>
+        </section>
+        <section id="m-dash" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>📊 09 — Dashboard</h3><p>Totais e barras recortados pelo seu escopo: o que você vê é o que você edita.</p></div></div>
+        </section>
+        <section id="m-config" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>⚙️ 10 — Configurações</h3><p>Modo escuro para todos; conta e troca de senha para logados.</p></div></div>
+        </section>
+        <section id="m-imprimir" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>🖨️ 11 — Imprimir ou salvar PDF</h3><p>Consulta, Dashboard e Registro têm botão próprio; a folha sai limpa em A4.</p></div></div>
+        </section>
+        <section id="m-faq" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>❓ 12 — Perguntas frequentes</h3></div></div>
+          <div class="manual-faq">
+            <details><summary>Não vejo botões de edição — por quê?</summary><p>Você só edita onde tem cobertura (✓ nos menus). No resto, só consulta — peça acesso pelo botão ao lado do menu.</p></details>
+            <details><summary>Esqueci minha senha. E agora?</summary><p>Peça ao admin para reprovar e reaprovar? Não — nesta demo, entre em contato com o administrador, que pode recriar seu acesso.</p></details>
+            <details><summary>O que o admin vê de diferente?</summary><p>Tudo: todos os escopos, a fila de solicitações e todas as notificações de mudança.</p></details>
+          </div>
+        </section>
+      </div>
     </section>
     <footer>Python stdlib + HTML/CSS/JS · Leaflet + GeoJSON público · dados de exemplo</footer>
   </main>
