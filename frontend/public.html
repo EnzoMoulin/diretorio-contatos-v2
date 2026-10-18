@@ -20,6 +20,7 @@
     <nav class="sidebar-menu" aria-label="Navegação principal">
       <button class="menu-item active" data-view="consulta"><span class="icon">☎</span><span>Consulta</span></button>
       <button class="menu-item" data-view="config"><span class="icon">⚙</span><span>Configurações</span></button>
+      <button class="menu-item" data-view="manual"><span class="icon">?</span><span>Manual do Usuário</span></button>
     </nav>
     <div class="sidebar-footer">
       <div class="sidebar-user">Consulta pública</div>
@@ -28,31 +29,45 @@
   </aside>
   <main class="main-content">
     <section id="view-consulta">
+      <div class="fc-page-head">
+        <div>
+          <p class="fc-eyebrow">Diretório institucional · demo</p>
+          <h1>Diretório de Contatos — Demo</h1>
+          <p class="fc-subtitle">Guia de contatos da Empresa Exemplo</p>
+        </div>
+        <span class="fc-profile"><i>●</i> Visitante</span>
+      </div>
       <div class="consulta-layout">
+        <section id="consulta-mapa" aria-label="Mapa dos municípios">
+          <div class="fc-map-head">
+            <p class="fc-subtitle">Selecione um município válido no mapa abaixo ou no painel ao lado.</p>
+          </div>
+          <div id="map" role="region" aria-label="Mapa interativo dos municípios"></div>
+          <p class="hint" id="map-msg"></p>
+        </section>
         <div class="fc-panel">
           <div class="fc-head">
             <div>
-              <h2 class="fc-title">Consulta pública</h2>
-              <p class="fc-subtitle">Selecione um local no mapa ao lado ou nos menus abaixo.</p>
-            </div>
-            <div class="fc-toolbar">
-              <button type="button" class="fc-btn noprint" onclick="window.print()" title="Imprimir / Salvar PDF">🖨️ Imprimir / Salvar PDF</button>
+              <h2 class="fc-title">Contatos da Empresa Exemplo</h2>
+              <p class="fc-subtitle">Consulte a estrutura completa por Município, Unidade e Setor. Selecione um município no mapa, nos menus ou na lista abaixo.</p>
             </div>
           </div>
+          <span class="fc-pill fc-total-localidades" id="loc-count"></span>
           <input id="q" class="fc-search" type="search" placeholder="Buscar por nome, cargo, telefone, e-mail ou setor…" autocomplete="off">
           <p class="fc-subtitle" id="crumb">Selecione um local ou busque</p>
-          <select id="sel-loc" class="fc-select" aria-label="Localidade"><option value="">Localidade…</option></select>
-          <select id="sel-uni" class="fc-select" aria-label="Unidade" disabled><option value="">Unidade…</option></select>
-          <select id="sel-set" class="fc-select" aria-label="Setor" disabled><option value="">Setor…</option></select>
-          <table>
-            <thead><tr><th>Nome</th><th>Cargo</th><th>Local</th><th>Telefone</th><th>E-mail</th></tr></thead>
-            <tbody id="lista"></tbody>
-          </table>
+          <div class="fc-selects-row" id="sel-row">
+            <select id="sel-loc" class="fc-select" aria-label="Localidade"><option value="">Localidade…</option></select>
+            <select id="sel-uni" class="fc-select" aria-label="Unidade" disabled><option value="">Unidade…</option></select>
+            <select id="sel-set" class="fc-select" aria-label="Setor" disabled><option value="">Setor…</option></select>
+          </div>
+          <button type="button" class="fc-btn fc-print-all hidden" id="btn-print" title="Imprimir / Salvar PDF dos contatos do nível selecionado">🖨️ Imprimir / Salvar PDF</button>
+          <div id="lista"></div>
+          <div id="print-area"></div>
+          <div class="fc-bottom-nav">
+            <button type="button" class="fc-btn hidden" id="btn-voltar">← Voltar</button>
+            <button type="button" class="fc-btn" id="btn-topo">↑ Voltar ao topo</button>
+          </div>
         </div>
-        <section id="consulta-mapa" aria-label="Mapa dos municípios">
-          <div id="map" role="region" aria-label="Mapa interativo dos municípios"></div>
-          <p class="hint" id="map-msg">Clique em um município com contatos para filtrar. GeoJSON público (IBGE).</p>
-        </section>
       </div>
     </section>
     <section class="hidden" id="view-config">
@@ -101,6 +116,66 @@
             </div>
           </div>
         </div>
+      </div>
+    </section>
+    <section class="hidden" id="view-manual">
+      <div class="manual-container">
+        <div class="page-header" style="margin-bottom:2px">
+          <div>
+            <h2 style="display:flex;align-items:center;gap:10px;margin:0 0 6px;font-size:22px">📖 Manual do Usuário</h2>
+            <p style="margin:0;color:#475569;font-size:13.5px;line-height:1.5">Guia rápido para consultar e salvar os contatos públicos da demo.</p>
+          </div>
+        </div>
+        <div class="panel manual-hero">
+          <h2>Consulta pública de contatos</h2>
+          <p>Encontre Unidades, Setores, telefones e e-mails pelo mapa ou pelos menus de Município.</p>
+          <div class="manual-hero-meta">
+            <span>🗺️ Navegação pelo mapa</span>
+            <span>☎️ Contatos clicáveis</span>
+            <span>🖨️ Impressão e PDF</span>
+          </div>
+        </div>
+        <div class="panel manual-toc-panel">
+          <h3>📑 Neste manual</h3>
+          <div class="manual-toc-grid">
+            <a href="#manual-consultar"><span class="toc-num">01</span> Localizar um município</a>
+            <a href="#manual-navegar"><span class="toc-num">02</span> Navegar pelos contatos</a>
+            <a href="#manual-imprimir"><span class="toc-num">03</span> Imprimir ou salvar PDF</a>
+            <a href="#manual-dicas-publicas"><span class="toc-num">04</span> Dicas de uso</a>
+          </div>
+        </div>
+        <section id="manual-consultar" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>🗺️ 01 — Localizar um município</h3><p>Use o mapa ou os menus no painel de consulta.</p></div></div>
+          <ol class="manual-steps">
+            <li><span class="manual-step-num">1</span><div><strong>Abra "Consulta"</strong><p>Clique em <code>☎ Consulta</code> na barra lateral.</p></div></li>
+            <li><span class="manual-step-num">2</span><div><strong>Escolha pelo mapa</strong><p>Clique num município destacado no mapa à esquerda.</p></div></li>
+            <li><span class="manual-step-num">3</span><div><strong>Ou use os menus</strong><p>Selecione o município na lista ao lado do campo de busca.</p></div></li>
+          </ol>
+        </section>
+        <section id="manual-navegar" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>🏛️ 02 — Navegar pelos contatos</h3><p>A estrutura segue Município, Unidade e Setor.</p></div></div>
+          <ol class="manual-steps">
+            <li><span class="manual-step-num">1</span><div><strong>Selecione um município</strong><p>Confira os badges de Unidades, Setores e Contatos e clique no município desejado.</p></div></li>
+            <li><span class="manual-step-num">2</span><div><strong>Abra uma Unidade ou um Setor</strong><p>Use os cards da estrutura e o botão de voltar para percorrer os níveis.</p></div></li>
+            <li><span class="manual-step-num">3</span><div><strong>Use o contato</strong><p>Clique no telefone para abrir o discador e no e-mail para abrir seu aplicativo de mensagens.</p></div></li>
+          </ol>
+        </section>
+        <section id="manual-imprimir" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>🖨️ 03 — Imprimir ou salvar PDF</h3><p>Os documentos são preparados para impressão em folha A4.</p></div></div>
+          <ol class="manual-steps">
+            <li><span class="manual-step-num">1</span><div><strong>Selecione um município</strong><p>O botão <span class="manual-kbd">Imprimir / Salvar PDF</span> aparece após a seleção.</p></div></li>
+            <li><span class="manual-step-num">2</span><div><strong>Município, Unidade ou Setor</strong><p>O botão imprime todos os contatos do nível atual.</p></div></li>
+            <li><span class="manual-step-num">3</span><div><strong>Salvar como arquivo</strong><p>Na janela de impressão do navegador, escolha o destino <code>Salvar como PDF</code>.</p></div></li>
+          </ol>
+        </section>
+        <section id="manual-dicas-publicas" class="panel manual-section">
+          <div class="manual-section-head"><div><h3>💡 04 — Dicas de uso</h3><p>Recursos disponíveis na consulta pública.</p></div></div>
+          <div class="manual-cols">
+            <div class="panel"><strong>Busca</strong><p>Digite nome, cargo, telefone ou e-mail no campo de busca.</p></div>
+            <div class="panel"><strong>Modo escuro</strong><p>Use a aba Configurações para alternar a aparência. A preferência fica salva neste navegador.</p></div>
+          </div>
+          <div class="manual-info"><span>ℹ️</span><div>Em telas menores, o mapa e o painel se reorganizam automaticamente. Use o botão de voltar para retornar ao nível anterior.</div></div>
+        </section>
       </div>
     </section>
     <footer>Python stdlib + HTML/CSS/JS · Leaflet + GeoJSON público · dados de exemplo</footer>

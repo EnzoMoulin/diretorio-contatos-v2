@@ -335,7 +335,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if u.path == "/api/localidades":
                 rows = con.execute(
-                    "SELECT l.id, l.nome, COUNT(c.id) AS total FROM localidades l"
+                    "SELECT l.id, l.nome, COUNT(c.id) AS total,"
+                    " COUNT(DISTINCT u.id) AS n_unidades,"
+                    " COUNT(DISTINCT s.id) AS n_setores FROM localidades l"
                     " LEFT JOIN unidades u ON u.localidade_id=l.id"
                     " LEFT JOIN setores s ON s.unidade_id=u.id"
                     " LEFT JOIN contatos c ON c.setor_id=s.id"
@@ -343,12 +345,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/unidades":
                 rows = con.execute(
-                    "SELECT * FROM unidades WHERE localidade_id=? ORDER BY nome",
+                    "SELECT u.id, u.nome, u.localidade_id,"
+                    " COUNT(DISTINCT s.id) AS n_setores,"
+                    " COUNT(c.id) AS total FROM unidades u"
+                    " LEFT JOIN setores s ON s.unidade_id=u.id"
+                    " LEFT JOIN contatos c ON c.setor_id=s.id"
+                    " WHERE u.localidade_id=? GROUP BY u.id ORDER BY u.nome",
                     (arg("localidade_id"),)).fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/setores":
                 rows = con.execute(
-                    "SELECT * FROM setores WHERE unidade_id=? ORDER BY nome",
+                    "SELECT s.id, s.nome, s.unidade_id, COUNT(c.id) AS total"
+                    " FROM setores s LEFT JOIN contatos c ON c.setor_id=s.id"
+                    " WHERE s.unidade_id=? GROUP BY s.id ORDER BY s.nome",
                     (arg("unidade_id"),)).fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/contatos":

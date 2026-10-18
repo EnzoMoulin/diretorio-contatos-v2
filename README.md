@@ -18,8 +18,9 @@
 - **Tabela de usuários decide permissões**: sem cadastro, mesmo no interno a
   visão seria só consulta; com cadastro, edita os locais do seu escopo
   (`acessos`, com herança municipio > unidade > setor); admin edita tudo
-- **Gestão por contato**: em cada linha, botões **Editar** (modal) e **Remover**,
-  só onde há cobertura; **Criar** no setor selecionado coberto; edição via PUT
+- **Consulta em cards por nível**: sem tabela — Localidade → Unidade → Setor
+  em cards clicáveis com contagem, botão voltar e breadcrumb; contato em card
+  com `tel:` + `mailto:`; Criar/Editar/Remover só onde há cobertura
 
 ## O que faz
 - **Consulta pública** (`/`): **mapa clicável à esquerda como porta de entrada**
@@ -57,9 +58,9 @@
   com ou sem login); logado ganha dados da conta e troca de senha
 - **E-mails clicáveis**: toda coluna de e-mail abre o app de e-mail (mailto),
   igual ao original
-- **Imprimir / Salvar PDF**: botão na consulta (externa e interna), no
-  Dashboard e no Registro; a folha sai limpa (só o conteúdo, sem menus/mapa/
-  botões), igual ao original
+- **Imprimir / Salvar PDF**: botão aparece após selecionar um município e
+  imprime todos os contatos do nível atual (município, unidade ou setor);
+  Dashboard e Registro têm botão próprio; folha limpa em A4
 
 ## Stack
 - Backend: Python 3, somente biblioteca padrão (`http.server` + `sqlite3`) — zero dependências

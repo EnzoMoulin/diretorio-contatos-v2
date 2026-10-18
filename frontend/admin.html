@@ -36,25 +36,38 @@
   </aside>
   <main class="main-content">
     <section id="view-consulta">
+      <div class="fc-page-head">
+        <div>
+          <p class="fc-eyebrow">Diretório institucional · demo</p>
+          <h1>Diretório de Contatos — Demo</h1>
+          <p class="fc-subtitle">Guia de contatos da Empresa Exemplo</p>
+        </div>
+        <span class="fc-profile" id="profile-badge"><i>●</i> Visitante</span>
+      </div>
       <div class="consulta-layout">
+        <section id="consulta-mapa" aria-label="Mapa dos municípios">
+          <div class="fc-map-head">
+            <p class="fc-subtitle">Selecione um município válido no mapa abaixo ou no painel ao lado.</p>
+          </div>
+          <div id="map" role="region" aria-label="Mapa interativo dos municípios"></div>
+          <p class="hint" id="map-msg"></p>
+        </section>
         <div class="fc-panel">
           <div class="fc-head">
             <div>
-              <h2 class="fc-title">Consulta</h2>
-              <p class="fc-subtitle" id="escopo-hint">Selecione um local no mapa ao lado ou nos menus abaixo.</p>
-            </div>
-            <div class="fc-toolbar">
-              <button type="button" class="fc-btn noprint" onclick="window.print()" title="Imprimir / Salvar PDF">🖨️ Imprimir / Salvar PDF</button>
+              <h2 class="fc-title">Contatos da Empresa Exemplo</h2>
+              <p class="fc-subtitle">Consulte a estrutura completa por Município, Unidade e Setor. Selecione um município no mapa, nos menus ou na lista abaixo.</p>
             </div>
           </div>
+          <span class="fc-pill fc-total-localidades" id="loc-count"></span>
           <input id="q" class="fc-search" type="search" placeholder="Buscar por nome, cargo, telefone, e-mail ou setor…" autocomplete="off">
           <p class="fc-subtitle" id="crumb">Selecione um local ou busque</p>
-          <select id="sel-loc" class="fc-select" aria-label="Localidade"><option value="">Localidade…</option></select>
-          <button id="sol-loc" class="fc-access hidden">Solicitar acesso a este município</button>
-          <select id="sel-uni" class="fc-select" aria-label="Unidade" disabled><option value="">Unidade…</option></select>
-          <button id="sol-uni" class="fc-access hidden">Solicitar acesso a esta unidade</button>
-          <select id="sel-set" class="fc-select" aria-label="Setor" disabled><option value="">Setor…</option></select>
-          <button id="sol-set" class="fc-access hidden">Solicitar acesso a este setor</button>
+          <div class="fc-selects-row" id="sel-row">
+            <select id="sel-loc" class="fc-select" aria-label="Localidade"><option value="">Localidade…</option></select>
+            <select id="sel-uni" class="fc-select" aria-label="Unidade" disabled><option value="">Unidade…</option></select>
+            <select id="sel-set" class="fc-select" aria-label="Setor" disabled><option value="">Setor…</option></select>
+          </div>
+          <button type="button" class="fc-btn fc-print-all hidden" id="btn-print" title="Imprimir / Salvar PDF dos contatos do nível selecionado">🖨️ Imprimir / Salvar PDF</button>
           <div class="create-box hidden" id="create-box">
             <h3>Novo contato neste setor</h3>
             <div class="form-grid">
@@ -66,15 +79,13 @@
               <span id="save-status"></span>
             </div>
           </div>
-          <table>
-            <thead><tr><th>Nome</th><th>Cargo</th><th>Local</th><th>Telefone</th><th>E-mail</th><th></th></tr></thead>
-            <tbody id="lista"></tbody>
-          </table>
+          <div id="lista"></div>
+          <div id="print-area"></div>
+          <div class="fc-bottom-nav">
+            <button type="button" class="fc-btn hidden" id="btn-voltar">← Voltar</button>
+            <button type="button" class="fc-btn" id="btn-topo">↑ Voltar ao topo</button>
+          </div>
         </div>
-        <section id="consulta-mapa" aria-label="Mapa dos municípios">
-          <div id="map" role="region" aria-label="Mapa interativo dos municípios"></div>
-          <p class="hint" id="map-msg">Clique em um município com contatos para filtrar.</p>
-        </section>
       </div>
     </section>
     <section class="card hidden" id="view-dashboard">
@@ -231,11 +242,12 @@
         <section id="m-consultar" class="panel manual-section">
           <div class="manual-section-head"><div><h3>🔍 02 — Consultar contatos</h3><p>Acesso livre, sem login. Mapa, menus e busca combináveis.</p></div></div>
           <ol class="manual-steps">
-            <li><span class="manual-step-num">1</span><div><strong>Clique no mapa ou nos menus</strong><p>Clique num município com contatos no <code>mapa à direita</code> ou use os menus <code>Localidade → Unidade → Setor</code> no painel.</p></div></li>
-            <li><span class="manual-step-num">2</span><div><strong>Busque por qualquer nível</strong><p>O campo de busca alcança nome, cargo, telefone, e-mail, setor, unidade e município — pode combinar busca + nível.</p></div></li>
-            <li><span class="manual-step-num">3</span><div><strong>Use os contatos</strong><p><code>E-mail</code> abre seu app de e-mail (<code>mailto:</code>). Valores vazios aparecem como "—".</p></div></li>
+            <li><span class="manual-step-num">1</span><div><strong>Clique no mapa ou nos menus</strong><p>Clique num município com contatos no <code>mapa à esquerda</code> ou use os menus <code>Localidade → Unidade → Setor</code> no painel.</p></div></li>
+            <li><span class="manual-step-num">2</span><div><strong>Navegue pelos cards</strong><p>Cada nível abre cards clicáveis com a contagem de contatos — Localidade → Unidade → Setor → contatos, com botão de voltar.</p></div></li>
+            <li><span class="manual-step-num">3</span><div><strong>Busque por qualquer nível</strong><p>O campo de busca alcança nome, cargo, telefone, e-mail, setor, unidade e município — pode combinar busca + nível.</p></div></li>
+            <li><span class="manual-step-num">4</span><div><strong>Use os contatos</strong><p><code>Telefone</code> abre o discador (<code>tel:</code>), <code>E-mail</code> abre seu app de e-mail (<code>mailto:</code>).</p></div></li>
           </ol>
-          <div class="manual-tip"><span>💡</span><div><strong>Dica:</strong> a tabela começa vazia de propósito — filtre primeiro para não navegar numa lista gigante.</div></div>
+          <div class="manual-tip"><span>💡</span><div><strong>Dica:</strong> digite no campo de busca para filtrar contatos instantaneamente — não precisa apertar Enter.</div></div>
         </section>
         <section id="m-acesso" class="panel manual-section">
           <div class="manual-section-head"><div><h3>🔑 03 — Acesso e solicitação</h3><p>Sem cadastro a visão é só consulta; com cadastro, gestão no seu escopo.</p></div></div>
@@ -283,7 +295,7 @@
           <div class="manual-section-head"><div><h3>⚙️ 10 — Configurações</h3><p>Modo escuro para todos; conta e troca de senha para logados.</p></div></div>
         </section>
         <section id="m-imprimir" class="panel manual-section">
-          <div class="manual-section-head"><div><h3>🖨️ 11 — Imprimir ou salvar PDF</h3><p>Consulta, Dashboard e Registro têm botão próprio; a folha sai limpa em A4.</p></div></div>
+          <div class="manual-section-head"><div><h3>🖨️ 11 — Imprimir ou salvar PDF</h3><p>O botão aparece após selecionar um município e imprime todos os contatos do nível atual (município, unidade ou setor). Dashboard e Registro têm botão próprio; a folha sai limpa em A4.</p></div></div>
         </section>
         <section id="m-faq" class="panel manual-section">
           <div class="manual-section-head"><div><h3>❓ 12 — Perguntas frequentes</h3></div></div>

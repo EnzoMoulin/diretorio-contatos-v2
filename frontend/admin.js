@@ -43,6 +43,7 @@ function marcaEscopo(locId) {
 async function loadLocs() {
   $('sel-loc').innerHTML = '<option value="">Localidade…</option>' +
     locs.map(l => `<option value="${l.id}">${esc(l.nome)} (${l.total})${cobre('municipio', l.id) ? ' ✓' : ''}</option>`).join('');
+  $('loc-count').textContent = `${locs.length} Municípios`;
   sel.loc = ''; sel.uni = ''; sel.set = '';
   $('sel-uni').innerHTML = '<option value="">Unidade…</option>';
   $('sel-set').innerHTML = '<option value="">Setor…</option>';
@@ -50,7 +51,7 @@ async function loadLocs() {
   $('sel-set').disabled = true;
 }
 
-async function onLoc() {
+async function onLoc(skip) {
   sel.loc = $('sel-loc').value; sel.uni = ''; sel.set = '';
   const su = $('sel-uni'), ss = $('sel-set');
   su.innerHTML = '<option value="">Unidade…</option>';
@@ -62,10 +63,10 @@ async function onLoc() {
   su.innerHTML += unis.map(u => `<option value="${u.id}">${esc(u.nome)}${cobre('unidade', u.id) ? ' ✓' : ''}</option>`).join('');
   su.disabled = false;
   } else su.disabled = true;
-  sync();
+  if (!skip) sync();
 }
 
-async function onUni() {
+async function onUni(skip) {
   sel.uni = $('sel-uni').value; sel.set = '';
   const ss = $('sel-set');
   ss.innerHTML = '<option value="">Setor…</option>';
@@ -75,32 +76,82 @@ async function onUni() {
     ss.innerHTML += sets.map(s => `<option value="${s.id}">${esc(s.nome)}${cobre('setor', s.id) ? ' ✓' : ''}</option>`).join('');
     ss.disabled = false;
   } else ss.disabled = true;
-  sync();
+  if (!skip) sync();
 }
 
-function onSet() {
+function onSet(skip) {
   sel.set = $('sel-set').value;
+  if (!skip) sync();
+}
+
+async function navTo(loc, uni, set) {
+  $('sel-loc').value = loc || '';
+  await onLoc(true);
+  if (uni) {
+    $('sel-uni').value = uni;
+    await onUni(true);
+  }
+  if (set) $('sel-set').value = set;
+  onSet(true);
   sync();
 }
 
 function setLoc(id) {
-  $('sel-loc').value = String(id);
-  onLoc();
+  navTo(String(id));
 }
 
 function sync() {
   const parts = [optLabel('sel-loc'), optLabel('sel-uni'), optLabel('sel-set')].filter(Boolean);
   $('crumb').textContent = parts.length ? parts.join(' › ') : 'Selecione um local ou busque';
   refreshSol();
+  $('btn-print').classList.toggle('hidden', !sel.loc);
+  const bv = $('btn-voltar');
+  if (!sel.loc && !sel.uni && !sel.set && !$('q').value.trim()) bv.classList.add('hidden');
+  else {
+    bv.classList.remove('hidden');
+    bv.onclick = () => {
+      if (sel.set) navTo(sel.loc, sel.uni);
+      else if (sel.uni) navTo(sel.loc);
+      else if (sel.loc) navTo('');
+      else { $('q').value = ''; buscar(); }
+    };
+  }
+  if (typeof destacarMunicipioMapa === 'function') {
+    const loc = locs.find(x => String(x.id) === String(sel.loc));
+    destacarMunicipioMapa(sel.loc && loc ? loc.nome : '');
+  }
   buscar();
 }
 
-// "Solicitar acesso" aparece ao lado de cada nível selecionado sem cobertura.
-function refreshSol() {
-  $('sol-loc').classList.toggle('hidden', !(logado() && sel.loc && !cobre('municipio', sel.loc)));
-  $('sol-uni').classList.toggle('hidden', !(logado() && sel.uni && !cobre('unidade', sel.uni)));
-  $('sol-set').classList.toggle('hidden', !(logado() && sel.set && !cobre('setor', sel.set)));
+$('btn-topo').onclick = () =>
+  document.querySelector('.fc-panel').scrollTo({ top: 0, behavior: 'smooth' });
+
+function printRow(c, caminho) {
+  return `<div class="fc-contato"><div class="fc-contato-main">` +
+    `<span class="fc-contato-tipo">${esc(c.cargo || '')}${caminho ? ' · ' + esc(caminho) : ''}</span>` +
+    `<h4>${esc(c.nome)}</h4></div><div class="fc-contato-side">` +
+    (c.telefone ? `<span class="fc-contato-valor">${esc(c.telefone)}</span>` : '') +
+    (c.email ? `<span class="fc-contato-valor">${esc(c.email)}</span>` : '') + `</div></div>`;
 }
+
+async function imprimirEscopo() {
+  const params = new URLSearchParams();
+  let titulo = '';
+  if (sel.set) { params.set('setor_id', sel.set); titulo = optLabel('sel-set'); }
+  else if (sel.uni) { params.set('unidade_id', sel.uni); titulo = optLabel('sel-uni'); }
+  else if (sel.loc) { params.set('localidade_id', sel.loc); titulo = optLabel('sel-loc'); }
+  else return;
+  titulo = titulo.replace(/ \(\d+\)( ✓)?$/, '').replace(/ ✓$/, '');
+  const ctts = await (await fetch('/api/contatos?' + params)).json();
+  $('print-area').innerHTML = `<h2 class="fc-title">${esc(titulo)}</h2>` +
+    `<p class="fc-subtitle">${ctts.length} contato(s)</p>` +
+    ctts.map(c => printRow(c, sel.set ? '' : `${c.localidade} · ${c.unidade} · ${c.setor}`)).join('');
+  window.print();
+}
+$('btn-print').onclick = imprimirEscopo;
+
+// "Solicitar acesso" agora vive dentro dos cards sem cobertura.
+function refreshSol() {}
 function podeEditar(localidade) {
   const l = locs.find(x => x.nome === localidade);
   return l && cobre('municipio', l.id);
@@ -135,41 +186,134 @@ function cobreContato(c) {
   return g.has('setor:' + c.setor_id) || g.has('unidade:' + c.unidade_id) ||
          g.has('municipio:' + c.localidade_id);
 }
-async function buscar() {
-  const q = $('q').value.trim();
-  if (!q && !sel.set && !sel.uni && !sel.loc) {
-    $('lista').innerHTML = '<tr><td colspan="6" class="hint-cell">Selecione um local no mapa ou nos menus, ou digite uma busca.</td></tr>';
-    $('create-box').classList.add('hidden');
-    return;
-  }
-  const params = new URLSearchParams({ q });
-  if (sel.set) params.set('setor_id', sel.set);
-  else if (sel.uni) params.set('unidade_id', sel.uni);
-  else if (sel.loc) params.set('localidade_id', sel.loc);
-  const lista = await (await fetch('/api/contatos?' + params)).json();
-  lastList = lista;
-  $('lista').innerHTML = lista.map(c =>
-    `<tr><td>${esc(c.nome)}</td><td>${esc(c.cargo)}</td>` +
-    `<td>${esc(c.localidade)} · ${esc(c.unidade)} · ${esc(c.setor)}</td>` +
-    `<td>${esc(c.telefone)}</td><td><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></td>` +
-    `<td>${cobreContato(c) ? `<button class="btn-edit" data-id="${c.id}">editar</button> <button class="btn-del" data-id="${c.id}">remover</button>` : ''}</td></tr>`
-  ).join('') || '<tr><td colspan="6">Nenhum contato.</td></tr>';
-  document.querySelectorAll('.btn-edit').forEach(b => {
-    b.onclick = () => abrirEdicao(Number(b.dataset.id));
+const pill = (n, s, p) => `<span class="fc-pill">${n} ${n == 1 ? s : p}</span>`;
+
+function cardNivel(tipo, id, nome, meta, solBtn) {
+  return `<div class="fc-card" data-nav="${tipo}" data-id="${id}">` +
+    `<div class="fc-card-head"><div><h4>${esc(nome)}</h4></div></div>` +
+    `<div class="fc-meta">${meta}</div>${solBtn || ''}</div>`;
+}
+
+function solBtnNivel(nivel, id) {
+  if (!logado() || cobre(nivel, id)) return '';
+  return `<button type="button" class="fc-access" data-sol="${nivel}" data-id="${id}">Solicitar acesso</button>`;
+}
+
+function cardContato(c, caminho) {
+  const tel = c.telefone ? `<a class="fc-contato-valor" href="tel:${esc(String(c.telefone).replace(/\D/g, ''))}">${esc(c.telefone)}</a>` : '';
+  const mail = c.email ? `<a class="fc-contato-valor" href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '';
+  const acoes = cobreContato(c)
+    ? `<span class="fc-contato-actions"><button class="fc-icon-btn" data-edit="${c.id}">✏️ Editar</button>` +
+      `<button class="fc-icon-btn fc-icon-btn--danger" data-del="${c.id}">🗑️ Remover</button></span>` : '';
+  return `<div class="fc-contato"><div class="fc-contato-main">` +
+    `<span class="fc-contato-tipo">${esc(c.cargo || '')}${caminho ? ' · ' + esc(caminho) : ''}</span>` +
+    `<h4>${esc(c.nome)}</h4></div>` +
+    `<div class="fc-contato-side">${tel}${mail}${acoes}</div></div>`;
+}
+
+function bindCards() {
+  document.querySelectorAll('#lista [data-nav]').forEach(el => {
+    el.onclick = (e) => {
+      if (e.target.closest('[data-sol]')) return;
+      const id = el.dataset.id, t = el.dataset.nav;
+      if (t === 'loc') navTo(id);
+      else if (t === 'uni') navTo(sel.loc, id);
+      else if (t === 'set') navTo(sel.loc, sel.uni, id);
+    };
   });
-  document.querySelectorAll('.btn-del').forEach(b => {
+  document.querySelectorAll('#lista [data-sol]').forEach(el => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      const nomes = { municipio: optLabel('sel-loc').replace(/ \(\d+\)( ✓)?$/, ''),
+                      unidade: optLabel('sel-uni').replace(/ ✓$/, ''),
+                      setor: optLabel('sel-set').replace(/ ✓$/, '') };
+      abrirConf(el.dataset.sol, el.dataset.id,
+        nomes[el.dataset.sol] || el.dataset.id);
+    };
+  });
+  document.querySelectorAll('#lista [data-back]').forEach(el => {
+    el.onclick = () => {
+      const t = el.dataset.back;
+      if (t === 'home') navTo('');
+      else if (t === 'loc') navTo(sel.loc);
+      else if (t === 'uni') navTo(sel.loc, sel.uni);
+    };
+  });
+  document.querySelectorAll('#lista [data-edit]').forEach(b => {
+    b.onclick = () => abrirEdicao(Number(b.dataset.edit));
+  });
+  document.querySelectorAll('#lista [data-del]').forEach(b => {
     b.onclick = async () => {
       if (!confirm('Remover este contato?')) return;
-      const r = await fetch('/api/contatos/' + b.dataset.id, { method: 'DELETE', headers: auth() });
+      const r = await fetch('/api/contatos/' + b.dataset.del, { method: 'DELETE', headers: auth() });
       if (!r.ok) alert('Erro: ' + await r.text());
       sync();
     };
   });
-  const locNome = optLabel('sel-loc').replace(/ \(\d+\)$/, '');
-  const okEscopo = logado() && !!sel.set && locNome && podeEditar(locNome);
-  $('create-box').classList.toggle('hidden', !okEscopo);
-  $('save-status').textContent = (logado() && sel.set && !okEscopo)
-    ? 'Você não tem acesso a este local — peça acesso pelo botão "Solicitar acesso".' : '';
+}
+
+async function buscar() {
+  const q = $('q').value.trim();
+  const box = $('lista');
+  $('create-box').classList.add('hidden');
+  $('save-status').textContent = '';
+  if (!q && !sel.set && !sel.uni && !sel.loc) {
+    box.innerHTML = `<div class="fc-section"><h3>Municípios</h3>` + locs.map(l =>
+      cardNivel('loc', l.id, l.nome + (cobre('municipio', l.id) ? ' ✓' : ''),
+        pill(l.n_unidades || 0, 'Unidade', 'Unidades') +
+        pill(l.n_setores || 0, 'Setor', 'Setores') +
+        pill(l.total, 'contato', 'contatos'), solBtnNivel('municipio', l.id))
+    ).join('') + `</div>` || '<div class="fc-empty">Nenhum local.</div>';
+  } else if (!sel.set && !sel.uni && sel.loc && !q) {
+    const [unis, ctts] = await Promise.all([
+      (await fetch('/api/unidades?localidade_id=' + sel.loc)).json(),
+      (await fetch('/api/contatos?localidade_id=' + sel.loc)).json(),
+    ]);
+    unisCache = unis;
+    const porUni = {};
+    ctts.forEach(c => { porUni[c.unidade_id] = (porUni[c.unidade_id] || 0) + 1; });
+    const loc = locs.find(x => String(x.id) === String(sel.loc));
+    box.innerHTML = `<button class="fc-back" data-back="home">← Localidades</button>` +
+      `<div class="fc-head"><div><h2 class="fc-title">${esc(loc ? loc.nome : '')}</h2></div></div>` +
+      unis.map(u => cardNivel('uni', u.id, u.nome + (cobre('unidade', u.id) ? ' ✓' : ''),
+        `<span class="fc-pill fc-pill-type">Unidade</span>` +
+        pill(u.n_setores || 0, 'Setor', 'Setores') +
+        pill(porUni[u.id] || 0, 'contato', 'contatos'), solBtnNivel('unidade', u.id))).join('');
+  } else if (!sel.set && sel.uni) {
+    const params = new URLSearchParams({ unidade_id: sel.uni, q });
+    const [sets, ctts] = await Promise.all([
+      q ? [] : (await fetch('/api/setores?unidade_id=' + sel.uni)).json(),
+      (await fetch('/api/contatos?' + params)).json(),
+    ]);
+    if (!q) setsCache = sets;
+    const porSet = {};
+    ctts.forEach(c => { porSet[c.setor_id] = (porSet[c.setor_id] || 0) + 1; });
+    box.innerHTML = `<button class="fc-back" data-back="loc">← ${esc(optLabel('sel-loc'))}</button>` +
+      `<div class="fc-head"><div><h2 class="fc-title">${esc(optLabel('sel-uni'))}</h2></div></div>` +
+      (q
+        ? ctts.map(c => cardContato(c, c.setor)).join('') || '<div class="fc-empty">Nenhum contato.</div>'
+        : sets.map(s => cardNivel('set', s.id, s.nome + (cobre('setor', s.id) ? ' ✓' : ''),
+            `<span class="fc-pill fc-pill-type">Setor</span>` + pill(porSet[s.id] || 0, 'contato', 'contatos'), solBtnNivel('setor', s.id))).join(''));
+  } else {
+    const params = new URLSearchParams({ q });
+    if (sel.set) params.set('setor_id', sel.set);
+    else if (sel.uni) params.set('unidade_id', sel.uni);
+    else if (sel.loc) params.set('localidade_id', sel.loc);
+    const ctts = await (await fetch('/api/contatos?' + params)).json();
+    lastList = ctts;
+    box.innerHTML = (sel.set
+      ? `<button class="fc-back" data-back="uni">← ${esc(optLabel('sel-uni'))}</button>` +
+        `<div class="fc-head"><div><h2 class="fc-title">${esc(optLabel('sel-set'))}</h2></div></div>`
+      : '') +
+      ctts.map(c => cardContato(c, sel.set ? '' : `${c.localidade} · ${c.unidade} · ${c.setor}`)).join('') ||
+      '<div class="fc-empty">Nenhum contato.</div>';
+    if (logado() && sel.set) {
+      const ok = cobre('setor', sel.set);
+      $('create-box').classList.toggle('hidden', !ok);
+      if (!ok) $('save-status').textContent = '';
+    }
+  }
+  bindCards();
 }
 let lastList = [];
 let editId = null;
@@ -223,9 +367,9 @@ async function refresh() {
   $('estado-hint').textContent = dentro
     ? 'Logado como ' + me.usuario + (me.escopo === 'all' ? ' (admin: todos os locais).' : ` (locais liberados: ${me.escopo.length}).`)
     : 'Consulta sem login. Com cadastro, entre para gerenciar seus locais.';
-  $('escopo-hint').textContent = dentro
-    ? (me.escopo === 'all' ? 'Você edita todos os locais.' : 'Você edita os locais liberados para você; nos demais, só consulta.')
-    : '';
+  $('profile-badge').innerHTML = dentro
+    ? '👤 ' + esc(me.usuario)
+    : '<i>●</i> Visitante';
   if (dentro) carregarPedidos();
   if (dentro) notifBadge(); else $('notif-count').textContent = '';
   VIEWS.forEach(v => $('view-' + v).classList.add('hidden'));
@@ -307,9 +451,6 @@ async function abrirConf(nivel, id, nome) {
   $('conf-texto').innerHTML = texto;
   $('modal-conf').classList.remove('hidden');
 }
-$('sol-loc').onclick = () => abrirConf('municipio', sel.loc, optLabel('sel-loc').replace(/ \(\d+\)( ✓)?$/, ''));
-$('sol-uni').onclick = () => abrirConf('unidade', sel.uni, optLabel('sel-uni').replace(/ ✓$/, ''));
-$('sol-set').onclick = () => abrirConf('setor', sel.set, optLabel('sel-set').replace(/ ✓$/, ''));
 $('c-cancel').onclick = () => $('modal-conf').classList.add('hidden');
 $('c-enviar').onclick = async () => {
   const corpo = { nome: me.usuario, email: me.email, usuario: me.usuario,
