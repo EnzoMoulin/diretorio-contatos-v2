@@ -1,10 +1,12 @@
-"""Diretório de contatos — demo para portfólio (stdlib Python, sem dependências).
+"""Diretório Institucional de Contatos do PJES — reimplementação para portfólio.
 
-Inspirado em experiência prévia com diretório institucional de contatos:
-consulta pública + área administrativa com login + histórico de alterações
-+ solicitação de acesso + navegação em camadas (localidade > unidade > setor).
-Todo o código e os dados aqui são fictícios e genéricos, criados do zero
-para demonstração. Nenhum dado real ou interno é utilizado.
+Case real de estágio no TJES (MVP original em Google Apps Script + Sheets),
+aqui reescrito em Python + SQLite como evolução da arquitetura, com a mesma
+modelagem do original: comarca > fórum > unidade > setor > contatos.
+Consulta pública + área administrativa com login + histórico de alterações
++ solicitação de acesso + navegação em camadas com mapa.
+Comarcas reais do ES; fóruns/unidades/setores representativos; pessoas,
+telefones e e-mails 100% fictícios. Nenhum dado real ou interno é utilizado.
 
 Como rodar:
     python3 app.py
@@ -12,19 +14,20 @@ Como rodar:
     -> admin:   http://localhost:8000/admin  (demo: admin / admin123)
 
 Endpoints (JSON):
-    GET  /api/localidades                 localidades + total de contatos
-    GET  /api/unidades?localidade_id=N
+    GET  /api/comarcas                        comarcas + contagens
+    GET  /api/foruns?comarca_id=N
+    GET  /api/unidades?forum_id=N
     GET  /api/setores?unidade_id=N
-    GET  /api/contatos?q=&setor_id=&unidade_id=&localidade_id=
-    GET  /api/historico                   requer token
-    GET  /api/me                          requer token -> {usuario}
-    POST /api/login                       {usuario, senha} -> {token}
-    POST /api/contatos                    cria (token, no seu escopo)
-    PUT  /api/contatos/<id>               edita (token, no seu escopo)
-    DELETE /api/contatos/<id>             remove (token, no seu escopo)
-    POST /api/pedidos                     {nome,email,usuario,motivo} (público)
-    GET  /api/pedidos                     pendentes (token)
-    POST /api/pedidos/<id>/aprovar        cria usuário (token)
+    GET  /api/contatos?q=&setor_id=&unidade_id=&forum_id=&comarca_id=
+    GET  /api/historico                       requer token
+    GET  /api/me                              requer token -> {usuario}
+    POST /api/login                           {usuario, senha} -> {token}
+    POST /api/contatos                        cria (token, no seu escopo)
+    PUT  /api/contatos/<id>                   edita (token, no seu escopo)
+    DELETE /api/contatos/<id>                 remove (token, no seu escopo)
+    POST /api/pedidos                         {nome,email,usuario,motivo} (público)
+    GET  /api/pedidos                         pendentes (token)
+    POST /api/pedidos/<id>/aprovar            cria usuário (token)
 """
 
 import hashlib
@@ -41,13 +44,20 @@ FRONT = BASE / "frontend"
 
 SESSIONS = {}  # token -> usuario_id (memória; demo)
 
+NIVEIS = ("comarca", "forum", "unidade", "setor")
+
 SCHEMA = """
-CREATE TABLE IF NOT EXISTS localidades (
+CREATE TABLE IF NOT EXISTS comarcas (
     id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE);
+CREATE TABLE IF NOT EXISTS foruns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    comarca_id INTEGER NOT NULL REFERENCES comarcas(id),
+    nome TEXT NOT NULL, endereco TEXT NOT NULL DEFAULT '',
+    cep TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS unidades (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    localidade_id INTEGER NOT NULL REFERENCES localidades(id),
-    nome TEXT NOT NULL);
+    forum_id INTEGER NOT NULL REFERENCES foruns(id),
+    nome TEXT NOT NULL, endereco TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS setores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     unidade_id INTEGER NOT NULL REFERENCES unidades(id),
@@ -65,7 +75,8 @@ CREATE TABLE IF NOT EXISTS historico (
 CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT, usuario TEXT NOT NULL UNIQUE,
     senha_sha256 TEXT NOT NULL, aprovado INTEGER NOT NULL DEFAULT 1,
-    admin INTEGER NOT NULL DEFAULT 0);
+    admin INTEGER NOT NULL DEFAULT 0,
+    email TEXT NOT NULL DEFAULT '');  -- compatível com USUARIOS.EMAIL
 CREATE TABLE IF NOT EXISTS notificacoes (
     id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER NOT NULL,
     tipo TEXT NOT NULL DEFAULT 'info', texto TEXT NOT NULL DEFAULT '',
@@ -73,52 +84,62 @@ CREATE TABLE IF NOT EXISTS notificacoes (
     data TEXT NOT NULL DEFAULT (datetime('now')));
 CREATE TABLE IF NOT EXISTS acessos (
     usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
-    nivel TEXT NOT NULL, -- 'municipio' | 'unidade' | 'setor'
+    nivel TEXT NOT NULL, -- 'comarca' | 'forum' | 'unidade' | 'setor'
     alvo_id INTEGER NOT NULL,
     PRIMARY KEY (usuario_id, nivel, alvo_id));
 CREATE TABLE IF NOT EXISTS pedidos (
     id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL,
     email TEXT NOT NULL, usuario_desejado TEXT NOT NULL,
     motivo TEXT NOT NULL DEFAULT '',
-    localidade_id INTEGER REFERENCES localidades(id),
-    nivel TEXT NOT NULL DEFAULT 'municipio', -- nível pedido
+    comarca_id INTEGER REFERENCES comarcas(id),
+    nivel TEXT NOT NULL DEFAULT 'comarca', -- nível pedido
     alvo_id INTEGER,                          -- id no nível pedido
     status TEXT NOT NULL DEFAULT 'pendente',
     criado_em TEXT NOT NULL DEFAULT (datetime('now')));
 """
 
-# (localidade, unidade, setor, nome, cargo, telefone, email) — tudo fictício
+# (comarca, fórum, unidade, setor, nome, cargo, telefone, email)
+# Comarcas reais do ES; fóruns/unidades/setores representativos (nomenclatura
+# típica). Nomes de pessoas, telefones e e-mails 100% fictícios.
 SEED = [
-    ("Vitória", "Unidade Centro", "Atendimento", "Ana Souza", "Atendente",
-     "(27) 3333-0001", "atendimento@empresa-exemplo.com.br"),
-    ("Vitória", "Unidade Centro", "Atendimento", "Paulo Reis", "Atendente",
-     "(27) 3333-0007", "paulo.reis@empresa-exemplo.com.br"),
-    ("Vitória", "Unidade Centro", "Suporte", "Bruno Lima", "Técnico de suporte",
-     "(27) 3333-0002", "suporte@empresa-exemplo.com.br"),
-    ("Vitória", "Unidade Jardim", "Financeiro", "Carla Dias", "Analista financeira",
-     "(27) 3333-0003", "financeiro@empresa-exemplo.com.br"),
-    ("Vitória", "Unidade Jardim", "RH", "Diego Rocha", "Analista de RH",
-     "(27) 3333-0004", "rh@empresa-exemplo.com.br"),
-    ("Vila Velha", "Unidade Praia", "Atendimento", "Elisa Prado", "Atendente",
-     "(27) 3333-0005", "elisaprado@empresa-exemplo.com.br"),
-    ("Vila Velha", "Unidade Praia", "TI", "Fabio Nunes", "Desenvolvedor",
-     "(27) 3333-0006", "ti@empresa-exemplo.com.br"),
-    ("Vila Velha", "Unidade Centro", "Suporte", "Gabi Moura", "Técnica de suporte",
-     "(27) 3333-0008", "gabi.moura@empresa-exemplo.com.br"),
-    ("Serra", "Unidade Laranjeiras", "Atendimento", "Hugo Alves", "Atendente",
-     "(27) 3333-0009", "hugo.alves@empresa-exemplo.com.br"),
-    ("Serra", "Unidade Laranjeiras", "Logística", "Inês Castro", "Coordenadora",
-     "(27) 3333-0010", "logistica@empresa-exemplo.com.br"),
-    ("Cariacica", "Unidade Centro", "Atendimento", "João Pinto", "Atendente",
-     "(27) 3333-0011", "joao.pinto@empresa-exemplo.com.br"),
-    ("Cariacica", "Unidade Centro", "TI", "Karla Mendes", "Analista de sistemas",
-     "(27) 3333-0012", "karla.mendes@empresa-exemplo.com.br"),
+    ("Vitória", "Fórum Cível de Vitória", "1ª Vara Cível", "Atendimento", "Ana Souza", "Atendente",
+     "(27) 3333-0001", "atendimento@exemplo.jus.br"),
+    ("Vitória", "Fórum Cível de Vitória", "1ª Vara Cível", "Cartório", "Paulo Reis", "Técnico judiciário",
+     "(27) 3333-0007", "paulo.reis@exemplo.jus.br"),
+    ("Vitória", "Fórum Cível de Vitória", "2ª Vara Cível", "Atendimento", "Bruno Lima", "Técnico judiciário",
+     "(27) 3333-0002", "bruno.lima@exemplo.jus.br"),
+    ("Vitória", "Fórum Criminal de Vitória", "Vara Criminal", "Cartório", "Carla Dias", "Analista judiciária",
+     "(27) 3333-0003", "criminal@exemplo.jus.br"),
+    ("Vitória", "Fórum Criminal de Vitória", "Distribuição", "Atendimento", "Diego Rocha", "Distribuidor",
+     "(27) 3333-0004", "distribuicao@exemplo.jus.br"),
+    ("Vila Velha", "Fórum Des. Afonso Cláudio", "1ª Vara Cível", "Atendimento", "Elisa Prado", "Atendente",
+     "(27) 3333-0005", "elisaprado@exemplo.jus.br"),
+    ("Vila Velha", "Fórum Des. Afonso Cláudio", "1ª Vara Cível", "Gabinete", "Fabio Nunes", "Assessor",
+     "(27) 3333-0006", "fabio.nunes@exemplo.jus.br"),
+    ("Vila Velha", "Fórum Des. Afonso Cláudio", "2ª Vara Cível", "Cartório", "Gabi Moura", "Técnica judiciária",
+     "(27) 3333-0008", "gabi.moura@exemplo.jus.br"),
+    ("Serra", "Fórum Cível da Serra", "1ª Vara Cível", "Atendimento", "Hugo Alves", "Atendente",
+     "(27) 3333-0009", "hugo.alves@exemplo.jus.br"),
+    ("Serra", "Fórum Cível da Serra", "1ª Vara Cível", "Cartório", "Inês Castro", "Técnica judiciária",
+     "(27) 3333-0010", "ines.castro@exemplo.jus.br"),
+    ("Cariacica", "Fórum Cível de Cariacica", "1ª Vara Cível", "Cartório", "João Pinto", "Atendente",
+     "(27) 3333-0011", "joao.pinto@exemplo.jus.br"),
+    ("Cariacica", "Fórum Cível de Cariacica", "Juizado Especial Cível", "Atendimento", "Karla Mendes", "Conciliadora",
+     "(27) 3333-0012", "karla.mendes@exemplo.jus.br"),
+    ("Linhares", "Fórum Cível de Linhares", "1ª Vara Cível", "Atendimento", "Rui Barbosa", "Atendente",
+     "(27) 3333-0013", "rui.barbosa@exemplo.jus.br"),
+    ("Colatina", "Fórum Cível de Colatina", "1ª Vara Cível", "Atendimento", "Sofia Teles", "Atendente",
+     "(27) 3333-0014", "sofia.teles@exemplo.jus.br"),
+    ("Cachoeiro de Itapemirim", "Fórum Cível de Cachoeiro", "1ª Vara Cível", "Atendimento", "Tiago Pires", "Atendente",
+     "(27) 3333-0015", "tiago.pires@exemplo.jus.br"),
+    ("Guarapari", "Fórum Cível de Guarapari", "1ª Vara Cível", "Atendimento", "Ursula Faria", "Atendente",
+     "(27) 3333-0016", "ursula.faria@exemplo.jus.br"),
 ]
 
 SENHA_INICIAL = "bemvindo123"
-# Domínio institucional da demo: equivale à checagem de e-mail institucional
+# Domínio institucional fictício: equivale à checagem de e-mail institucional
 # do sistema original (lá, sessão Google + intranet; aqui, login + domínio).
-DOMINIO_INSTITUCIONAL = "empresa-exemplo.com.br"
+DOMINIO_INSTITUCIONAL = "exemplo.jus.br"
 
 
 def sha(s):
@@ -131,51 +152,129 @@ def get_db():
     return con
 
 
+def _carregar_seed_json(con):
+    """Seed a partir da base mascarada (seed_pjes.json). Devolve True se usou."""
+    pj = BASE / "seed_pjes.json"
+    if not pj.exists():
+        return False
+    seed = json.loads(pj.read_text(encoding="utf-8"))
+    coms = {}
+    for c in seed.get("comarcas", []):
+        coms[c["id"]] = con.execute(
+            "INSERT INTO comarcas (nome) VALUES (?)", (c["nome"],)).lastrowid
+    fors = {}
+    for f in seed.get("foruns", []):
+        if f["comarca_id"] not in coms:
+            continue
+        fors[f["id"]] = con.execute(
+            "INSERT INTO foruns (comarca_id, nome, endereco, cep) VALUES (?,?,?,?)",
+            (coms[f["comarca_id"]], f["nome"], f.get("endereco", ""),
+             f.get("cep", ""))).lastrowid
+    uns = {}
+    for u in seed.get("unidades", []):
+        if u["forum_id"] not in fors:
+            continue
+        uns[u["id"]] = con.execute(
+            "INSERT INTO unidades (forum_id, nome, endereco) VALUES (?,?,?)",
+            (fors[u["forum_id"]], u["nome"], u.get("endereco", ""))).lastrowid
+    # unidades/setores genéricos por fórum (contatos gerais + órfãos)
+    auto_u, auto_s = {}, {}
+    for fid in fors.values():
+        uid = con.execute(
+            "INSERT INTO unidades (forum_id, nome) VALUES (?,?)",
+            (fid, "Atendimento geral")).lastrowid
+        auto_u[fid] = uid
+    sets = {}
+    for s in seed.get("setores", []):
+        if s["forum_id"] not in fors:
+            continue
+        uid = uns.get(s["unidade_id"])
+        if uid is None:  # setor órfão -> cai nos gerais do fórum
+            fdb = fors[s["forum_id"]]
+            if fdb not in auto_s:
+                auto_s[fdb] = con.execute(
+                    "INSERT INTO setores (unidade_id, nome) VALUES (?,?)",
+                    (auto_u[fdb], "Contatos gerais")).lastrowid
+            uid = auto_u[fdb]
+            sid = auto_s[fdb]
+        else:
+            sid = con.execute(
+                "INSERT INTO setores (unidade_id, nome) VALUES (?,?)",
+                (uid, s["nome"])).lastrowid
+        sets[s["id"]] = sid
+    import re as _re
+    TIPO_COL = {"TELEFONE": "telefone", "EMAIL": "email", "RAMAL": "telefone",
+                "WHATSAPP": "telefone"}
+    for ct in seed.get("contatos", []):
+        if ct["forum"] not in fors:
+            continue
+        fdb = fors[ct["forum"]]
+        if ct.get("geral") or not ct.get("setor"):
+            if fdb not in auto_s:
+                auto_s[fdb] = con.execute(
+                    "INSERT INTO setores (unidade_id, nome) VALUES (?,?)",
+                    (auto_u[fdb], "Contatos gerais")).lastrowid
+            sid = auto_s[fdb]
+        else:
+            sid = sets.get(ct["setor"])
+            if sid is None:
+                continue
+        tnorm = _re.sub(r"[^A-Z]", "", str(ct.get("tipo", "")).upper())
+        col = TIPO_COL.get(tnorm, "telefone")
+        valor = ct.get("valor", "")
+        nome = ct.get("desc", "") or valor
+        con.execute(
+            "INSERT INTO contatos (setor_id, nome, cargo, telefone, email)"
+            " VALUES (?,?,?,?,?)",
+            (sid, nome, str(ct.get("tipo", "")),
+             valor if col == "telefone" else "",
+             valor if col == "email" else ""))
+    return True
+
+
 def init_db():
     con = get_db()
-    cols = [r["name"] for r in con.execute("PRAGMA table_info(usuarios)")]
-    if cols and "admin" not in cols:  # esquema v1 -> recria (demo)
+    tabelas = {r["name"] for r in con.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    if "localidades" in tabelas or "usuarios_locais" in tabelas:
+        # esquema antigo (3 níveis) -> recria do zero (demo)
         con.executescript("""
             DROP TABLE IF EXISTS pedidos; DROP TABLE IF EXISTS usuarios;
             DROP TABLE IF EXISTS historico; DROP TABLE IF EXISTS contatos;
             DROP TABLE IF EXISTS setores; DROP TABLE IF EXISTS unidades;
             DROP TABLE IF EXISTS localidades; DROP TABLE IF EXISTS usuarios_locais;
+            DROP TABLE IF EXISTS foruns; DROP TABLE IF EXISTS comarcas;
+            DROP TABLE IF EXISTS acessos; DROP TABLE IF EXISTS notificacoes;
         """)
     con.executescript(SCHEMA)
-    cols_u = [r["name"] for r in con.execute("PRAGMA table_info(usuarios)")]
-    if "email" not in cols_u:  # compatível com USUARIOS.EMAIL do original
-        con.execute("ALTER TABLE usuarios ADD COLUMN email TEXT NOT NULL DEFAULT ''")
-    con.execute("UPDATE usuarios SET email=? WHERE usuario='admin' AND email=''",
-                ("admin@" + DOMINIO_INSTITUCIONAL,))
-    # migração v5->v6: escopo por localidade vira acesso nível 'municipio'
-    try:
-        n_loc = con.execute("SELECT COUNT(*) FROM usuarios_locais").fetchone()[0]
-    except Exception:
-        n_loc = 0
-    if n_loc:
-        con.execute("INSERT OR IGNORE INTO acessos (usuario_id, nivel, alvo_id)"
-                    " SELECT usuario_id, 'municipio', localidade_id FROM usuarios_locais")
-        con.execute("DROP TABLE usuarios_locais")
     n = con.execute("SELECT COUNT(*) AS c FROM contatos").fetchone()["c"]
-    if n == 0:
-        locs, uns, sets = {}, {}, {}
-        for loc, und, set_, nome, cargo, tel, mail in SEED:
-            if loc not in locs:
-                locs[loc] = con.execute(
-                    "INSERT INTO localidades (nome) VALUES (?)", (loc,)).lastrowid
-            key_u = (loc, und)
+    if n == 0 and _carregar_seed_json(con):
+        pass  # base mascarada completa
+    elif n == 0:
+        coms, fors, uns, sets = {}, {}, {}, {}
+        for com, fr, un, st, nome, cargo, tel, mail in SEED:
+            if com not in coms:
+                coms[com] = con.execute(
+                    "INSERT INTO comarcas (nome) VALUES (?)", (com,)).lastrowid
+            key_f = (com, fr)
+            if key_f not in fors:
+                fors[key_f] = con.execute(
+                    "INSERT INTO foruns (comarca_id, nome) VALUES (?,?)",
+                    (coms[com], fr)).lastrowid
+            key_u = (com, fr, un)
             if key_u not in uns:
                 uns[key_u] = con.execute(
-                    "INSERT INTO unidades (localidade_id, nome) VALUES (?,?)",
-                    (locs[loc], und)).lastrowid
-            key_s = (loc, und, set_)
+                    "INSERT INTO unidades (forum_id, nome) VALUES (?,?)",
+                    (fors[key_f], un)).lastrowid
+            key_s = (com, fr, un, st)
             if key_s not in sets:
                 sets[key_s] = con.execute(
                     "INSERT INTO setores (unidade_id, nome) VALUES (?,?)",
-                    (uns[key_u], set_)).lastrowid
+                    (uns[key_u], st)).lastrowid
             con.execute(
                 "INSERT INTO contatos (setor_id, nome, cargo, telefone, email)"
                 " VALUES (?,?,?,?,?)", (sets[key_s], nome, cargo, tel, mail))
+    if n == 0:
         con.execute(
             "INSERT INTO usuarios (usuario, senha_sha256, aprovado, admin, email)"
             " VALUES (?,?,1,1,?) ON CONFLICT(usuario) DO NOTHING",
@@ -203,7 +302,7 @@ def admin_ids(con):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "ContatosDemo/2.0"
+    server_version = "ContatosDemo/3.0"
 
     def _json(self, obj, status=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -255,69 +354,61 @@ class Handler(BaseHTTPRequestHandler):
         return [dict(r) for r in rows]
 
     def _cadeia(self, con, setor_id=None, contato_id=None):
-        """Resolve (municipio, unidade, setor) de um setor ou contato."""
+        """Resolve (comarca, forum, unidade, setor) de um setor ou contato."""
+        base = ("SELECT c.id AS c, f.id AS f, u.id AS u, s.id AS s"
+                " FROM comarcas c JOIN foruns f ON f.comarca_id=c.id"
+                " JOIN unidades u ON u.forum_id=f.id"
+                " JOIN setores s ON s.unidade_id=u.id")
         if contato_id is not None:
             r = con.execute(
-                "SELECT l.id AS m, u.id AS u, s.id AS s"
-                " FROM localidades l JOIN unidades u ON u.localidade_id=l.id"
-                " JOIN setores s ON s.unidade_id=u.id"
-                " JOIN contatos c ON c.setor_id=s.id WHERE c.id=?",
+                base + " JOIN contatos ct ON ct.setor_id=s.id WHERE ct.id=?",
                 (contato_id,)).fetchone()
         else:
+            r = con.execute(base + " WHERE s.id=?", (setor_id,)).fetchone()
+        return ((r["c"], r["f"], r["u"], r["s"]) if r else (None,) * 4)
+
+    def _pais(self, con, nivel, alvo_id):
+        """Alvo + ancestrais (para herança de cima)."""
+        if nivel == "comarca":
+            return [("comarca", alvo_id)]
+        if nivel == "forum":
+            r = con.execute("SELECT comarca_id FROM foruns WHERE id=?",
+                            (alvo_id,)).fetchone()
+            out = [("forum", alvo_id)]
+            if r:
+                out.append(("comarca", r["comarca_id"]))
+            return out
+        if nivel == "unidade":
             r = con.execute(
-                "SELECT l.id AS m, u.id AS u, s.id AS s"
-                " FROM localidades l JOIN unidades u ON u.localidade_id=l.id"
-                " JOIN setores s ON s.unidade_id=u.id WHERE s.id=?",
-                (setor_id,)).fetchone()
-        return (r["m"], r["u"], r["s"]) if r else (None, None, None)
+                "SELECT f.id AS f, f.comarca_id AS c FROM unidades u"
+                " JOIN foruns f ON f.id=u.forum_id WHERE u.id=?",
+                (alvo_id,)).fetchone()
+            out = [("unidade", alvo_id)]
+            if r:
+                out += [("forum", r["f"]), ("comarca", r["c"])]
+            return out
+        if nivel == "setor":
+            r = con.execute(
+                "SELECT u.id AS u, f.id AS f, f.comarca_id AS c FROM setores s"
+                " JOIN unidades u ON u.id=s.unidade_id"
+                " JOIN foruns f ON f.id=u.forum_id WHERE s.id=?",
+                (alvo_id,)).fetchone()
+            out = [("setor", alvo_id)]
+            if r:
+                out += [("unidade", r["u"]), ("forum", r["f"]),
+                        ("comarca", r["c"])]
+            return out
+        return []
 
     def _cobre(self, con, uid, nivel, alvo_id):
-        """O usuário pode editar o alvo? Herda de cima: municipio>unidade>setor."""
+        """O usuário pode editar o alvo? Herda de cima: comarca>forum>unidade>setor."""
         esc = self._escopo(con, uid)
         if esc is None:
             return False
         if esc == "all":
             return True
         tem = {(a["nivel"], a["alvo_id"]) for a in esc}
-        if nivel == "municipio":
-            return ("municipio", alvo_id) in tem
-        # pais do alvo
-        if nivel == "unidade":
-            m = con.execute("SELECT localidade_id FROM unidades WHERE id=?",
-                            (alvo_id,)).fetchone()
-            pais = [("unidade", alvo_id)]
-            if m:
-                pais.append(("municipio", m["localidade_id"]))
-            return any(p in tem for p in pais)
-        if nivel == "setor":
-            r = con.execute(
-                "SELECT u.id AS u, l.id AS m FROM setores s"
-                " JOIN unidades u ON u.id=s.unidade_id"
-                " JOIN localidades l ON l.id=u.localidade_id WHERE s.id=?",
-                (alvo_id,)).fetchone()
-            pais = [("setor", alvo_id)]
-            if r:
-                pais += [("unidade", r["u"]), ("municipio", r["m"])]
-            return any(p in tem for p in pais)
-        return False
-
-    def _pode(self, con, uid, localidade_id):
-        return self._cobre(con, uid, "municipio", int(localidade_id))
-
-    def _loc_de_setor(self, con, setor_id):
-        r = con.execute(
-            "SELECT l.id FROM localidades l JOIN unidades u ON u.localidade_id=l.id"
-            " JOIN setores s ON s.unidade_id=u.id WHERE s.id=?",
-            (setor_id,)).fetchone()
-        return r["id"] if r else None
-
-    def _loc_de_contato(self, con, cid):
-        r = con.execute(
-            "SELECT l.id FROM localidades l JOIN unidades u ON u.localidade_id=l.id"
-            " JOIN setores s ON s.unidade_id=u.id"
-            " JOIN contatos c ON c.setor_id=s.id WHERE c.id=?",
-            (cid,)).fetchone()
-        return r["id"] if r else None
+        return any(p in tem for p in self._pais(con, nivel, alvo_id))
 
     def do_GET(self):
         u = urllib.parse.urlparse(self.path)
@@ -333,69 +424,94 @@ class Handler(BaseHTTPRequestHandler):
             return self._static("style.css", "text/css; charset=utf-8")
         con = get_db()
         try:
-            if u.path == "/api/localidades":
+            if u.path == "/api/comarcas":
                 rows = con.execute(
-                    "SELECT l.id, l.nome, COUNT(c.id) AS total,"
+                    "SELECT c.id, c.nome, COUNT(ct.id) AS total,"
+                    " COUNT(DISTINCT f.id) AS n_foruns,"
                     " COUNT(DISTINCT u.id) AS n_unidades,"
-                    " COUNT(DISTINCT s.id) AS n_setores FROM localidades l"
-                    " LEFT JOIN unidades u ON u.localidade_id=l.id"
+                    " COUNT(DISTINCT s.id) AS n_setores FROM comarcas c"
+                    " LEFT JOIN foruns f ON f.comarca_id=c.id"
+                    " LEFT JOIN unidades u ON u.forum_id=f.id"
                     " LEFT JOIN setores s ON s.unidade_id=u.id"
-                    " LEFT JOIN contatos c ON c.setor_id=s.id"
-                    " GROUP BY l.id ORDER BY l.nome").fetchall()
+                    " LEFT JOIN contatos ct ON ct.setor_id=s.id"
+                    " GROUP BY c.id ORDER BY c.nome").fetchall()
+                return self._json([dict(r) for r in rows])
+            if u.path == "/api/foruns":
+                rows = con.execute(
+                    "SELECT f.id, f.nome, f.comarca_id, f.endereco, f.cep,"
+                    " COUNT(DISTINCT u.id) AS n_unidades,"
+                    " COUNT(DISTINCT s.id) AS n_setores,"
+                    " COUNT(ct.id) AS total FROM foruns f"
+                    " LEFT JOIN unidades u ON u.forum_id=f.id"
+                    " LEFT JOIN setores s ON s.unidade_id=u.id"
+                    " LEFT JOIN contatos ct ON ct.setor_id=s.id"
+                    " WHERE f.comarca_id=? GROUP BY f.id ORDER BY f.nome",
+                    (arg("comarca_id"),)).fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/unidades":
                 rows = con.execute(
-                    "SELECT u.id, u.nome, u.localidade_id,"
+                    "SELECT u.id, u.nome, u.forum_id, u.endereco,"
                     " COUNT(DISTINCT s.id) AS n_setores,"
-                    " COUNT(c.id) AS total FROM unidades u"
+                    " COUNT(ct.id) AS total FROM unidades u"
                     " LEFT JOIN setores s ON s.unidade_id=u.id"
-                    " LEFT JOIN contatos c ON c.setor_id=s.id"
-                    " WHERE u.localidade_id=? GROUP BY u.id ORDER BY u.nome",
-                    (arg("localidade_id"),)).fetchall()
+                    " LEFT JOIN contatos ct ON ct.setor_id=s.id"
+                    " WHERE u.forum_id=? GROUP BY u.id ORDER BY u.nome",
+                    (arg("forum_id"),)).fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/setores":
                 rows = con.execute(
-                    "SELECT s.id, s.nome, s.unidade_id, COUNT(c.id) AS total"
-                    " FROM setores s LEFT JOIN contatos c ON c.setor_id=s.id"
+                    "SELECT s.id, s.nome, s.unidade_id, COUNT(ct.id) AS total"
+                    " FROM setores s LEFT JOIN contatos ct ON ct.setor_id=s.id"
                     " WHERE s.unidade_id=? GROUP BY s.id ORDER BY s.nome",
                     (arg("unidade_id"),)).fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/contatos":
-                sql = ("SELECT c.*, s.nome AS setor, u.nome AS unidade,"
-                       " u.id AS unidade_id, l.nome AS localidade, l.id AS localidade_id"
-                       " FROM contatos c JOIN setores s ON s.id=c.setor_id"
+                sql = ("SELECT ct.*, s.nome AS setor, s.id AS setor_id,"
+                       " u.nome AS unidade, u.id AS unidade_id,"
+                       " f.nome AS forum, f.id AS forum_id,"
+                       " c.nome AS comarca, c.id AS comarca_id"
+                       " FROM contatos ct JOIN setores s ON s.id=ct.setor_id"
                        " JOIN unidades u ON u.id=s.unidade_id"
-                       " JOIN localidades l ON l.id=u.localidade_id WHERE 1=1")
+                       " JOIN foruns f ON f.id=u.forum_id"
+                       " JOIN comarcas c ON c.id=f.comarca_id WHERE 1=1")
                 params = []
-                for key, col in (("setor_id", "c.setor_id"),
+                for key, col in (("setor_id", "ct.setor_id"),
                                  ("unidade_id", "u.id"),
-                                 ("localidade_id", "l.id")):
+                                 ("forum_id", "f.id"),
+                                 ("comarca_id", "c.id")):
                     if arg(key):
                         sql += f" AND {col}=?"
                         params.append(arg(key))
                 if arg("q"):
                     like = f"%{arg('q')}%"
-                    sql += (" AND (c.nome LIKE ? OR c.cargo LIKE ? OR c.telefone LIKE ?"
-                            " OR c.email LIKE ? OR s.nome LIKE ? OR u.nome LIKE ?"
-                            " OR l.nome LIKE ?)")
-                    params += [like] * 7
-                sql += " ORDER BY c.nome"
+                    sql += (" AND (ct.nome LIKE ? OR ct.cargo LIKE ? OR ct.telefone LIKE ?"
+                            " OR ct.email LIKE ? OR s.nome LIKE ? OR u.nome LIKE ?"
+                            " OR f.nome LIKE ? OR c.nome LIKE ?)")
+                    params += [like] * 8
+                sql += " ORDER BY ct.nome"
                 rows = con.execute(sql, params).fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/resumo":
                 uid = self._uid()
                 if not uid:
                     return self._json({"erro": "não autenticado"}, 403)
-                por_uni = con.execute(
-                    "SELECT u.id, u.nome, u.localidade_id, l.nome AS localidade,"
-                    " COUNT(c.id) AS total FROM unidades u"
-                    " JOIN localidades l ON l.id=u.localidade_id"
+                por_for = con.execute(
+                    "SELECT f.id, f.nome, f.comarca_id, c.nome AS comarca,"
+                    " COUNT(ct.id) AS total FROM foruns f"
+                    " JOIN comarcas c ON c.id=f.comarca_id"
+                    " LEFT JOIN unidades u ON u.forum_id=f.id"
                     " LEFT JOIN setores s ON s.unidade_id=u.id"
-                    " LEFT JOIN contatos c ON c.setor_id=s.id"
-                    " GROUP BY u.id ORDER BY l.nome, u.nome").fetchall()
+                    " LEFT JOIN contatos ct ON ct.setor_id=s.id"
+                    " GROUP BY f.id ORDER BY c.nome, f.nome").fetchall()
+                por_uni = con.execute(
+                    "SELECT u.id, u.nome, u.forum_id, COUNT(ct.id) AS total"
+                    " FROM unidades u"
+                    " LEFT JOIN setores s ON s.unidade_id=u.id"
+                    " LEFT JOIN contatos ct ON ct.setor_id=s.id"
+                    " GROUP BY u.id ORDER BY u.nome").fetchall()
                 por_set = con.execute(
-                    "SELECT s.id, s.nome, s.unidade_id, COUNT(c.id) AS total"
-                    " FROM setores s LEFT JOIN contatos c ON c.setor_id=s.id"
+                    "SELECT s.id, s.nome, s.unidade_id, COUNT(ct.id) AS total"
+                    " FROM setores s LEFT JOIN contatos ct ON ct.setor_id=s.id"
                     " GROUP BY s.id ORDER BY s.nome").fetchall()
                 ult = con.execute(
                     "SELECT * FROM historico ORDER BY id DESC LIMIT 5").fetchall()
@@ -403,6 +519,7 @@ class Handler(BaseHTTPRequestHandler):
                     "SELECT COUNT(*) AS c FROM pedidos"
                     " WHERE status='pendente'").fetchone()["c"]
                 return self._json({
+                    "por_forum": [dict(r) for r in por_for],
                     "por_unidade": [dict(r) for r in por_uni],
                     "por_setor": [dict(r) for r in por_set],
                     "ultimos": [dict(r) for r in ult],
@@ -441,11 +558,11 @@ class Handler(BaseHTTPRequestHandler):
                 if not self._uid():
                     return self._json({"erro": "não autenticado"}, 403)
                 rows = con.execute(
-                    "SELECT p.*, l.nome AS localidade FROM pedidos p"
-                    " LEFT JOIN localidades l ON l.id=p.localidade_id"
+                    "SELECT p.*, c.nome AS comarca FROM pedidos p"
+                    " LEFT JOIN comarcas c ON c.id=p.comarca_id"
                     " WHERE p.status='pendente' ORDER BY p.id DESC").fetchall()
-                nomes = {"municipio": "localidades", "unidade": "unidades",
-                         "setor": "setores"}
+                nomes = {"comarca": "comarcas", "forum": "foruns",
+                         "unidade": "unidades", "setor": "setores"}
                 saida = []
                 for r in rows:
                     d = dict(r)
@@ -486,37 +603,33 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"erro": "use seu e-mail institucional (@" + DOMINIO_INSTITUCIONAL + ")"}, 400)
             usuario = (data.get("usuario") or "").strip() or email.split("@")[0]
             con = get_db()
-            nivel = (data.get("nivel") or "municipio").strip().lower()
-            if nivel not in ("municipio", "unidade", "setor"):
-                nivel = "municipio"
+            nivel = (data.get("nivel") or "comarca").strip().lower()
+            if nivel not in NIVEIS:
+                nivel = "comarca"
             try:
-                alvo = int(data.get("alvo_id") or data.get("localidade_id") or 0) or None
+                alvo = int(data.get("alvo_id") or data.get("comarca_id") or 0) or None
             except (TypeError, ValueError):
                 alvo = None
-            # localidade do alvo (para exibir ao admin)
-            loc_id = data.get("localidade_id") or None
-            if nivel == "municipio" and alvo:
-                loc_id = alvo
-            elif nivel == "unidade" and alvo:
-                r = con.execute("SELECT localidade_id FROM unidades WHERE id=?",
-                                (alvo,)).fetchone()
-                loc_id = r["localidade_id"] if r else None
-            elif nivel == "setor" and alvo:
-                r = con.execute(
-                    "SELECT l.id FROM localidades l JOIN unidades u"
-                    " ON u.localidade_id=l.id JOIN setores s ON s.unidade_id=u.id"
-                    " WHERE s.id=?", (alvo,)).fetchone()
-                loc_id = r["id"] if r else None
+            # comarca do alvo (para exibir ao admin)
+            com_id = data.get("comarca_id") or None
+            if alvo:
+                pais = self._pais(con, nivel, alvo)
+                for nv, aid in pais:
+                    if nv == "comarca":
+                        com_id = aid
+                        break
             cur = con.execute(
                 "INSERT INTO pedidos (nome, email, usuario_desejado, motivo,"
-                " localidade_id, nivel, alvo_id) VALUES (?,?,?,?,?,?,?)",
+                " comarca_id, nivel, alvo_id) VALUES (?,?,?,?,?,?,?)",
                 (data.get("nome"), data.get("email", ""),
                  usuario, data.get("motivo", ""),
-                 loc_id, nivel, alvo))
+                 com_id, nivel, alvo))
             for aid in admin_ids(con):
+                nivel_txt = {"comarca": "comarca", "forum": "fórum",
+                             "unidade": "unidade", "setor": "setor"}.get(nivel, nivel)
                 notify(con, aid, "solicitacao",
                        f"Nova solicitação de {data.get('nome')} ({usuario}):"
-                       f" {nivel} id {alvo or '-'}")
+                       f" {nivel_txt} id {alvo or '-'}")
             log(con, "pedido", None,
                 f"solicitação de acesso: {data.get('nome')} ({usuario})")
             con.commit()
@@ -545,16 +658,16 @@ class Handler(BaseHTTPRequestHandler):
             uid_novo = con.execute(
                 "SELECT id FROM usuarios WHERE usuario=?",
                 (ped["usuario_desejado"],)).fetchone()["id"]
-            if ped["localidade_id"] and not ped["alvo_id"]:
+            if ped["comarca_id"] and not ped["alvo_id"]:
                 con.execute(
                     "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
-                    " VALUES (?, 'municipio', ?) ON CONFLICT DO NOTHING",
-                    (uid_novo, ped["localidade_id"]))
+                    " VALUES (?, 'comarca', ?) ON CONFLICT DO NOTHING",
+                    (uid_novo, ped["comarca_id"]))
             if ped["alvo_id"]:
                 con.execute(
                     "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
                     " VALUES (?,?,?) ON CONFLICT DO NOTHING",
-                    (uid_novo, ped["nivel"] or "municipio", ped["alvo_id"]))
+                    (uid_novo, ped["nivel"] or "comarca", ped["alvo_id"]))
             con.execute("UPDATE pedidos SET status='aprovado' WHERE id=?", (pid,))
             log(con, "aprovar", None, f"acesso aprovado: {ped['usuario_desejado']}")
             notify(con, uid_novo, "aprovada",
@@ -654,7 +767,7 @@ class Handler(BaseHTTPRequestHandler):
             if not row:
                 con.close()
                 return self._json({"erro": "não encontrado"}, 404)
-            if not self._cobre(con, uid, "setor", self._cadeia(con, contato_id=cid)[2] or 0):
+            if not self._cobre(con, uid, "setor", self._cadeia(con, contato_id=cid)[3] or 0):
                 con.close()
                 return self._json({"erro": "sem acesso a este local"}, 403)
             if self.command == "PUT":

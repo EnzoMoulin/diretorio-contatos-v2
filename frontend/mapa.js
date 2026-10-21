@@ -14,23 +14,23 @@ function corPorDensidade(n) {
   return '#1d63b8';
 }
 
-function estiloMunicipio(nome, total) {
+function estiloComarca(nome, total) {
   const isSel = _selecionado && norm(nome) === norm(_selecionado);
   return {
-    fillColor: isSel ? '#00adb5' : (total ? '#dbeafe' : '#f8fafc'),
-    fillOpacity: isSel ? 0.85 : (total ? 0.45 : 0.25),
-    color: isSel ? '#0f172a' : (total ? '#1d63b8' : '#94a3b8'),
+    fillColor: isSel ? '#00adb5' : (total ? '#93c5fd' : '#f1f5f9'),
+    fillOpacity: isSel ? 0.85 : (total ? 0.65 : 0.25),
+    color: isSel ? '#0f172a' : (total ? '#2563eb' : '#94a3b8'),
     weight: isSel ? 2.4 : 2,
     opacity: 1,
   };
 }
 
-function destacarMunicipioMapa(nome) {
+function destacarComarcaMapa(nome) {
   _selecionado = nome || '';
   if (!_layer) return;
   _layer.eachLayer(l => {
     const nm = l.feature.properties.name || '';
-    l.setStyle(estiloMunicipio(nm, l._total || 0));
+    l.setStyle(estiloComarca(nm, l._total || 0));
   });
 }
 
@@ -42,7 +42,7 @@ async function initMapa(mapId, msgId, locs, onSelect) {
     return false;
   }
   _mapaOK = true;
-  _map = L.map(mapId, { zoomControl: true, attributionControl: true, scrollWheelZoom: true })
+  _map = L.map(mapId, { zoomControl: true, attributionControl: true, scrollWheelZoom: true, zoomSnap: 0.5 })
     .setView([-19.5, -40.3], 9);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(_map);
@@ -53,7 +53,7 @@ async function initMapa(mapId, msgId, locs, onSelect) {
     _layer = L.geoJSON(gj, {
       style: f => {
         const nome = String(f.properties.name || '').trim();
-        return estiloMunicipio(nome, dens[norm(nome)] || 0);
+        return estiloComarca(nome, dens[norm(nome)] || 0);
       },
       onEachFeature: (f, l) => {
         const nome = String(f.properties.name || '').trim();
@@ -78,14 +78,19 @@ async function initMapa(mapId, msgId, locs, onSelect) {
         });
       },
     }).addTo(_map);
-    try { _map.fitBounds(_layer.getBounds(), { padding: [6, 6] }); } catch (e) {}
-    setTimeout(() => {
-      try { _map.invalidateSize(); _map.fitBounds(_layer.getBounds(), { padding: [6, 6] }); } catch (e) {}
-    }, 220);
+    _layer.eachLayer(l => { if (l._total) l.bringToFront(); });
+    const enquadrar = () => {
+      try {
+        _map.fitBounds(_layer.getBounds(), { padding: [-14, -14] });
+        _map.setZoom(_map.getZoom() + 0.5, { animate: false });
+      } catch (e) {}
+    };
+    enquadrar();
+    setTimeout(() => { try { _map.invalidateSize(); enquadrar(); } catch (e) {} }, 220);
     const legenda = L.control({ position: 'bottomright' });
     legenda.onAdd = () => {
       const div = L.DomUtil.create('div', 'fc-map-legenda');
-      div.innerHTML = '<span class="tem-contato">● Municípios com contatos</span>' +
+      div.innerHTML = '<span class="tem-contato">● Comarcas com contatos</span>' +
         '<span class="sem-contato">● Sem contatos cadastrados</span>';
       return div;
     };

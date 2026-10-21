@@ -1,6 +1,6 @@
 # Roteiro de prints e vídeo (só tela + legendas, sem voz/webcam)
 
-## Demo executável (`diretorio-contatos-demo`)
+## Demo executável (`diretorio-contatos-v2`)
 1. `python3 app.py` e abrir http://localhost:8000
 2. Prints (salvar em `screenshots/`):
    - `01-busca.png` — página inicial com a lista de 6 contatos
