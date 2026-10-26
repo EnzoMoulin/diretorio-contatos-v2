@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Diretório de Contatos — Acesso interno</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css?v=33">
+<link rel="stylesheet" href="style.css?v=35">
 </head>
 <body>
 <div class="app-container">
@@ -25,6 +25,7 @@
       <button class="menu-item" data-view="config" id="menu-conf"><span class="icon icon-txt">⚙</span><span>Configurações</span></button>
     </nav>
     <div class="sidebar-footer">
+      <div id="who-mail" class="sidebar-user sidebar-mail hidden"></div>
       <div id="who-line" class="sidebar-user">Sem acesso administrativo</div>
       <button id="btn-entrar" class="sidebar-status-btn primary">🔑 Acesso administrativo</button>
       <button id="btn-pedir" class="sidebar-status-btn">📝 Solicitar acesso</button>
@@ -152,18 +153,18 @@
           </div>
           <div class="config-card-body">
             <div class="config-kv">
-              <div class="config-row"><span class="config-label">Nome</span><span class="config-value">Diretório de Contatos — Demo</span></div>
-              <div class="config-row"><span class="config-label">Versão</span><span class="config-value"><span class="config-badge-versao">demo</span></span></div>
+              <div class="config-row"><span class="config-label">Nome</span><span class="config-value">Diretório de Contatos</span></div>
+              <div class="config-row"><span class="config-label">Versão</span><span class="config-value"><span class="config-badge-versao">v2</span></span></div>
               <div class="config-row"><span class="config-label">Ambiente</span><span class="config-value"><span class="config-env-dot"></span>Python stdlib</span></div>
               <div class="config-row"><span class="config-label">Implantação</span><span class="config-value config-value-muted">API local + páginas estáticas</span></div>
             </div>
           </div>
         </div>
       </div>
-      <div style="grid-column:1/-1">
+      <div class="manual-bloco">
       <div class="manual-container">
         <div class="manual-hero">
-          <h2>Bem-vindo ao Diretório de Contatos — Demo</h2>
+          <h2>Bem-vindo ao Diretório de Contatos</h2>
           <p>Consulta sem login, gestão com permissões por comarca, fórum, unidade e setor, e trilha de auditoria. Este manual cobre todos os fluxos com passos numerados e dicas.</p>
           <div class="manual-hero-meta">
             <span>⚡ Consulta sem login</span>
@@ -280,7 +281,7 @@
           <div class="manual-section-head"><div><h3>❓ 12 — Perguntas frequentes</h3></div></div>
           <div class="manual-faq">
             <details><summary>Não vejo botões de edição — por quê?</summary><p>Você só edita onde tem cobertura (✓ nos menus). No resto, só consulta — peça acesso pelo botão ao lado do menu.</p></details>
-            <details><summary>Esqueci minha senha. E agora?</summary><p>Peça ao admin para reprovar e reaprovar? Não — nesta demo, entre em contato com o administrador, que pode recriar seu acesso.</p></details>
+            <details><summary>Esqueci minha senha. E agora?</summary><p>Peça ao admin para reprovar e reaprovar? Não — neste sistema, entre em contato com o administrador, que pode recriar seu acesso.</p></details>
             <details><summary>O que o admin vê de diferente?</summary><p>Tudo: todos os escopos, a fila de solicitações e todas as notificações de mudança.</p></details>
           </div>
         </section>
@@ -293,7 +294,7 @@
 <div class="modal hidden" id="modal-login">
   <div class="modal-box">
     <h2>Acesso administrativo</h2>
-    <p class="hint">Entre com sua conta cadastrada. Demo: admin@exemplo.jus.br / admin123.</p>
+    <p class="hint">Entre com sua conta cadastrada. Acesso: admin@exemplo.jus.br / admin123.</p>
     <label>E-mail ou usuário<input id="user" value="admin@exemplo.jus.br" autocomplete="username"></label>
     <label>Senha<input id="pass" type="password" value="admin123" autocomplete="current-password"></label>
     <div class="modal-actions">
@@ -347,6 +348,6 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="mapa.js?v=21"></script>
-<script src="admin.js?v=24"></script>
+<script src="admin.js?v=26"></script>
 </body>
 </html>

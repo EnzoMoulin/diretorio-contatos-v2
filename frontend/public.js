@@ -970,7 +970,7 @@
 
   /* ---- menu + tema (padrão v2) ---- */
   function aplicarTema() {
-    var dark = (localStorage.getItem("demo-theme") || "light") === "dark";
+    var dark = (localStorage.getItem("contatos-theme") || "light") === "dark";
     document.body.dataset.theme = dark ? "dark" : "light";
     var t = $("toggle-dark-mode");
     if (t) t.checked = dark;
@@ -981,7 +981,7 @@
     vincularBuscaGlobal();
     var tg = $("toggle-dark-mode");
     if (tg) tg.onchange = function (e) {
-      localStorage.setItem("demo-theme", e.target.checked ? "dark" : "light");
+      localStorage.setItem("contatos-theme", e.target.checked ? "dark" : "light");
       aplicarTema();
     };
     var itens = document.querySelectorAll('.menu-item[data-view]');
@@ -992,7 +992,7 @@
           for (var j = 0; j < all.length; j++) all[j].classList.remove("active");
           btn.classList.add("active");
           var v = btn.getAttribute("data-view");
-          ["consulta", "config", "manual"].forEach(function (x) { $("view-" + x).classList.add("hidden"); });
+          ["consulta", "config"].forEach(function (x) { var s = $("view-" + x); if (s) s.classList.add("hidden"); });
           $("view-consulta").classList.remove("hidden");
           if (v === "consulta") { renderInicio(); }
           else if (v === "tjes") { abrirTJES(); }

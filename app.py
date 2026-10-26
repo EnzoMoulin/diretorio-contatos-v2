@@ -11,7 +11,7 @@ telefones e e-mails 100% fictícios. Nenhum dado real ou interno é utilizado.
 Como rodar:
     python3 app.py
     -> pública: http://localhost:8000
-    -> admin:   http://localhost:8000/admin  (demo: admin / admin123)
+    -> admin:   http://localhost:8000/admin  (acesso: admin / admin123)
 
 Endpoints (JSON):
     GET  /api/comarcas                        comarcas + contagens
@@ -42,7 +42,7 @@ BASE = Path(__file__).parent
 DB = BASE / "contatos.db"
 FRONT = BASE / "frontend"
 
-SESSIONS = {}  # token -> usuario_id (memória; demo)
+SESSIONS = {}  # token -> usuario_id (memória local)
 
 NIVEIS = ("comarca", "forum", "unidade", "setor")
 
@@ -534,7 +534,7 @@ def init_db():
         except Exception:
             precisa_migrar = True
     if precisa_migrar:
-        # esquema antigo -> recria do zero (demo)
+        # esquema antigo -> recria do zero (uso local)
         con.executescript("""
             DROP TABLE IF EXISTS pedidos; DROP TABLE IF EXISTS usuarios;
             DROP TABLE IF EXISTS historico; DROP TABLE IF EXISTS contatos;
@@ -578,7 +578,7 @@ def init_db():
             ("admin", sha("admin123"), "admin@" + DOMINIO_INSTITUCIONAL))
         con.execute(
             "INSERT INTO historico (acao, detalhe) VALUES (?,?)",
-            ("init", "base de demonstração criada com dados fictícios"))
+            ("init", "base inicial criada com dados fictícios"))
     con.commit()
     con.close()
 
@@ -599,7 +599,7 @@ def admin_ids(con):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "ContatosDemo/3.0"
+    server_version = "DiretorioContatos/3.0"
 
     def _json(self, obj, status=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -1127,5 +1127,5 @@ if __name__ == "__main__":
     init_db()
     HTTPServer.allow_reuse_address = True
     print("Pública: http://localhost:8000  |  Admin: http://localhost:8000/admin"
-          "  (demo: admin / admin123)")
+          "  (acesso: admin / admin123)")
     HTTPServer(("127.0.0.1", 8000), Handler).serve_forever()

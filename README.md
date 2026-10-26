@@ -19,7 +19,7 @@
   - `/` pública: só consulta; falha fechada (nenhuma mutação sem token)
   - `/admin` interna: portão de login; sem token válido, nada além do portão aparece
 - **Portão institucional**: no original, sessão Google + intranet + domínio
-  institucional (`AuthService.emailPermitidoNoPrivado`); aqui, login demo +
+  institucional (`AuthService.emailPermitidoNoPrivado`); aqui, login local +
   pedido exigindo e-mail `@exemplo.jus.br` (validado no servidor, 400 fora do domínio)
 - **Tabela de usuários decide permissões**: sem cadastro, mesmo no interno a
   visão seria só consulta; com cadastro, edita os locais do seu escopo
@@ -43,7 +43,7 @@
   e-mail + senha; com cadastro, eleva e libera gestão por escopo + Solicitações
   + Registro) e **Solicitar acesso** (modal do formulário); **Sair do acesso
   administrativo** volta à consulta, continua no interno.
-  Demo: admin@exemplo.jus.br / admin123.
+  Acesso: admin@exemplo.jus.br / admin123.
 - **Gestão dentro da consulta, com escopo por nível**: o usuário cria/edita/remove
   contatos só onde tem cobertura (comarca, fórum, unidade ou setor, com herança de
   cima); fora dela, só consulta. Ao lado de cada nível selecionado sem cobertura,
@@ -77,7 +77,7 @@
 ```bash
 python3 app.py
 # pública: http://localhost:8000
-# admin:   http://localhost:8000/admin   (demo: admin / admin123)
+# admin:   http://localhost:8000/admin   (acesso: admin / admin123)
 bash teste_rapido.sh   # verifica o fluxo completo, incl. escopo por local
 ```
 

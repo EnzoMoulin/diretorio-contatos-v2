@@ -4,7 +4,7 @@
    "Acesso administrativo" (login e-mail+senha) eleva quem tem cadastro;
    "Solicitar acesso" abre o formulário; "Sair" volta à consulta (continua no interno). */
 const $ = id => document.getElementById(id);
-let token = localStorage.getItem('demo-token') || '';
+let token = localStorage.getItem('contatos-token') || '';
 let me = null;            // {id, usuario, admin, escopo: 'all' | [{nivel, alvo_id}]}
 let H = { comarcas: [], uteis: [] };  // espelho de /api/hierarquia
 let estado = { comarcaId: '', forumId: '', noId: '' };
@@ -965,13 +965,15 @@ async function refresh() {
   if (token) {
     const r = await fetch('/api/me', { headers: auth() });
     if (r.ok) me = await r.json();
-    else { token = ''; localStorage.removeItem('demo-token'); }
+    else { token = ''; localStorage.removeItem('contatos-token'); }
   }
   const dentro = logado();
   $('menu-dash').classList.toggle('hidden', !dentro);
   $('menu-notif').classList.toggle('hidden', !dentro);
   $('menu-sol').classList.toggle('hidden', !dentro);
   $('menu-reg').classList.toggle('hidden', !dentro);
+  $('who-mail').classList.toggle('hidden', !dentro);
+  if (dentro) $('who-mail').textContent = '👤 ' + (me.email || me.usuario);
   $('who-line').textContent = dentro ? '👤 ' + me.usuario : 'Sem acesso administrativo';
   $('btn-entrar').classList.toggle('hidden', dentro);
   $('btn-sair').classList.toggle('hidden', !dentro);
@@ -1006,13 +1008,13 @@ $('login').onclick = async () => {
     body: JSON.stringify({ usuario: $('user').value, senha: $('pass').value }) });
   const j = await r.json();
   if (j.token) {
-    token = j.token; localStorage.setItem('demo-token', token);
+    token = j.token; localStorage.setItem('contatos-token', token);
     $('modal-login').classList.add('hidden');
     refresh();
   } else $('l-status').textContent = j.erro || 'falhou';
 };
 $('btn-sair').onclick = () => {
-  token = ''; localStorage.removeItem('demo-token');
+  token = ''; localStorage.removeItem('contatos-token');
   refresh();
 };
 
@@ -1134,13 +1136,13 @@ $('s-salvar').onclick = async () => {
   if (r.ok) { $('s-atual').value = ''; $('s-nova').value = ''; }
 };
 function aplicarTema() {
-  const dark = (localStorage.getItem('demo-theme') || 'light') === 'dark';
+  const dark = (localStorage.getItem('contatos-theme') || 'light') === 'dark';
   document.body.dataset.theme = dark ? 'dark' : 'light';
   const t = $('toggle-dark-mode');
   if (t) t.checked = dark;
 }
 $('toggle-dark-mode').onchange = (e) => {
-  localStorage.setItem('demo-theme', e.target.checked ? 'dark' : 'light');
+  localStorage.setItem('contatos-theme', e.target.checked ? 'dark' : 'light');
   aplicarTema();
 };
 aplicarTema();
