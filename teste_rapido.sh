@@ -4,7 +4,7 @@
 set -u
 cd "$(dirname "$0")"
 rm -f contatos.db
-pkill -9 -f "python3 app.py" 2>/dev/null
+fuser -k 8000/tcp 2>/dev/null
 sleep 2
 python3 app.py &>/tmp/demo_test.log &
 PID=$!
@@ -38,34 +38,44 @@ echo "== login uservv =="
 TV=$(curl -s -X POST $B/api/login -H 'Content-Type: application/json' -d '{"usuario":"uservv","senha":"bemvindo123"}' | python3 -c "$TOK")
 curl -s "$B/api/me" -H "X-Admin-Token: $TV"; echo
 # setor de Vila Velha (unidade da comarca 2) vs setor de Vitória (comarca 1)
-# primeiro setor com conteúdo de cada comarca (1=Vitória, 2=Vila Velha na base atual)
+# primeiro setor com conteúdo de duas comarcas distintas (escopo do teste)
 IDS=$(curl -s "$B/api/comarcas" | python3 -c "
 import json,sys,urllib.request
 base = 'http://localhost:8000'
 def get(p):
     return json.load(urllib.request.urlopen(base + p))
-out = {}
-for cid in ('1', '2'):
-    for f in get('/api/foruns?comarca_id=' + cid):
+out = []
+for c in get('/api/comarcas'):
+    achou = None
+    for f in get('/api/foruns?comarca_id=%d' % c['id']):
         for u in get('/api/unidades?forum_id=%d' % f['id']):
             ss = get('/api/setores?unidade_id=%d' % u['id'])
             if ss:
-                out[cid] = (f['id'], u['id'], ss[0]['id'])
+                achou = (c['id'], f['id'], u['id'], ss[0]['id'])
                 break
-        if cid in out: break
-print(out['1'][0], out['1'][1], out['1'][2], out['2'][0], out['2'][1], out['2'][2])")
-set -- $IDS; FIDVT=$1; UIDVT=$2; SVT=$3; FIDVV=$4; UIDVV=$5; SVV=$6
+        if achou:
+            break
+    if achou:
+        out.append(achou)
+    if len(out) >= 2:
+        break
+a, b = out[0], out[1]
+print(a[0], a[1], a[2], a[3], b[0], b[1], b[2], b[3])")
+# a = comarca do pedido (proprio); b = comarca estranha (fora)
+set -- $IDS; CIDVV=$1; FIDVV=$2; UIDVV=$3; SVV=$4; CIDVT=$5; FIDVT=$6; UIDVT=$7; SVT=$8
 echo -n "criar no proprio local (201 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/contatos -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d "{\"setor_id\":$SVV,\"nome\":\"QA VV\",\"telefone\":\"(27) 3333-0088\"}"
 echo -n "criar fora do escopo (403 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/contatos -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d "{\"setor_id\":$SVT,\"nome\":\"QA VT\",\"telefone\":\"(27) 3333-0088\"}"
 echo -n "remover fora do escopo (403 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X DELETE $B/api/contatos/1 -H "X-Admin-Token: $TV"
-CIDV=$(curl -s "$B/api/contatos?comarca_id=2" | python3 -c "$SID")
+CIDV=$(curl -s "$B/api/contatos?comarca_id=$CIDVV" | python3 -c "$SID")
+CIDT=$(curl -s "$B/api/contatos?comarca_id=$CIDVT" | python3 -c "$SID")
+if [ -z "$CIDT" ]; then CIDT=1; fi
 echo -n "editar no proprio escopo (200 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X PUT $B/api/contatos/$CIDV -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d '{"nome":"QA VV editado"}'
 echo -n "editar fora do escopo (403 esperado): "
-curl -s -o /dev/null -w "%{http_code}\n" -X PUT $B/api/contatos/1 -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d '{"nome":"invasao"}'
+curl -s -o /dev/null -w "%{http_code}\n" -X PUT $B/api/contatos/$CIDT -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d '{"nome":"invasao"}'
 echo "== pedido de unidade (heranca: forum cobre?) =="
 curl -s -X POST $B/api/pedidos -H 'Content-Type: application/json' -d "{\"nome\":\"User VV\",\"email\":\"u@exemplo.jus.br\",\"usuario\":\"uservv\",\"motivo\":\"mais uma unidade\",\"nivel\":\"unidade\",\"alvo_id\":$UIDVV}"; echo
 echo "== pendentes com nivel =="; curl -s "$B/api/pedidos" -H "X-Admin-Token: $TA" | head -c 300; echo

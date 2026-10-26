@@ -3,24 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Diretório de Contatos — Consulta pública</title>
+<title>Diretório de Contatos — Consulta Pública</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
 <div class="app-container">
   <aside class="sidebar sidebar-public">
     <div class="sidebar-header">
       <svg class="sidebar-logo" viewBox="0 0 42 42" aria-label="PJES"><defs><linearGradient id="li-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563eb"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs><rect width="42" height="42" rx="10" fill="url(#li-g)"/><text x="21" y="28" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="800" fill="#fff">PJ</text></svg>
-      <div class="sidebar-brand-copy"><strong>PJES</strong><span>Tribunal de Justiça do Estado do Espírito Santo</span></div>
+      <div class="sidebar-brand-copy"><strong>PJES</strong><span>Tribunal de Justiça do<br>Estado do Espírito Santo</span></div>
     </div>
     <nav class="sidebar-menu" aria-label="Navegação principal">
-      <button class="menu-item active" data-view="consulta"><span class="icon icon-white">📞</span><span>Consulta</span></button>
+      <button class="menu-item active" data-view="consulta"><span class="icon icon-white">📞</span><span>Comarcas</span></button>
+      <button class="menu-item" data-view="tjes"><span class="icon icon-txt">🏛</span><span>TJES</span></button>
+      <button class="menu-item" data-view="uteis"><span class="icon icon-white">☎</span><span>Telefones Úteis</span></button>
       <button class="menu-item" data-view="config"><span class="icon icon-txt">⚙</span><span>Configurações</span></button>
-      <button class="menu-item" data-view="manual"><span class="icon icon-txt">?</span><span>Manual do Usuário</span></button>
     </nav>
     <div class="sidebar-footer">
-      <div class="sidebar-user">Consulta pública</div>
+      <div class="sidebar-user">Consulta Pública</div>
     </div>
   </aside>
   <main class="main-content">
@@ -28,6 +29,10 @@
       <div class="fc-page-head">
         <div>
           <h1 class="fc-title">Diretório Institucional de Contatos - PJES</h1>
+        </div>
+        <div class="fc-busca">
+          <input id="fc-busca" class="fc-busca-input" type="search" placeholder="Buscar contato, setor, unidade…" autocomplete="off">
+          <div id="fc-busca-resultados" class="fc-busca-resultados" hidden></div>
         </div>
         <span class="fc-profile"><i>●</i> Visitante</span>
       </div>
@@ -37,29 +42,7 @@
           <p class="hint" id="map-msg"></p>
         </section>
         <div class="fc-panel">
-          <div class="fc-head" id="panel-head">
-            <div>
-              <h2 class="fc-title">Contatos do PJES</h2>
-              <p class="fc-subtitle">Consulte a estrutura completa por Comarca<span class="seta">→</span>Fórum<span class="seta">→</span>Unidade<span class="seta">→</span>Setor<span class="seta">→</span>Contatos. Selecione uma comarca no mapa ao lado, no menu suspenso ou na lista abaixo.</p>
-            </div>
-          </div>
-          <span class="fc-pill fc-total-localidades" id="loc-count"></span>
-          <p class="fc-subtitle" id="crumb"></p>
-          <div class="fc-selects-row" id="sel-row">
-            <select id="sel-com" class="fc-select" aria-label="Comarca"><option value="">Selecione uma comarca</option></select>
-            <select id="sel-for" class="fc-select hidden" aria-label="Fórum" disabled><option value="">Fórum…</option></select>
-            <select id="sel-uni" class="fc-select hidden" aria-label="Unidade" disabled><option value="">Unidade…</option></select>
-            <select id="sel-set" class="fc-select hidden" aria-label="Setor" disabled><option value="">Setor…</option></select>
-          </div>
-          <div id="lista"></div>
-          <div id="print-area"></div>
-          <div class="fc-bottom-nav">
-            <div class="nav-group">
-              <button type="button" class="fc-btn hidden" id="btn-voltar">← Voltar</button>
-              <button type="button" class="fc-btn" id="btn-topo">↑ Voltar ao topo</button>
-            </div>
-            <button type="button" class="fc-btn hidden" id="btn-print" title="Imprimir / Salvar PDF dos contatos do nível selecionado">🖨️ Imprimir / Salvar PDF</button>
-          </div>
+          <div id="lista"><div class="fc-empty">Carregando contatos...</div></div>
         </div>
       </div>
     </section>
@@ -110,8 +93,7 @@
           </div>
         </div>
       </div>
-    </section>
-    <section class="hidden" id="view-manual">
+      <div style="grid-column:1/-1">
       <div class="manual-container">
         <div class="page-header" style="margin-bottom:2px">
           <div>
@@ -140,7 +122,7 @@
         <section id="manual-consultar" class="panel manual-section">
           <div class="manual-section-head"><div><h3>🗺️ 01 — Localizar uma comarca</h3><p>Use o mapa ou os menus no painel de consulta.</p></div></div>
           <ol class="manual-steps">
-            <li><span class="manual-step-num">1</span><div><strong>Abra "Consulta"</strong><p>Clique em <code>☎ Consulta</code> na barra lateral.</p></div></li>
+            <li><span class="manual-step-num">1</span><div><strong>Abra "Comarcas"</strong><p>Clique em <code>📞 Comarcas</code> na barra lateral.</p></div></li>
             <li><span class="manual-step-num">2</span><div><strong>Escolha pelo mapa</strong><p>Clique numa comarca destacado no mapa à esquerda.</p></div></li>
             <li><span class="manual-step-num">3</span><div><strong>Ou use o menu</strong><p>Selecione a comarca na lista do painel.</p></div></li>
           </ol>
@@ -170,12 +152,12 @@
           <div class="manual-info"><span>ℹ️</span><div>Em telas menores, o mapa e o painel se reorganizam automaticamente. Use o botão de voltar para retornar ao nível anterior.</div></div>
         </section>
       </div>
+      </div>
     </section>
-    <footer>Python stdlib + HTML/CSS/JS · Leaflet + GeoJSON público · dados de exemplo</footer>
+    <footer>Python stdlib + HTML/CSS/JS · Leaflet + GeoJSON público · dados mascarados</footer>
   </main>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="mapa.js?v=16"></script>
-<script src="public.js?v=20"></script>
+<script src="public.js?v=22"></script>
 </body>
 </html>

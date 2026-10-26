@@ -48,26 +48,50 @@ NIVEIS = ("comarca", "forum", "unidade", "setor")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS comarcas (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE);
+    id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE,
+    ordem_num REAL, ordem_idx INTEGER NOT NULL DEFAULT 0,
+    codigo_ibge TEXT NOT NULL DEFAULT '', tipo TEXT NOT NULL DEFAULT '',
+    endereco TEXT NOT NULL DEFAULT '', cep TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '', observacao TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS foruns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     comarca_id INTEGER NOT NULL REFERENCES comarcas(id),
     nome TEXT NOT NULL, endereco TEXT NOT NULL DEFAULT '',
-    cep TEXT NOT NULL DEFAULT '');
+    cep TEXT NOT NULL DEFAULT '', ordem_num REAL,
+    ordem_idx INTEGER NOT NULL DEFAULT 0,
+    email TEXT NOT NULL DEFAULT '', observacao TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS unidades (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    forum_id INTEGER NOT NULL REFERENCES foruns(id),
-    nome TEXT NOT NULL, endereco TEXT NOT NULL DEFAULT '');
+    forum_id INTEGER REFERENCES foruns(id),
+    comarca_id INTEGER REFERENCES comarcas(id),
+    nome TEXT NOT NULL, tipo TEXT NOT NULL DEFAULT 'UNIDADE',
+    endereco TEXT NOT NULL DEFAULT '', cep TEXT NOT NULL DEFAULT '',
+    observacao TEXT NOT NULL DEFAULT '',
+    selecionavel INTEGER NOT NULL DEFAULT 0,
+    ordem_num REAL, ordem_idx INTEGER NOT NULL DEFAULT 0,
+    virtual INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS setores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     unidade_id INTEGER NOT NULL REFERENCES unidades(id),
-    nome TEXT NOT NULL);
+    nome TEXT NOT NULL, tipo TEXT NOT NULL DEFAULT 'SETOR',
+    endereco TEXT NOT NULL DEFAULT '', cep TEXT NOT NULL DEFAULT '',
+    observacao TEXT NOT NULL DEFAULT '',
+    selecionavel INTEGER NOT NULL DEFAULT 0,
+    ordem_num REAL, ordem_idx INTEGER NOT NULL DEFAULT 0,
+    virtual INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS contatos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     setor_id INTEGER NOT NULL REFERENCES setores(id),
     nome TEXT NOT NULL, cargo TEXT NOT NULL DEFAULT '',
     telefone TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '',
+    descricao TEXT NOT NULL DEFAULT '',
+    observacao TEXT NOT NULL DEFAULT '',
+    ordem_num REAL, ordem_idx INTEGER NOT NULL DEFAULT 0,
     atualizado_em TEXT NOT NULL DEFAULT (datetime('now')));
+CREATE TABLE IF NOT EXISTS uteis (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL DEFAULT '',
+    nome TEXT NOT NULL, tipo TEXT NOT NULL DEFAULT '',
+    valor TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS historico (
     id INTEGER PRIMARY KEY AUTOINCREMENT, acao TEXT NOT NULL,
     contato_id INTEGER, detalhe TEXT NOT NULL DEFAULT '',
@@ -152,56 +176,69 @@ def get_db():
     return con
 
 
-def _carregar_seed_json(con):
-    """Seed a partir da base mascarada (seed_pjes.json). Devolve True se usou."""
-    pj = BASE / "seed_pjes.json"
-    if not pj.exists():
-        return False
-    seed = json.loads(pj.read_text(encoding="utf-8"))
+def _carregar_seed_legado(con, seed):
+    """Formato antigo (seed_pjes.json): sem suporte no esquema atual."""
+    return False
     coms = {}
     for c in seed.get("comarcas", []):
         coms[c["id"]] = con.execute(
-            "INSERT INTO comarcas (nome) VALUES (?)", (c["nome"],)).lastrowid
+            "INSERT INTO comarcas (nome, ordem) VALUES (?,?)",
+            (c["nome"], c.get("ordem", 0))).lastrowid
     fors = {}
     for f in seed.get("foruns", []):
         if f["comarca_id"] not in coms:
             continue
         fors[f["id"]] = con.execute(
-            "INSERT INTO foruns (comarca_id, nome, endereco, cep) VALUES (?,?,?,?)",
+            "INSERT INTO foruns (comarca_id, nome, endereco, cep, ordem)"
+            " VALUES (?,?,?,?,?)",
             (coms[f["comarca_id"]], f["nome"], f.get("endereco", ""),
-             f.get("cep", ""))).lastrowid
+             f.get("cep", ""), f.get("ordem", 0))).lastrowid
     uns = {}
     for u in seed.get("unidades", []):
         if u["forum_id"] not in fors:
             continue
         uns[u["id"]] = con.execute(
-            "INSERT INTO unidades (forum_id, nome, endereco) VALUES (?,?,?)",
-            (fors[u["forum_id"]], u["nome"], u.get("endereco", ""))).lastrowid
-    # unidades/setores genéricos por fórum (contatos gerais + órfãos)
-    auto_u, auto_s = {}, {}
-    for fid in fors.values():
-        uid = con.execute(
-            "INSERT INTO unidades (forum_id, nome) VALUES (?,?)",
-            (fid, "Atendimento geral")).lastrowid
-        auto_u[fid] = uid
+            "INSERT INTO unidades (forum_id, nome, endereco, ordem)"
+            " VALUES (?,?,?,?)",
+            (fors[u["forum_id"]], u["nome"], u.get("endereco", ""),
+             u.get("ordem", 0))).lastrowid
+    # auto sob demanda: unidade "Atendimento geral" + setor "Contatos Gerais"
+    auto_u, auto_s, auto_su = {}, {}, {}
+
+    def _auto_unidade(fdb, ordem):
+        if fdb not in auto_u:
+            auto_u[fdb] = con.execute(
+                "INSERT INTO unidades (forum_id, nome, ordem, virtual)"
+                " VALUES (?,?,?,1)",
+                (fdb, "Atendimento geral", ordem)).lastrowid
+        return auto_u[fdb]
+
+    def _auto_setor_geral(fdb):
+        if fdb not in auto_s:
+            auto_s[fdb] = con.execute(
+                "INSERT INTO setores (unidade_id, nome, ordem, virtual)"
+                " VALUES (?,?,?,1)",
+                (_auto_unidade(fdb, 10 ** 9), "Contatos Gerais", 10 ** 9)).lastrowid
+        return auto_s[fdb]
+
+    def _auto_setor_unidade(udb):
+        if udb not in auto_su:
+            auto_su[udb] = con.execute(
+                "INSERT INTO setores (unidade_id, nome, ordem, virtual)"
+                " VALUES (?,?,?,1)",
+                (udb, "Contatos Gerais", 10 ** 9)).lastrowid
+        return auto_su[udb]
+
     sets = {}
     for s in seed.get("setores", []):
         if s["forum_id"] not in fors:
             continue
         uid = uns.get(s["unidade_id"])
-        if uid is None:  # setor órfão -> cai nos gerais do fórum
-            fdb = fors[s["forum_id"]]
-            if fdb not in auto_s:
-                auto_s[fdb] = con.execute(
-                    "INSERT INTO setores (unidade_id, nome) VALUES (?,?)",
-                    (auto_u[fdb], "Contatos gerais")).lastrowid
-            uid = auto_u[fdb]
-            sid = auto_s[fdb]
-        else:
-            sid = con.execute(
-                "INSERT INTO setores (unidade_id, nome) VALUES (?,?)",
-                (uid, s["nome"])).lastrowid
-        sets[s["id"]] = sid
+        if uid is None:  # órfão com contato: vira card sob Atendimento geral
+            uid = _auto_unidade(fors[s["forum_id"]], s.get("ordem", 0))
+        sets[s["id"]] = con.execute(
+            "INSERT INTO setores (unidade_id, nome, ordem) VALUES (?,?,?)",
+            (uid, s["nome"], s.get("ordem", 0))).lastrowid
     import re as _re
     TIPO_COL = {"TELEFONE": "telefone", "EMAIL": "email", "RAMAL": "telefone",
                 "WHATSAPP": "telefone"}
@@ -209,35 +246,295 @@ def _carregar_seed_json(con):
         if ct["forum"] not in fors:
             continue
         fdb = fors[ct["forum"]]
-        if ct.get("geral") or not ct.get("setor"):
-            if fdb not in auto_s:
-                auto_s[fdb] = con.execute(
-                    "INSERT INTO setores (unidade_id, nome) VALUES (?,?)",
-                    (auto_u[fdb], "Contatos gerais")).lastrowid
-            sid = auto_s[fdb]
+        if ct.get("setor") and ct["setor"] in sets:
+            sid = sets[ct["setor"]]
+        elif ct.get("unidade") and ct["unidade"] in uns:
+            sid = _auto_setor_unidade(uns[ct["unidade"]])
         else:
-            sid = sets.get(ct["setor"])
-            if sid is None:
+            sid = _auto_setor_geral(fdb)
+        tnorm = _re.sub(r"[^A-Z]", "", str(ct.get("tipo", "")).upper())
+        col = TIPO_COL.get(tnorm, "telefone")
+        valor = ct.get("valor", "")
+        nome = ct.get("desc", "") or valor
+        con.execute(
+            "INSERT INTO contatos (setor_id, nome, cargo, telefone, email, ordem)"
+            " VALUES (?,?,?,?,?,?)",
+            (sid, nome, str(ct.get("tipo", "")),
+             valor if col == "telefone" else "",
+             valor if col == "email" else "",
+             ct.get("ordem", 0)))
+    return True
+
+
+
+def _carregar_seed_json(con):
+    """Seed a partir da base oficial (seed_oficial.json). Devolve True se usou."""
+    pj = BASE / "seed_oficial.json"
+    if not pj.exists():
+        pj = BASE / "seed_pjes.json"
+        if not pj.exists():
+            return False
+        return _carregar_seed_legado(con, json.loads(pj.read_text(encoding="utf-8")))
+    seed = json.loads(pj.read_text(encoding="utf-8"))
+    if "nos" not in seed:
+        return _carregar_seed_legado(con, seed)
+    coms = {}
+    for i, c in enumerate(seed.get("comarcas", [])):
+        coms[c["id"]] = con.execute(
+            "INSERT INTO comarcas (nome, ordem_num, ordem_idx, codigo_ibge,"
+            " tipo, endereco, cep, email, observacao)"
+            " VALUES (?,?,?,?,?,?,?,?,?)",
+            (c["nome"], c.get("ordem"), i, c.get("ibge", ""),
+             c.get("tipo", ""), c.get("end", ""), c.get("cep", ""),
+             c.get("email", ""), c.get("obs", ""))).lastrowid
+    fors = {}
+    for i, f in enumerate(seed.get("foruns", [])):
+        if f["comarca_id"] not in coms:
+            continue
+        fors[f["id"]] = con.execute(
+            "INSERT INTO foruns (comarca_id, nome, endereco, cep, ordem_num,"
+            " ordem_idx, email, observacao) VALUES (?,?,?,?,?,?,?,?)",
+            (coms[f["comarca_id"]], f["nome"], f.get("end", ""),
+             f.get("cep", ""), f.get("ordem"), i, f.get("email", ""),
+             f.get("obs", ""))).lastrowid
+    node_db, node_kind, node_row = {}, {}, {}
+    for i, no in enumerate(seed.get("nos", [])):
+        if not no.get("ativo", True):
+            continue
+        fdb = fors.get(no["forum"])
+        mdb = coms.get(no["comarca"]) if not fdb else None
+        if fdb is None and mdb is None:
+            continue
+        if no["pai"]:
+            continue  # filhos na segunda passada
+        uid = con.execute(
+            "INSERT INTO unidades (forum_id, comarca_id, nome, tipo,"
+            " endereco, cep, observacao, selecionavel, ordem_num, ordem_idx)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (fdb, mdb, no["nome"], no.get("tipo", "UNIDADE") or "UNIDADE",
+             no.get("end", ""), no.get("cep", ""), no.get("obs", ""),
+             1 if no.get("sel") else 0, no.get("ordem"), i)).lastrowid
+        node_db[no["id"]] = uid
+        node_kind[no["id"]] = "u"
+        node_row[no["id"]] = no
+    for i, no in enumerate(seed.get("nos", [])):
+        if not no.get("ativo", True) or not no["pai"]:
+            continue
+        p = None
+        n = no
+        seen = set()
+        while n and n["id"] not in seen:
+            seen.add(n["id"])
+            if n["id"] in node_db and node_kind[n["id"]] == "u":
+                p = n["id"]
+                break
+            pn = next((x for x in seed.get("nos", []) if x["id"] == n["pai"]), None)
+            n = pn
+        if p is None:
+            continue
+        sid = con.execute(
+            "INSERT INTO setores (unidade_id, nome, tipo, endereco, cep,"
+            " observacao, selecionavel, ordem_num, ordem_idx)"
+            " VALUES (?,?,?,?,?,?,?,?,?)",
+            (node_db[p], no["nome"], no.get("tipo", "SETOR") or "SETOR",
+             no.get("end", ""), no.get("cep", ""), no.get("obs", ""),
+             1 if no.get("sel") else 0, no.get("ordem"), i)).lastrowid
+        node_db[no["id"]] = sid
+        node_kind[no["id"]] = "s"
+        node_row[no["id"]] = no
+    auto_u, auto_s = {}, {}
+
+    def _auto_unidade(fdb, mdb):
+        key = ("f", fdb) if fdb else ("m", mdb)
+        if key not in auto_u:
+            auto_u[key] = con.execute(
+                "INSERT INTO unidades (forum_id, comarca_id, nome,"
+                " ordem_num, virtual) VALUES (?,?,?,NULL,1)",
+                (fdb, mdb, "Atendimento geral")).lastrowid
+        return auto_u[key]
+
+    def _auto_setor(udb):
+        if udb not in auto_s:
+            auto_s[udb] = con.execute(
+                "INSERT INTO setores (unidade_id, nome, ordem_num, virtual)"
+                " VALUES (?,?,NULL,1)",
+                (udb, "Contatos Gerais")).lastrowid
+        return auto_s[udb]
+
+    import re as _re
+    TIPO_COL = {"TELEFONE": "telefone", "EMAIL": "email", "RAMAL": "telefone",
+                "WHATSAPP": "telefone", "FAX": "telefone", "CELULAR": "telefone"}
+    for i, ct in enumerate(seed.get("contatos", [])):
+        alvo = ct.get("uo") or ""  # UO-only: vínculo é o nó da árvore
+        kind = node_kind.get(alvo)
+        if kind == "s":
+            sid, dono = node_db[alvo], ("s", node_db[alvo])
+        elif kind == "u":
+            sid, dono = _auto_setor(node_db[alvo]), ("u", node_db[alvo])
+        else:
+            fdb = fors.get(ct.get("forum"))
+            mkey = ct.get("comarca")
+            if fdb:
+                sid, dono = _auto_setor(_auto_unidade(fdb, None)), ("f", fdb)
+            elif mkey and mkey in coms:
+                sid = _auto_setor(_auto_unidade(None, coms[mkey]))
+                dono = ("m", coms[mkey])
+            else:
                 continue
         tnorm = _re.sub(r"[^A-Z]", "", str(ct.get("tipo", "")).upper())
         col = TIPO_COL.get(tnorm, "telefone")
         valor = ct.get("valor", "")
         nome = ct.get("desc", "") or valor
         con.execute(
-            "INSERT INTO contatos (setor_id, nome, cargo, telefone, email)"
-            " VALUES (?,?,?,?,?)",
+            "INSERT INTO contatos (setor_id, nome, cargo, telefone, email,"
+            " descricao, observacao, ordem_num, ordem_idx)"
+            " VALUES (?,?,?,?,?,?,?,?,?)",
             (sid, nome, str(ct.get("tipo", "")),
              valor if col == "telefone" else "",
-             valor if col == "email" else ""))
+             valor if col == "email" else "", ct.get("desc", ""),
+             ct.get("obs", ""), ct.get("ordem"), i))
+    for u in seed.get("uteis", []):
+        con.execute("INSERT INTO uteis (uid, nome, tipo, valor) VALUES (?,?,?,?)",
+                    (u.get("id", ""), u.get("nome", ""), u.get("tipo", ""), u.get("valor", "")))
     return True
+
+
+def _ordem(r):
+    n = r["ordem_num"]
+    if n is None:
+        return (2, r["ordem_idx"])
+    try:
+        return (0, float(n))
+    except (TypeError, ValueError):
+        return (2, r["ordem_idx"])
+
+
+def build_hierarquia(con):
+    """Monta o JSON aninhado no formato do backend original (GAS)."""
+    coms = [dict(r) for r in con.execute("SELECT * FROM comarcas")]
+    fors = [dict(r) for r in con.execute("SELECT * FROM foruns")]
+    unis = [dict(r) for r in con.execute("SELECT * FROM unidades")]
+    sets = [dict(r) for r in con.execute("SELECT * FROM setores")]
+    cts = [dict(r) for r in con.execute("SELECT * FROM contatos")]
+    set_by_unidade = {}
+    for s in sets:
+        set_by_unidade.setdefault(s["unidade_id"], []).append(s)
+    ct_por_setor = {}
+    for c in cts:
+        ct_por_setor.setdefault(c["setor_id"], []).append(c)
+    for lst in ct_por_setor.values():
+        lst.sort(key=_ordem)
+    # setor auto "Contatos Gerais" de cada unidade auto -> dono (forum/comarca)
+    gerais_por_forum, gerais_por_mun = {}, {}
+    for u in unis:
+        if not u["virtual"]:
+            continue
+        for s in set_by_unidade.get(u["id"], []):
+            if not s["virtual"]:
+                continue
+            dest = (gerais_por_forum if u["forum_id"] else gerais_por_mun)
+            dest.setdefault(u["forum_id"] or u["comarca_id"], []).extend(
+                ct_por_setor.get(s["id"], []))
+    for lst in gerais_por_forum.values():
+        lst.sort(key=_ordem)
+    for lst in gerais_por_mun.values():
+        lst.sort(key=_ordem)
+
+    def contato_pub(c, no_id=""):
+        return {"id": c["id"], "tipo": c["cargo"], "descricao": c["descricao"],
+                "valor": c["telefone"] or c["email"], "observacao": c["observacao"]}
+
+    def ser_no(u, raiz_end, raiz_cep):
+        end_ex = u["endereco"] or raiz_end
+        cep_ex = u["cep"] or raiz_cep
+        pai_ex = {"enderecoExibicao": end_ex, "cepExibicao": cep_ex}
+        filhos = sorted(
+            (s for s in set_by_unidade.get(u["id"], []) if not s["virtual"]),
+            key=_ordem)
+        out_filhos = [ser_no_filho(s, pai_ex, raiz_end, raiz_cep) for s in filhos]
+        auto_id = next((s["id"] for s in set_by_unidade.get(u["id"], [])
+                        if s["virtual"]), None)
+        diretos = [contato_pub(c) for c in ct_por_setor.get(auto_id, [])]
+        qtd = len(diretos) + sum(f["qtdContatos"] for f in out_filhos)
+        return {"id": u["id"], "tipo": u["tipo"], "nome": u["nome"],
+                "endereco": u["endereco"], "cep": u["cep"],
+                "enderecoExibicao": end_ex, "cepExibicao": cep_ex,
+                "observacao": u["observacao"],
+                "selecionavelAcesso": bool(u["selecionavel"]),
+                "contatos": diretos, "filhos": out_filhos,
+                "qtdFilhos": len(out_filhos),
+                "qtdNos": 1 + sum(f["qtdNos"] for f in out_filhos),
+                "qtdContatos": qtd}
+
+    def ser_no_filho(s, pai, raiz_end, raiz_cep):
+        diretos = [contato_pub(c) for c in ct_por_setor.get(s["id"], [])]
+        end_ex = s["endereco"] or (pai.get("enderecoExibicao") if isinstance(pai, dict) else "") or raiz_end
+        cep_ex = s["cep"] or (pai.get("cepExibicao") if isinstance(pai, dict) else "") or raiz_cep
+        return {"id": s["id"], "tipo": s["tipo"], "nome": s["nome"],
+                "endereco": s["endereco"], "cep": s["cep"],
+                "enderecoExibicao": end_ex, "cepExibicao": cep_ex,
+                "observacao": s["observacao"],
+                "selecionavelAcesso": bool(s["selecionavel"]),
+                "contatos": diretos, "filhos": [],
+                "qtdFilhos": 0, "qtdNos": 1,
+                "qtdContatos": len(diretos)}
+
+    def cont_sel(lista):
+        return sum(1 for n in lista if n["selecionavelAcesso"])
+
+    comarcas = []
+    for c in sorted((x for x in coms), key=_ordem):
+        f_do = sorted((f for f in fors
+                       if f["comarca_id"] == c["id"]), key=_ordem)
+        foruns_pub = []
+        for f in f_do:
+            roots = sorted(
+                (u for u in unis if u["forum_id"] == f["id"]
+                 and not u["virtual"]),
+                key=_ordem)
+            nos = [ser_no(u, f["endereco"], f["cep"])
+                   for u in roots]
+            gerais = [contato_pub(x) for x in gerais_por_forum.get(f["id"], [])]
+            foruns_pub.append({
+                "id": f["id"], "nome": f["nome"], "endereco": f["endereco"],
+                "cep": f["cep"], "email": f["email"],
+                "observacao": f.get("observacao", ""),
+                "qtdNos": sum(n["qtdNos"] for n in nos),
+                "qtdUnidades": cont_sel(nos),
+                "qtdContatos": len(gerais) + sum(n["qtdContatos"] for n in nos),
+                "contatos": gerais, "nos": nos})
+        roots_m = sorted(
+            (u for u in unis if u["comarca_id"] == c["id"]
+             and not u["virtual"]),
+            key=_ordem)
+        nos_m = [ser_no(u, c["endereco"], c["cep"])
+                 for u in roots_m]
+        gerais_m = [contato_pub(x) for x in gerais_por_mun.get(c["id"], [])]
+        comarcas.append({
+            "id": c["id"], "nome": c["nome"], "codigoIbge": c["codigo_ibge"],
+            "tipo": c["tipo"], "endereco": c["endereco"], "cep": c["cep"],
+            "email": c["email"], "observacao": c["observacao"],
+            "qtdForuns": len(foruns_pub),
+            "qtdUnidades": cont_sel(nos_m) + sum(f["qtdUnidades"] for f in foruns_pub),
+            "qtdContatos": len(gerais_m) + sum(n["qtdContatos"] for n in nos_m) + sum(f["qtdContatos"] for f in foruns_pub),
+            "contatos": gerais_m, "nos": nos_m, "foruns": foruns_pub})
+    uteis = [{"id": u["uid"], "nome": u["nome"], "tipo": u["tipo"], "valor": u["valor"]}
+             for u in con.execute("SELECT uid, nome, tipo, valor FROM uteis ORDER BY id").fetchall()]
+    return {"comarcas": comarcas, "uteis": uteis}
 
 
 def init_db():
     con = get_db()
     tabelas = {r["name"] for r in con.execute(
         "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
-    if "localidades" in tabelas or "usuarios_locais" in tabelas:
-        # esquema antigo (3 níveis) -> recria do zero (demo)
+    precisa_migrar = ("localidades" in tabelas or "usuarios_locais" in tabelas)
+    if "unidades" in tabelas and not precisa_migrar:
+        try:
+            con.execute("SELECT comarca_id FROM unidades LIMIT 1")
+        except Exception:
+            precisa_migrar = True
+    if precisa_migrar:
+        # esquema antigo -> recria do zero (demo)
         con.executescript("""
             DROP TABLE IF EXISTS pedidos; DROP TABLE IF EXISTS usuarios;
             DROP TABLE IF EXISTS historico; DROP TABLE IF EXISTS contatos;
@@ -424,50 +721,71 @@ class Handler(BaseHTTPRequestHandler):
             return self._static("style.css", "text/css; charset=utf-8")
         con = get_db()
         try:
+            if u.path == "/api/hierarquia":
+                return self._json(build_hierarquia(con))
             if u.path == "/api/comarcas":
                 rows = con.execute(
                     "SELECT c.id, c.nome, COUNT(ct.id) AS total,"
                     " COUNT(DISTINCT f.id) AS n_foruns,"
-                    " COUNT(DISTINCT u.id) AS n_unidades,"
-                    " COUNT(DISTINCT s.id) AS n_setores FROM comarcas c"
+                    " COUNT(DISTINCT CASE WHEN EXISTS"
+                    " (SELECT 1 FROM setores s2 JOIN contatos ct2"
+                    " ON ct2.setor_id=s2.id WHERE s2.unidade_id=u.id)"
+                    " THEN u.id END) AS n_unidades,"
+                    " COUNT(DISTINCT CASE WHEN EXISTS"
+                    " (SELECT 1 FROM contatos ct3 WHERE ct3.setor_id=s.id)"
+                    " THEN s.id END) AS n_setores"
+                    " FROM comarcas c"
                     " LEFT JOIN foruns f ON f.comarca_id=c.id"
                     " LEFT JOIN unidades u ON u.forum_id=f.id"
                     " LEFT JOIN setores s ON s.unidade_id=u.id"
                     " LEFT JOIN contatos ct ON ct.setor_id=s.id"
-                    " GROUP BY c.id ORDER BY c.nome").fetchall()
+                    " GROUP BY c.id ORDER BY (c.ordem_num IS NULL),"
+                    " c.ordem_num, c.ordem_idx").fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/foruns":
                 rows = con.execute(
                     "SELECT f.id, f.nome, f.comarca_id, f.endereco, f.cep,"
-                    " COUNT(DISTINCT u.id) AS n_unidades,"
-                    " COUNT(DISTINCT s.id) AS n_setores,"
+                    " COUNT(DISTINCT CASE WHEN EXISTS"
+                    " (SELECT 1 FROM setores s2 JOIN contatos ct2"
+                    " ON ct2.setor_id=s2.id WHERE s2.unidade_id=u.id)"
+                    " THEN u.id END) AS n_unidades,"
+                    " COUNT(DISTINCT CASE WHEN EXISTS"
+                    " (SELECT 1 FROM contatos ct3 WHERE ct3.setor_id=s.id)"
+                    " THEN s.id END) AS n_setores,"
                     " COUNT(ct.id) AS total FROM foruns f"
                     " LEFT JOIN unidades u ON u.forum_id=f.id"
                     " LEFT JOIN setores s ON s.unidade_id=u.id"
                     " LEFT JOIN contatos ct ON ct.setor_id=s.id"
-                    " WHERE f.comarca_id=? GROUP BY f.id ORDER BY f.nome",
+                    " WHERE f.comarca_id=? GROUP BY f.id ORDER BY (f.ordem_num IS NULL), f.ordem_num, f.ordem_idx",
                     (arg("comarca_id"),)).fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/unidades":
                 rows = con.execute(
-                    "SELECT u.id, u.nome, u.forum_id, u.endereco,"
-                    " COUNT(DISTINCT s.id) AS n_setores,"
+                    "SELECT u.id, u.nome, u.forum_id, u.endereco, u.virtual,"
+                    " COUNT(DISTINCT CASE WHEN EXISTS"
+                    " (SELECT 1 FROM contatos ct2 WHERE ct2.setor_id=s.id)"
+                    " THEN s.id END) AS n_setores,"
                     " COUNT(ct.id) AS total FROM unidades u"
                     " LEFT JOIN setores s ON s.unidade_id=u.id"
                     " LEFT JOIN contatos ct ON ct.setor_id=s.id"
-                    " WHERE u.forum_id=? GROUP BY u.id ORDER BY u.nome",
+                    " WHERE u.forum_id=?"
+                    " GROUP BY u.id HAVING COUNT(ct.id)>0"
+                    " ORDER BY u.virtual, (u.ordem_num IS NULL), u.ordem_num, u.ordem_idx",
                     (arg("forum_id"),)).fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/setores":
                 rows = con.execute(
-                    "SELECT s.id, s.nome, s.unidade_id, COUNT(ct.id) AS total"
+                    "SELECT s.id, s.nome, s.unidade_id, s.virtual,"
+                    " COUNT(ct.id) AS total"
                     " FROM setores s LEFT JOIN contatos ct ON ct.setor_id=s.id"
-                    " WHERE s.unidade_id=? GROUP BY s.id ORDER BY s.nome",
+                    " WHERE s.unidade_id=?"
+                    " GROUP BY s.id HAVING COUNT(ct.id)>0 ORDER BY (s.ordem_num IS NULL), s.ordem_num, s.ordem_idx",
                     (arg("unidade_id"),)).fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/contatos":
-                sql = ("SELECT ct.*, s.nome AS setor, s.id AS setor_id,"
-                       " u.nome AS unidade, u.id AS unidade_id,"
+                sql = ("SELECT ct.id, ct.nome, ct.cargo, ct.telefone, ct.email,"
+                       " s.nome AS setor, s.id AS setor_id, s.virtual AS setor_virtual,"
+                       " u.nome AS unidade, u.id AS unidade_id, u.virtual AS unidade_virtual,"
                        " f.nome AS forum, f.id AS forum_id,"
                        " c.nome AS comarca, c.id AS comarca_id"
                        " FROM contatos ct JOIN setores s ON s.id=ct.setor_id"
@@ -488,7 +806,7 @@ class Handler(BaseHTTPRequestHandler):
                             " OR ct.email LIKE ? OR s.nome LIKE ? OR u.nome LIKE ?"
                             " OR f.nome LIKE ? OR c.nome LIKE ?)")
                     params += [like] * 8
-                sql += " ORDER BY ct.nome"
+                sql += " ORDER BY (ct.ordem_num IS NULL), ct.ordem_num, ct.ordem_idx"
                 rows = con.execute(sql, params).fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/resumo":

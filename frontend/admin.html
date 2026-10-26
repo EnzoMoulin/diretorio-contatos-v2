@@ -12,16 +12,17 @@
   <aside class="sidebar">
     <div class="sidebar-header">
       <svg class="sidebar-logo" viewBox="0 0 42 42" aria-label="PJES"><defs><linearGradient id="li-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563eb"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs><rect width="42" height="42" rx="10" fill="url(#li-g)"/><text x="21" y="28" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="800" fill="#fff">PJ</text></svg>
-      <div class="sidebar-brand-copy"><strong>PJES</strong><span>Tribunal de Justiça do Estado do Espírito Santo</span></div>
+      <div class="sidebar-brand-copy"><strong>PJES</strong><span>Tribunal de Justiça do<br>Estado do Espírito Santo</span></div>
     </div>
     <nav class="sidebar-menu" aria-label="Navegação principal">
+      <button class="menu-item active" data-view="consulta"><span class="icon icon-white">📞</span><span>Comarcas</span></button>
+      <button class="menu-item" data-view="tjes"><span class="icon icon-txt">🏛</span><span>TJES</span></button>
+      <button class="menu-item" data-view="uteis"><span class="icon icon-white">☎</span><span>Telefones Úteis</span></button>
       <button class="menu-item hidden" data-view="dashboard" id="menu-dash"><span class="icon">📊</span><span>Dashboard</span></button>
-      <button class="menu-item active" data-view="consulta"><span class="icon icon-white">📞</span><span>Consulta</span></button>
       <button class="menu-item hidden" data-view="solicitacoes" id="menu-sol"><span class="icon icon-txt">◎</span><span>Solicitações de acesso</span><span id="ped-count" class="badge"></span></button>
       <button class="menu-item hidden" data-view="notificacoes" id="menu-notif"><span class="icon">🔔</span><span>Notificações</span><span id="notif-count" class="badge"></span></button>
       <button class="menu-item hidden" data-view="registro" id="menu-reg"><span class="icon icon-txt">≡</span><span>Registro de alterações</span></button>
       <button class="menu-item" data-view="config" id="menu-conf"><span class="icon icon-txt">⚙</span><span>Configurações</span></button>
-      <button class="menu-item" data-view="manual"><span class="icon icon-txt">?</span><span>Manual do Usuário</span></button>
     </nav>
     <div class="sidebar-footer">
       <div id="who-line" class="sidebar-user">Sem acesso administrativo</div>
@@ -29,6 +30,7 @@
       <button id="btn-pedir" class="sidebar-status-btn">📝 Solicitar acesso</button>
       <button id="btn-sair" class="sidebar-status-btn hidden">🚪 Sair do acesso administrativo</button>
       <p class="hint" id="estado-hint">Consulta sem login. Com cadastro, entre para gerenciar seus locais.</p>
+      <div class="sidebar-user">Consulta Pública</div>
     </div>
   </aside>
   <main class="main-content">
@@ -36,6 +38,10 @@
       <div class="fc-page-head">
         <div>
           <h1 class="fc-title">Diretório Institucional de Contatos - PJES</h1>
+        </div>
+        <div class="fc-busca">
+          <input id="fc-busca" class="fc-busca-input" type="search" placeholder="Buscar contato, setor, unidade…" autocomplete="off">
+          <div id="fc-busca-resultados" class="fc-busca-resultados" hidden></div>
         </div>
         <span class="fc-profile" id="profile-badge"><i>●</i> Visitante</span>
       </div>
@@ -45,20 +51,6 @@
           <p class="hint" id="map-msg"></p>
         </section>
         <div class="fc-panel">
-          <div class="fc-head" id="panel-head">
-            <div>
-              <h2 class="fc-title">Contatos do PJES</h2>
-              <p class="fc-subtitle">Consulte a estrutura completa por Comarca<span class="seta">→</span>Fórum<span class="seta">→</span>Unidade<span class="seta">→</span>Setor<span class="seta">→</span>Contatos. Selecione uma comarca no mapa ao lado, no menu suspenso ou na lista abaixo.</p>
-            </div>
-          </div>
-          <span class="fc-pill fc-total-localidades" id="loc-count"></span>
-          <p class="fc-subtitle" id="crumb"></p>
-          <div class="fc-selects-row" id="sel-row">
-            <select id="sel-com" class="fc-select" aria-label="Comarca"><option value="">Selecione uma comarca</option></select>
-            <select id="sel-for" class="fc-select hidden" aria-label="Fórum" disabled><option value="">Fórum…</option></select>
-            <select id="sel-uni" class="fc-select hidden" aria-label="Unidade" disabled><option value="">Unidade…</option></select>
-            <select id="sel-set" class="fc-select hidden" aria-label="Setor" disabled><option value="">Setor…</option></select>
-          </div>
           <div class="create-box hidden" id="create-box">
             <h3>Novo contato neste setor</h3>
             <div class="form-grid">
@@ -70,15 +62,7 @@
               <span id="save-status"></span>
             </div>
           </div>
-          <div id="lista"></div>
-          <div id="print-area"></div>
-          <div class="fc-bottom-nav">
-            <div class="nav-group">
-              <button type="button" class="fc-btn hidden" id="btn-voltar">← Voltar</button>
-              <button type="button" class="fc-btn" id="btn-topo">↑ Voltar ao topo</button>
-            </div>
-            <button type="button" class="fc-btn hidden" id="btn-print" title="Imprimir / Salvar PDF dos contatos do nível selecionado">🖨️ Imprimir / Salvar PDF</button>
-          </div>
+          <div id="lista"><div class="fc-empty">Carregando contatos...</div></div>
         </div>
       </div>
     </section>
@@ -174,8 +158,7 @@
           </div>
         </div>
       </div>
-    </section>
-    <section class="hidden" id="view-manual">
+      <div style="grid-column:1/-1">
       <div class="manual-container">
         <div class="manual-hero">
           <h2>Bem-vindo ao Diretório de Contatos — Demo</h2>
@@ -300,8 +283,9 @@
           </div>
         </section>
       </div>
+      </div>
     </section>
-    <footer>Python stdlib + HTML/CSS/JS · Leaflet + GeoJSON público · dados de exemplo</footer>
+    <footer>Python stdlib + HTML/CSS/JS · Leaflet + GeoJSON público · dados mascarados</footer>
   </main>
 </div>
 <div class="modal hidden" id="modal-login">
@@ -361,6 +345,6 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="mapa.js?v=16"></script>
-<script src="admin.js?v=20"></script>
+<script src="admin.js?v=22"></script>
 </body>
 </html>
