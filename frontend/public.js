@@ -882,14 +882,31 @@
             layer.bindTooltip(
               rotuloMapaComarca(codigo, nome),
               { sticky: true });
-            if (tem) {
-              layer.on("click", function () {
-                var m = (estado.dados.comarcas || []).filter(function (x) {
-                  return String(x.codigoIbge || "").replace(/\D/g, "") === codigo;
-                })[0];
-                if (m) abrirComarca(m.id);
-              });
-            }
+            layer.on("click", function () {
+              var lista = (estado.dados && estado.dados.comarcas) || [];
+              var m = null;
+              for (var i = 0; i < lista.length; i++) {
+                if (String(lista[i].codigoIbge || "").replace(/\D/g, "") === codigo) { m = lista[i]; break; }
+              }
+              if (!m) {
+                var alvo = String(nome || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+                for (var j = 0; j < lista.length; j++) {
+                  var nm = String(lista[j].nome || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+                  if (nm && nm === alvo) { m = lista[j]; break; }
+                }
+              }
+              if (m) abrirComarca(m.id);
+            });
+            layer.on("mouseover", function () {
+              var sel = String((comarcaAtual() && comarcaAtual().codigoIbge) || "").replace(/\D/g, "");
+              if (sel !== codigo) {
+                layer.setStyle({ color: "#0f172a", weight: 2.2, fillColor: "#00adb5", fillOpacity: .78 });
+              }
+            });
+            layer.on("mouseout", function () {
+              var cur = comarcaAtual();
+              destacarMapa(cur ? cur.codigoIbge : "");
+            });
           }
         }).addTo(estado.mapa);
         var legenda = L.control({ position: "bottomright" });

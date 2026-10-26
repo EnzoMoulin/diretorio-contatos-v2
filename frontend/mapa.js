@@ -40,7 +40,7 @@ async function initMapa(mapId, msgId, locs, onSelect) {
   }
   _mapaOK = true;
   _map = L.map(mapId, { zoomControl: true, attributionControl: true, scrollWheelZoom: true, zoomSnap: 0.5 })
-    .setView([-19.5, -40.3], 9);
+    .setView([-19.6, -40.35], 8);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(_map);
   const dens = {};
@@ -83,8 +83,7 @@ async function initMapa(mapId, msgId, locs, onSelect) {
     _layer.eachLayer(l => { if (l._total) l.bringToFront(); });
     const enquadrar = () => {
       try {
-        _map.fitBounds(_layer.getBounds(), { padding: [-14, -14] });
-        _map.setZoom(_map.getZoom() + 0.5, { animate: false });
+        _map.fitBounds(_layer.getBounds(), { padding: [3, 3] });
       } catch (e) {}
     };
     enquadrar();

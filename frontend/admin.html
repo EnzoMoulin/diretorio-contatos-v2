@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Diretório de Contatos — Acesso interno</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=33">
 </head>
 <body>
 <div class="app-container">
@@ -39,10 +39,6 @@
         <div>
           <h1 class="fc-title">Diretório Institucional de Contatos - PJES</h1>
         </div>
-        <div class="fc-busca">
-          <input id="fc-busca" class="fc-busca-input" type="search" placeholder="Buscar contato, setor, unidade…" autocomplete="off">
-          <div id="fc-busca-resultados" class="fc-busca-resultados" hidden></div>
-        </div>
         <span class="fc-profile" id="profile-badge"><i>●</i> Visitante</span>
       </div>
       <div class="consulta-layout">
@@ -50,6 +46,11 @@
           <div id="map" role="region" aria-label="Mapa interativo dos comarcas"></div>
           <p class="hint" id="map-msg"></p>
         </section>
+        <div class="consulta-direita">
+          <div class="fc-busca">
+            <input id="fc-busca" class="fc-busca-input" type="search" placeholder="Buscar contato, setor, unidade…" autocomplete="off">
+            <div id="fc-busca-resultados" class="fc-busca-resultados" hidden></div>
+          </div>
         <div class="fc-panel">
           <div class="create-box hidden" id="create-box">
             <h3>Novo contato neste setor</h3>
@@ -63,6 +64,7 @@
             </div>
           </div>
           <div id="lista"><div class="fc-empty">Carregando contatos...</div></div>
+        </div>
         </div>
       </div>
     </section>
@@ -344,7 +346,7 @@
   </div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="mapa.js?v=18"></script>
+<script src="mapa.js?v=21"></script>
 <script src="admin.js?v=24"></script>
 </body>
 </html>

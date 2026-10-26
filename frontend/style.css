@@ -205,6 +205,10 @@ body[data-theme="dark"] .fc-page-head{border-color:#334155}
 .fc-page-head .fc-title{font-size:20px;letter-spacing:.04em;text-transform:uppercase;color:#1d4ed8}
 .fc-page-head h1{margin:0;font-size:22px;font-weight:800;color:#0f172a;font-family:Arial,Helvetica,sans-serif;line-height:1.2}
 .fc-busca{position:relative;flex:1 1 auto;max-width:340px;margin:0 8px}
+.consulta-direita{display:flex;flex-direction:column;min-width:0;min-height:0}
+#view-consulta .consulta-direita>.fc-busca{max-width:none;width:100%;margin:0 0 5px;flex:none;box-sizing:border-box}
+#view-consulta .consulta-direita .fc-busca-input{max-width:none;margin-bottom:0}
+.consulta-direita>.fc-panel{flex:1 1 auto;min-height:0}
 .fc-busca-input{width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#f8fafc;color:#0f172a}
 .fc-busca-resultados{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.18);z-index:60;max-height:320px;overflow-y:auto}
 .fc-busca-item{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #f1f5f9;padding:9px 12px;cursor:pointer}
