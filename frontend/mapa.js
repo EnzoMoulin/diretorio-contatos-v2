@@ -16,13 +16,10 @@ function corPorDensidade(n) {
 
 function estiloComarca(nome, total) {
   const isSel = _selecionado && norm(nome) === norm(_selecionado);
-  return {
-    fillColor: isSel ? '#00adb5' : (total ? '#93c5fd' : '#f1f5f9'),
-    fillOpacity: isSel ? 0.85 : (total ? 0.65 : 0.25),
-    color: isSel ? '#0f172a' : (total ? '#2563eb' : '#94a3b8'),
-    weight: isSel ? 2.4 : 2,
-    opacity: 1,
-  };
+  if (isSel) return { fillColor: '#00adb5', fillOpacity: 0.85, color: '#0f172a', weight: 2.4, opacity: 1 };
+  return total
+    ? { fillColor: '#60a5fa', fillOpacity: 0.42, color: '#2563eb', weight: 1.2, opacity: 1 }
+    : { fillColor: '#cbd5e1', fillOpacity: 0.24, color: '#94a3b8', weight: 0.8, opacity: 1 };
 }
 
 function destacarComarcaMapa(nome) {
@@ -47,20 +44,25 @@ async function initMapa(mapId, msgId, locs, onSelect) {
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(_map);
   const dens = {};
-  (locs || []).forEach(l => { dens[norm(l.nome)] = l.total; });
+  (locs || []).forEach(l => { dens[norm(l.nome)] = { total: l.total || 0, foruns: l.foruns || 0 }; });
   try {
     const gj = await (await fetch(GEOJSON_URL)).json();
     _layer = L.geoJSON(gj, {
       style: f => {
         const nome = String(f.properties.name || '').trim();
-        return estiloComarca(nome, dens[norm(nome)] || 0);
+        return estiloComarca(nome, ((dens[norm(nome)] || {}).total) || 0);
       },
       onEachFeature: (f, l) => {
         const nome = String(f.properties.name || '').trim();
-        const n = dens[norm(nome)] || 0;
+        const info = dens[norm(nome)] || { total: 0, foruns: 0 };
+        const n = info.total || 0;
+        const nf = info.foruns || 0;
         l._total = n;
+        const detalhe = n > 0
+          ? `<small>${nf} ${nf === 1 ? 'Fórum' : 'Fóruns'} • ${n} ${n === 1 ? 'contato' : 'contatos'}</small>`
+          : `<small>Sem contatos cadastrados</small>`;
         l.bindTooltip(
-          `<div class="tooltip-premium">${nome}<small>${n} contato(s)</small></div>`,
+          `<div class="tooltip-premium">${nome}${detalhe}</div>`,
           { permanent: false, direction: 'auto', sticky: true });
         l.on({
           mouseover: e => {

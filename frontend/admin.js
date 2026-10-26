@@ -25,9 +25,9 @@ function esc(s) {
 const auth = () => ({ 'Content-Type': 'application/json', 'X-Admin-Token': token });
 const logado = () => !!me;
 
-const VIEWS = ['consulta', 'dashboard', 'solicitacoes', 'registro', 'manual', 'config', 'notificacoes'];
+const VIEWS = ['consulta', 'dashboard', 'solicitacoes', 'registro', 'config', 'notificacoes'];
 function mostrarConsulta() {
-  VIEWS.forEach(v => $('view-' + v).classList.add('hidden'));
+  VIEWS.forEach(v => { const s = $('view-' + v); if (s) s.classList.add('hidden'); });
   $('view-consulta').classList.remove('hidden');
 }
 function marcarMenu(v) {
@@ -425,7 +425,7 @@ function destacarMapaAdmin(nome) {
   if (typeof destacarComarcaMapa === 'function') destacarComarcaMapa(nome || '');
 }
 function locsMapa() {
-  return H.comarcas.filter(m => !ehOrgao(m)).map(m => ({ nome: m.nome, total: m.qtdContatos || 0 }));
+  return H.comarcas.filter(m => !ehOrgao(m)).map(m => ({ nome: m.nome, total: m.qtdContatos || 0, foruns: m.qtdForuns || 0 }));
 }
 
 /* ---- telas ---- */
