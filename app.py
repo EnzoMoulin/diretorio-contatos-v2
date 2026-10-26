@@ -921,38 +921,65 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"erro": "use seu e-mail institucional (@" + DOMINIO_INSTITUCIONAL + ")"}, 400)
             usuario = (data.get("usuario") or "").strip() or email.split("@")[0]
             con = get_db()
-            nivel = (data.get("nivel") or "comarca").strip().lower()
-            if nivel not in NIVEIS:
-                nivel = "comarca"
-            try:
-                alvo = int(data.get("alvo_id") or data.get("comarca_id") or 0) or None
-            except (TypeError, ValueError):
-                alvo = None
-            # comarca do alvo (para exibir ao admin)
-            com_id = data.get("comarca_id") or None
-            if alvo:
-                pais = self._pais(con, nivel, alvo)
-                for nv, aid in pais:
-                    if nv == "comarca":
-                        com_id = aid
-                        break
-            cur = con.execute(
-                "INSERT INTO pedidos (nome, email, usuario_desejado, motivo,"
-                " comarca_id, nivel, alvo_id) VALUES (?,?,?,?,?,?,?)",
-                (data.get("nome"), data.get("email", ""),
-                 usuario, data.get("motivo", ""),
-                 com_id, nivel, alvo))
+            # árvore de locais: escopos=[{tipo|nivel, id|alvo_id}] -> um pedido por local.
+            # Sem escopos, vale o caminho único (nivel+alvo_id ou comarca_id).
+            itens = []
+            raw_esc = data.get("escopos")
+            if isinstance(raw_esc, list):
+                for e in raw_esc:
+                    if not isinstance(e, dict):
+                        continue
+                    nv = str(e.get("tipo") or e.get("nivel") or "").strip().lower()
+                    if nv not in NIVEIS:
+                        continue
+                    try:
+                        aid = int(e.get("id") or e.get("alvo_id") or 0) or None
+                    except (TypeError, ValueError):
+                        aid = None
+                    if aid and (nv, aid) not in itens:
+                        itens.append((nv, aid))
+            if not itens:
+                nivel = (data.get("nivel") or "comarca").strip().lower()
+                if nivel not in NIVEIS:
+                    nivel = "comarca"
+                try:
+                    alvo = int(data.get("alvo_id") or data.get("comarca_id") or 0) or None
+                except (TypeError, ValueError):
+                    alvo = None
+                itens = [(nivel, alvo)]
+            nomes_nivel = {"comarca": "comarca", "forum": "fórum",
+                           "unidade": "unidade", "setor": "setor"}
+            primeiro_id = None
+            for (nivel, alvo) in itens:
+                # comarca do alvo (para exibir ao admin)
+                com_id = data.get("comarca_id") or None
+                if alvo:
+                    pais = self._pais(con, nivel, alvo)
+                    for nv, aid in pais:
+                        if nv == "comarca":
+                            com_id = aid
+                            break
+                cur = con.execute(
+                    "INSERT INTO pedidos (nome, email, usuario_desejado, motivo,"
+                    " comarca_id, nivel, alvo_id) VALUES (?,?,?,?,?,?,?)",
+                    (data.get("nome"), data.get("email", ""),
+                     usuario, data.get("motivo", ""),
+                     com_id, nivel, alvo))
+                if primeiro_id is None:
+                    primeiro_id = cur.lastrowid
+            if len(itens) == 1:
+                nv_txt = nomes_nivel.get(itens[0][0], itens[0][0])
+                detalhe = f" {nv_txt} id {itens[0][1] or '-'}"
+            else:
+                detalhe = f" {len(itens)} locais"
             for aid in admin_ids(con):
-                nivel_txt = {"comarca": "comarca", "forum": "fórum",
-                             "unidade": "unidade", "setor": "setor"}.get(nivel, nivel)
                 notify(con, aid, "solicitacao",
-                       f"Nova solicitação de {data.get('nome')} ({usuario}):"
-                       f" {nivel_txt} id {alvo or '-'}")
+                       f"Nova solicitação de {data.get('nome')} ({usuario}):{detalhe}")
             log(con, "pedido", None,
                 f"solicitação de acesso: {data.get('nome')} ({usuario})")
             con.commit()
             con.close()
-            return self._json({"ok": True, "id": cur.lastrowid}, 201)
+            return self._json({"ok": True, "id": primeiro_id}, 201)
         parts = u.path.rstrip("/").split("/")
         if len(parts) == 5 and parts[1] == "api" and parts[2] == "pedidos" \
                 and parts[4] == "aprovar":

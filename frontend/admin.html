@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Diretório de Contatos — Acesso interno</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css?v=35">
+<link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
 <div class="app-container">
@@ -66,6 +66,39 @@
           </div>
           <div id="lista"><div class="fc-empty">Carregando contatos...</div></div>
         </div>
+        </div>
+      </div>
+    </section>
+    <section class="hidden" id="view-pedido">
+      <div class="fc-page-head">
+        <div>
+          <h1 class="fc-title">Solicitar acesso</h1>
+        </div>
+        <button class="btn-ghost dark" id="ped-voltar" type="button">← Voltar à consulta</button>
+      </div>
+      <div class="fa-card">
+        <div class="fa-head">
+          <h2>Solicitar Acesso Administrativo</h2>
+          <p id="ped-hint">Exigido e-mail institucional @exemplo.jus.br (equivale ao vínculo da intranet).</p>
+        </div>
+        <div class="fa-body">
+          <div class="fa-grid">
+            <div class="fa-field"><label for="p-nome">Nome completo *</label><input id="p-nome" autocomplete="name"></div>
+            <div class="fa-field"><label for="p-email">E-mail institucional *</label><input id="p-email" placeholder="voce@exemplo.jus.br" autocomplete="email"></div>
+            <div class="fa-field"><label for="p-user">Usuário desejado</label><input id="p-user"><span class="fa-dica">Opcional — padrão: início do e-mail.</span></div>
+            <div class="fa-field"><label for="p-comarca">Comarca</label><select id="p-comarca"></select></div>
+            <div class="fa-field fa-full"><label for="p-motivo">Motivo (opcional)</label><textarea id="p-motivo" rows="3"></textarea></div>
+            <div class="fa-field fa-full">
+              <label>Locais solicitados <span class="fa-dica" id="ped-sel-count"></span></label>
+              <p class="fa-dica" style="margin:0">Marque a comarca inteira ou abra os fóruns e marque unidades e setores. Marcar um nível já inclui tudo abaixo dele.</p>
+              <div id="p-arvore" class="fa-unidades" aria-live="polite">Carregando locais...</div>
+            </div>
+          </div>
+          <p class="hint" id="p-status"></p>
+          <div class="fa-acoes">
+            <button id="p-cancel" class="btn-ghost dark">Cancelar</button>
+            <button id="p-enviar" class="fa-btn">Enviar pedido</button>
+          </div>
         </div>
       </div>
     </section>
@@ -304,22 +337,6 @@
     <p class="hint" id="l-status"></p>
   </div>
 </div>
-<div class="modal hidden" id="modal-pedido">
-  <div class="modal-box">
-    <h2>Solicitar acesso administrativo</h2>
-    <p class="hint" id="ped-hint">Exigido e-mail institucional @exemplo.jus.br (equivale ao vínculo da intranet).</p>
-    <label>Nome*<input id="p-nome"></label>
-    <label>E-mail institucional*<input id="p-email" placeholder="voce@exemplo.jus.br"></label>
-    <label>Usuário desejado <span class="hint">(opcional — padrão: início do e-mail)</span><input id="p-user"></label>
-    <label>Local de acesso<select id="p-loc"></select></label>
-    <label>Motivo<input id="p-motivo"></label>
-    <div class="modal-actions">
-      <button id="p-cancel" class="btn-ghost">Cancelar</button>
-      <button id="p-enviar" class="btn-primary">Enviar pedido</button>
-    </div>
-    <p class="hint" id="p-status"></p>
-  </div>
-</div>
 <div class="modal hidden" id="modal-edit">
   <div class="modal-box">
     <h2>Editar contato</h2>
@@ -348,6 +365,6 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="mapa.js?v=21"></script>
-<script src="admin.js?v=26"></script>
+<script src="admin.js?v=32"></script>
 </body>
 </html>
