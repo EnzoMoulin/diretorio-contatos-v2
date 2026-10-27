@@ -114,9 +114,13 @@ def aprovar_pedido(con, pid, automatico=False):
     con.execute("UPDATE pedidos SET status='aprovado' WHERE id=?", (pid,))
     marca = " (aprovação automática — simulação)" if automatico else ""
     log(con, "aprovar", None, f"acesso aprovado: {ped['usuario_desejado']}{marca}")
-    notify(con, uid_novo, "aprovada",
-           "Seu acesso foi aprovado. Entre com sua conta Google." +
-           (" (Aprovação automática — simulação.)" if automatico else ""))
+    texto_aprov = ("Seu acesso foi aprovado. Entre com sua conta Google." +
+                   (" (Aprovação automática — simulação.)" if automatico else ""))
+    notify(con, uid_novo, "aprovada", texto_aprov)
+    if not automatico:
+        _send_email(ped["email"], "Acesso liberado — Diretório de Contatos",
+                    f"Olá {ped['nome']},\n\nSeu acesso foi liberado pelo administrador.\n"
+                    f"Entre com sua conta Google: http://localhost:8000/admin")
     con.commit()
     return True, {"ok": True, "usuario": ped["usuario_desejado"]}, 200
 
@@ -252,6 +256,33 @@ DOMINIO_INSTITUCIONAL = "exemplo.jus.br"
 
 def sha(s):
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+
+def _send_email(to_addrs, subject, body):
+    """E-mail real via SMTP (env SMTP_HOST/PORT/USER/PASS/FROM). Sem SMTP
+    configurado, retorna False e o aviso fica só dentro do sistema."""
+    host = os.environ.get("SMTP_HOST", "")
+    if not host:
+        return False
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        port = int(os.environ.get("SMTP_PORT", "587"))
+        user = os.environ.get("SMTP_USER", "")
+        pwd = os.environ.get("SMTP_PASS", "")
+        dests = to_addrs if isinstance(to_addrs, list) else [to_addrs]
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["Subject"] = subject
+        msg["From"] = os.environ.get("SMTP_FROM", user)
+        msg["To"] = ", ".join(dests)
+        with smtplib.SMTP(host, port, timeout=20) as s:
+            s.starttls()
+            if user:
+                s.login(user, pwd)
+            s.send_message(msg)
+        return True
+    except Exception:
+        return False
 
 
 def get_db():
@@ -1243,6 +1274,24 @@ class Handler(BaseHTTPRequestHandler):
                 notify(con, aid, "solicitacao",
                        f"Nova solicitação de {data.get('nome')} ({usuario}):{detalhe}" +
                        (" (aprovada automaticamente — simulação)" if auto else ""))
+            if auto:
+                _send_email(email, "Acesso liberado — Diretório de Contatos",
+                            f"Olá {data.get('nome')},\n\nSeu acesso foi liberado "
+                            f"automaticamente (demonstração — simulação).\n"
+                            f"Entre com sua conta Google: http://localhost:8000/admin")
+            else:
+                chefes = [r["email"] for r in con.execute(
+                    "SELECT email FROM usuarios WHERE admin=1 AND aprovado=1").fetchall()
+                    if r["email"]]
+                extras = [e.strip() for e in
+                          os.environ.get("NOTIFY_EMAILS", "").split(",") if e.strip()]
+                for e in extras:
+                    if e not in chefes:
+                        chefes.append(e)
+                if chefes:
+                    _send_email(chefes, "Nova solicitação de acesso — Diretório de Contatos",
+                                f"Nova solicitação de {data.get('nome')} ({usuario}):{detalhe}\n\n"
+                                f"Analise em Solicitações de Acesso: http://localhost:8000/admin")
             log(con, "pedido", None,
                 f"solicitação de acesso: {data.get('nome')} ({usuario})" +
                 (" (auto-aprovada — simulação)" if auto else ""))

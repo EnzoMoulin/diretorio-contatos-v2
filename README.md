@@ -89,6 +89,19 @@ python3 app.py
 bash teste_rapido.sh   # verifica o fluxo completo, incl. escopo por local
 ```
 
+## E-mail de verdade (opcional)
+Sem SMTP configurado, os avisos ficam só dentro do sistema. Para enviar de
+verdade (Gmail), crie uma **senha de app** em
+conta Google → Segurança → Verificação em 2 etapas → Senhas de app, e rode:
+```bash
+SMTP_HOST=smtp.gmail.com SMTP_PORT=587 \
+SMTP_USER=seu@gmail.com SMTP_PASS=xxxx-xxxx-xxxx-xxxx \
+SMTP_FROM=seu@gmail.com NOTIFY_EMAILS=seu@gmail.com \
+python3 app.py
+```
+O que é enviado: pedido novo → admins (`NOTIFY_EMAILS` + contas admin);
+aprovação → solicitante. Falha de envio nunca quebra o fluxo.
+
 ## Endpoints
 | Método | Rota | Auth | Descrição |
 |---|---|---|---|
