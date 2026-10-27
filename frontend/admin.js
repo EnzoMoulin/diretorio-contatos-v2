@@ -988,7 +988,7 @@ async function refresh() {
   const ehAdmin = dentro && (me.admin === 1 || me.escopo === 'all');
   const ehVisitante = dentro && !ehAdmin && !(me.escopo || []).length;
   $('estado-hint').textContent = !dentro
-    ? 'Consulta sem login. Com cadastro, entre para gerenciar seus locais.'
+    ? 'Solicite acesso administrativo abaixo.'
     : (ehAdmin
       ? 'Logado como ' + me.usuario + ' (admin: todos os locais).'
       : (ehVisitante
