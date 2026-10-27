@@ -111,7 +111,7 @@ def aprovar_pedido(con, pid, automatico=False):
             "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
             " VALUES (?,?,?) ON CONFLICT DO NOTHING",
             (uid_novo, ped["nivel"] or "comarca", ped["alvo_id"]))
-    if ped["nivel"] == "sistema" and not ped["alvo_id"]:
+    if ped["nivel"] == "admin" and not ped["alvo_id"]:
         con.execute("UPDATE usuarios SET admin=1 WHERE id=?", (uid_novo,))
     con.execute("UPDATE pedidos SET status='aprovado' WHERE id=?", (pid,))
     marca = " (aprovação automática — simulação)" if automatico else ""
@@ -1207,7 +1207,7 @@ class Handler(BaseHTTPRequestHandler):
                 if sess_user["admin"]:
                     con.close()
                     return self._json({"erro": "Você já é Administrador."}, 400)
-                itens.append(("sistema", None))
+                itens.append(("admin", None))
             if not itens:
                 nivel = (data.get("nivel") or "comarca").strip().lower()
                 if nivel not in NIVEIS:
@@ -1219,7 +1219,7 @@ class Handler(BaseHTTPRequestHandler):
                 itens = [(nivel, alvo)]
             nomes_nivel = {"comarca": "comarca", "forum": "fórum",
                            "unidade": "unidade", "setor": "setor",
-                           "sistema": "administrador"}
+                           "admin": "administrador"}
             existentes = con.execute(
                 "SELECT nivel, alvo_id FROM pedidos WHERE lower(email)=? AND status='pendente'",
                 (email,)).fetchall()

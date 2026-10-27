@@ -1339,7 +1339,7 @@ async function carregarPedidos() {
   $('ped-count').textContent = n || '';
   $('pedidos').innerHTML = (Array.isArray(lista) ? lista : []).map(p =>
     `<li><b>${esc(p.nome)}</b> (${esc(p.email)}) — usuário: <code>${esc(p.usuario_desejado)}</code>` +
-    (p.nivel === 'sistema' && !p.alvo_id ? ` — <b>administrador</b>` :
+    (p.nivel === 'admin' && !p.alvo_id ? ` — <b>administrador</b>` :
     (p.alvo_nome ? ` — ${esc({comarca:'comarca',forum:'fórum',unidade:'unidade',setor:'setor'}[p.nivel]||p.nivel)}: <b>${esc(p.alvo_nome)}</b>` : (p.localidade ? ` — local: <b>${esc(p.localidade)}</b>` : ''))) +
     (p.motivo ? ` — ${esc(p.motivo)}` : '') +
     ` <button class="btn-primary" data-id="${p.id}">aprovar</button></li>`
