@@ -1206,7 +1206,7 @@ class Handler(BaseHTTPRequestHandler):
             if quer_admin:
                 if sess_user["admin"]:
                     con.close()
-                    return self._json({"erro": "Você já é Gestor do Sistema."}, 400)
+                    return self._json({"erro": "Você já é Administrador."}, 400)
                 itens.append(("sistema", None))
             if not itens:
                 nivel = (data.get("nivel") or "comarca").strip().lower()
@@ -1219,7 +1219,7 @@ class Handler(BaseHTTPRequestHandler):
                 itens = [(nivel, alvo)]
             nomes_nivel = {"comarca": "comarca", "forum": "fórum",
                            "unidade": "unidade", "setor": "setor",
-                           "sistema": "gestor do sistema"}
+                           "sistema": "administrador"}
             existentes = con.execute(
                 "SELECT nivel, alvo_id FROM pedidos WHERE lower(email)=? AND status='pendente'",
                 (email,)).fetchall()
