@@ -7,11 +7,11 @@ html,body{margin:0;padding:0;width:100%;height:100vh;overflow:hidden;
 /* ---- sidebar (identidade do app original) ---- */
 .sidebar{width:260px;min-width:260px;height:100vh;flex-shrink:0;overflow-y:auto;
   background:#1e293b;color:#fff;display:flex;flex-direction:column}
-.sidebar-header{padding:25px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-header{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.1)}
 .sidebar-header h2{margin:0;font-size:28px}
 .sidebar-header span{font-size:14px;opacity:.7}
-.sidebar-menu{padding:15px;flex:1}
-.menu-item{width:100%;border:0;background:transparent;color:#fff;padding:12px 15px;
+.sidebar-menu{padding:12px 15px;flex:1}
+.menu-item{width:100%;border:0;background:transparent;color:#fff;padding:10px 15px;
   margin-bottom:5px;text-align:left;border-radius:8px;cursor:pointer;font-size:15px}
 .menu-item:hover,.menu-item.active{background:rgba(255,255,255,.15)}
 .sidebar-login{padding:15px;border-top:1px solid rgba(255,255,255,.1)}
@@ -209,12 +209,12 @@ body[data-theme="dark"] code{background:#0f172a}
 .menu-item:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.08);color:#fff;transform:translateX(2px)}
 .menu-item.active{background:linear-gradient(90deg,rgba(37,99,235,.24),rgba(59,130,246,.1));border-color:rgba(96,165,250,.22);color:#fff;box-shadow:inset 3px 0 0 #60a5fa}
 .menu-item.active .icon{background:rgba(59,130,246,.2)}
-.sidebar-footer{padding:12px;border-top:1px solid rgba(255,255,255,.08);background:rgba(2,6,23,.12)}
-.sidebar-status-btn{width:100%;min-height:40px;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 10px;border:1px solid rgba(255,255,255,.12);border-radius:10px;cursor:pointer;font-size:12px;font-weight:800;background:transparent;color:#dbe4f0}
-.sidebar-footer .sidebar-status-btn{margin-top:10px}
+.sidebar-footer{padding:10px 12px;border-top:1px solid rgba(255,255,255,.08);background:rgba(2,6,23,.12)}
+.sidebar-status-btn{width:100%;min-height:38px;display:flex;align-items:center;justify-content:center;gap:8px;padding:7px 10px;border:1px solid rgba(255,255,255,.12);border-radius:10px;cursor:pointer;font-size:12px;font-weight:800;background:transparent;color:#dbe4f0}
+.sidebar-footer .sidebar-status-btn{margin-top:8px}
 .sidebar-status-btn:hover{filter:brightness(.985);transform:translateY(-1px)}
 .sidebar-status-btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
-.sidebar-user{margin-top:10px;color:#94a3b8;text-align:center;font-size:12px;line-height:1.5}
+.sidebar-user{margin-top:8px;color:#94a3b8;text-align:center;font-size:12px;line-height:1.5}
 /* ================= original: painel consulta + mapa ================= */
 .consulta-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(16px,2vw,24px);align-items:stretch}
 @media(max-width:900px){.consulta-layout{grid-template-columns:1fr}}
