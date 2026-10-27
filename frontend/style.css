@@ -83,7 +83,7 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 }
 .consulta-grid{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:16px;align-items:start}
 @media (max-width:900px){.consulta-grid{grid-template-columns:1fr}}
-.modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:flex-start;justify-content:center;z-index:2000;overflow-y:auto;padding:20px 12px}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:flex-start;justify-content:center;z-index:2000;overflow-y:auto;padding:20px 12px;backdrop-filter:blur(4px)}
 .modal-box{background:#fff;border-radius:10px;padding:24px;width:min(440px,92vw);display:flex;flex-direction:column;gap:10px;margin:auto;max-height:calc(100vh - 40px);overflow-y:auto}
 .modal-box h2{margin:0}
 .modal-box label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:#475569}
