@@ -976,8 +976,19 @@ async function refresh() {
   if (dentro) $('who-mail').textContent = '👤 ' + (me.email || me.usuario);
   $('who-line').textContent = dentro ? '👤 ' + me.usuario : 'Sem acesso administrativo';
   $('btn-entrar').classList.toggle('hidden', dentro);
+  $('btn-pedir').classList.toggle('hidden', dentro);
+  $('btn-pedir-locais').classList.toggle('hidden', !dentro);
   $('btn-sair').classList.toggle('hidden', !dentro);
-  $('btn-pedir').onclick = dentro ? abrirPedidoMais : abrirPedidoNovo;
+  $('btn-pedir').onclick = () => {
+    if (!logado()) {
+      sessionStorage.setItem('pedirAposLogin', 'cadastro');
+      $('modal-login').classList.remove('hidden');
+      $('l-status').textContent = '';
+      return;
+    }
+    abrirPedidoNovo('cadastro');
+  };
+  $('btn-pedir-locais').onclick = () => abrirPedidoNovo('locais');
   $('estado-hint').textContent = dentro
     ? 'Logado como ' + me.usuario + (me.escopo === 'all' ? ' (admin: todos os locais).' : ` (locais liberados: ${me.escopo.length}).`)
     : 'Consulta sem login. Com cadastro, entre para gerenciar seus locais.';
@@ -1002,7 +1013,11 @@ async function refresh() {
 }
 $('btn-entrar').onclick = () => { $('modal-login').classList.remove('hidden'); $('l-status').textContent = ''; };
 $('l-cancel').onclick = () => $('modal-login').classList.add('hidden');
-$('l-pedir').onclick = () => { $('modal-login').classList.add('hidden'); abrirPedidoNovo(); };
+$('l-pedir').onclick = () => {
+  $('modal-login').classList.add('hidden');
+  sessionStorage.setItem('pedirAposLogin', 'cadastro');
+  location.href = '/oauth/login';
+};
 (function capturarTokenGoogle() {
   const m = (location.hash || '').match(/[#&]token=([A-Za-z0-9]+)/);
   if (m) {
@@ -1127,23 +1142,32 @@ function renderArvore() {
   const n = pedSel.size;
   $('ped-sel-count').textContent = n ? `(${n} selecionado${n === 1 ? '' : 's'})` : '';
 }
-async function abrirPedidoNovo() {
+async function abrirPedidoNovo(modo) {
+  if (!logado()) {
+    sessionStorage.setItem('pedirAposLogin', modo === 'locais' ? 'locais' : 'cadastro');
+    $('modal-login').classList.remove('hidden');
+    $('l-status').textContent = 'Entre com sua conta Google para solicitar acesso.';
+    return;
+  }
+  window._pedModo = (modo === 'locais') ? 'locais' : 'cadastro';
   mostrarPedido();
   $('p-status').textContent = '';
-  $('ped-hint').textContent = 'Exigido e-mail institucional @exemplo.jus.br (equivale ao vínculo da intranet).';
-  $('p-user').disabled = false;
+  $('ped-hint').textContent = window._pedModo === 'locais'
+    ? 'Escolha mais locais para o seu acesso.'
+    : 'Primeiro acesso: só a identidade. Os locais vêm depois, em Solicitar locais.';
+  if (logado()) {
+    $('p-nome').value = '';
+    $('p-email').value = me.email || '';
+    $('p-email').readOnly = true;
+    $('p-user').value = me.usuario;
+    $('p-user').disabled = true;
+  } else {
+    $('p-email').readOnly = false;
+    $('p-user').disabled = false;
+  }
   if (!(H.comarcas || []).length) { try { await recarregarHierarquia(true); } catch (e) {} }
   preencherLocais();
-}
-async function abrirPedidoMais() {
-  mostrarPedido();
-  $('p-status').textContent = '';
-  $('ped-hint').textContent = 'Pedir acesso a mais um local (entra como ' + me.usuario + ').';
-  $('p-user').value = me.usuario;
-  $('p-user').disabled = true;
-  $('p-email').value = '';
-  if (!(H.comarcas || []).length) { try { await recarregarHierarquia(true); } catch (e) {} }
-  preencherLocais();
+  $('bloco-locais').classList.toggle('hidden', window._pedModo !== 'locais');
 }
 function mostrarPedido() {
   VIEWS.forEach(v => { const s = $('view-' + v); if (s) s.classList.add('hidden'); });
@@ -1200,7 +1224,9 @@ $('c-enviar').onclick = async () => {
     : 'Erro: ' + await r.text();
 };
 $('p-enviar').onclick = async () => {
-  const corpo = { nome: $('p-nome').value.trim(), email: $('p-email').value.trim(),
+  const emCadastro = window._pedModo !== 'locais';
+  const corpo = { nome: $('p-nome').value.trim(),
+                  email: (logado() ? me.email : $('p-email').value.trim()),
                   usuario: (($('p-user').disabled && logado()) ? me.usuario : $('p-user').value.trim()),
                   motivo: $('p-motivo').value.trim(),
                   escopos: [...pedSel].map(k => {
@@ -1208,12 +1234,21 @@ $('p-enviar').onclick = async () => {
                     return { tipo: k.slice(0, i), id: Number(k.slice(i + 1)) };
                   }) };
   if (!corpo.nome) { $('p-status').textContent = 'Informe seu nome.'; return; }
-  if (!corpo.escopos.length) { $('p-status').textContent = 'Selecione ao menos um local na árvore.'; return; }
+  if (!emCadastro && !corpo.escopos.length) { $('p-status').textContent = 'Selecione ao menos um local na árvore.'; return; }
   const r = await fetch('/api/pedidos', { method: 'POST',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+  const txt = await r.text();
+  let j = {};
+  try { j = JSON.parse(txt); } catch (e) {}
+  if (r.ok && j.auto_aprovado) {
+    $('p-status').textContent = 'Acesso liberado automaticamente (demonstração).';
+    try { me = await (await fetch('/api/me', { headers: auth() })).json(); } catch (e) {}
+    setTimeout(() => voltarConsulta(), 900);
+    return;
+  }
   $('p-status').textContent = r.ok
     ? 'Pedido enviado. Aguarde a aprovação do administrador.'
-    : 'Erro: ' + await r.text();
+    : 'Erro: ' + (j.erro || txt);
 };
 
 /* ---- dashboard ---- */
@@ -1308,7 +1343,7 @@ async function carregarPedidos() {
       const r = await fetch('/api/pedidos/' + b.dataset.id + '/aprovar',
         { method: 'POST', headers: auth() });
       const j = await r.json();
-      alert(r.ok ? `Aprovado: ${j.usuario} (senha inicial: ${j.senha_inicial})` : 'Erro: ' + (j.erro || ''));
+      alert(r.ok ? `Aprovado: ${j.usuario} (entra com a conta Google)` : 'Erro: ' + (j.erro || ''));
       carregarPedidos();
     };
   });
@@ -1324,4 +1359,10 @@ async function carregarHistorico() {
 (async () => {
   vincularBuscaGlobal();
   await refresh();
+  try {
+    if (sessionStorage.getItem('pedirAposLogin') && logado()) {
+      sessionStorage.removeItem('pedirAposLogin');
+      abrirPedidoNovo('cadastro');
+    }
+  } catch (e) {}
 })();

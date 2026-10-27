@@ -18,9 +18,11 @@
   (implantação pública no site × privada na intranet, definidas por propriedade):
   - `/` pública: só consulta; falha fechada (nenhuma mutação sem token)
   - `/admin` interna: portão de login; sem token válido, nada além do portão aparece
-- **Portão institucional**: no original, sessão Google + intranet + domínio
-  institucional (`AuthService.emailPermitidoNoPrivado`); aqui, login Google +
-  pedido exigindo e-mail `@exemplo.jus.br` (validado no servidor, 400 fora do domínio)
+- **Portão institucional (simulado)**: no original, sessão Google + intranet + domínio
+  institucional; aqui, qualquer conta Google entra como visitante, e a intranet
+  é simulada pelo `INTRANET_ONLY` (só localhost/rede local alcança o `/admin`).
+  A aprovação é automática nesta demonstração (`SIMULACAO_AUTO_APROVAR=1`,
+  marcada como "SIMULAÇÃO AUTOMÁTICA"); produção = aprovação manual.
 - **Tabela de usuários decide permissões**: sem cadastro, mesmo no interno a
   visão seria só consulta; com cadastro, edita os locais do seu escopo
   (`acessos`, com herança comarca > fórum > unidade > setor); admin edita tudo
@@ -41,21 +43,24 @@
   (consulta em todos, edição só no escopo); clicar no mapa filtra qualquer local.
   Botões na base da sidebar: **Acesso administrativo** (login com Google, sem
   senha — identidade igual ao privado do v1; com acesso aprovado, eleva e libera
-  gestão por escopo + Solicitações + Registro) e **Solicitar acesso** (página do
-  formulário com árvore de locais); **Sair do acesso administrativo** volta à
-  consulta, continua no interno e invalida a sessão no servidor.
-  Primeiro login vira admin se não houver nenhum; demais e-mails precisam de
-  acesso aprovado.
+  gestão por escopo + Solicitações + Registro), **Solicitar acesso** (primeiro
+  acesso, só identidade) e **Solicitar locais** (árvore comarca > fórum >
+  unidade > setor, para quem já tem cadastro); **Sair do acesso administrativo**
+  volta à consulta, continua no interno e invalida a sessão no servidor.
+  Primeiro login vira admin se não houver nenhum; o resto é liberado por
+  aprovação (automática nesta demonstração).
 - **Gestão dentro da consulta, com escopo por nível**: o usuário cria/edita/remove
   contatos só onde tem cobertura (comarca, fórum, unidade ou setor, com herança de
   cima); fora dela, só consulta. Ao lado de cada nível selecionado sem cobertura,
   botão **Solicitar acesso** com modal de confirmação dinâmico (comarca inteira
   = tudo abaixo; fórum inteiro = unidades e setores; unidade inteira = setores; setor = só ele).
   Admin aprova e a cobertura amplia. Servidor barra tudo fora do escopo (403).
-- **Solicitação de acesso**: página (nome, e-mail institucional, usuário, motivo
-  opcional, árvore comarca > fórum > unidade > setor) → um pedido por local →
-  admin aprova e o acesso libera na conta Google do e-mail (e-mails fora do
-  domínio: 400)
+- **Solicitação de acesso**: página em dois modos — primeiro acesso (só
+  identidade) e locais (árvore comarca > fórum > unidade > setor); nome e motivo
+  opcional → um pedido por local → aprovação automática nesta demonstração
+  (marcada como simulação) ou manual pelo admin; o acesso libera na conta
+  Google do solicitante. Servidor barra duplicata, excesso de pendentes e tudo
+  fora do escopo (403).
 - **Registro de alterações**: criar / editar / remover / pedidos / aprovações
 - **Dashboard** (só logado): cards (comarcas, fóruns, unidades, setores, contatos,
   editáveis, pendências), barras por comarca com ✓ de cobertura e últimas

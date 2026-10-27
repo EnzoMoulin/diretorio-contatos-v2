@@ -14,8 +14,11 @@ Como rodar:
     -> admin:   http://localhost:8000/admin  (login com Google)
 
 Autenticação: identidade via Google OAuth (sem senha, como o privado do v1).
-Primeiro login vira admin se não houver nenhum; demais e-mails precisam de
-acesso aprovado (Solicitar acesso). Credencial em GOOGLE_CLIENT_FILE
+Entrada aberta: qualquer conta Google vira visitante; locais e gestão saem
+por aprovação — automática nesta demonstração (SIMULACAO_AUTO_APROVAR=1),
+marcada como "SIMULAÇÃO AUTOMÁTICA". O primeiro login vira admin se não
+houver nenhum. Intranet simulada: /admin só abre de localhost/rede local
+(INTRANET_ONLY=1). Credencial em GOOGLE_CLIENT_FILE
 (padrão: ~/.hermes/google_client_secret.json).
 
 Endpoints (JSON):
@@ -56,6 +59,8 @@ FRONT = BASE / "frontend"
 SESSIONS = {}  # token -> usuario_id (memória local)
 OAUTH_STATES = {}  # state -> expiração (login Google)
 
+SIMULACAO_AUTO_APROVAR = os.environ.get("SIMULACAO_AUTO_APROVAR", "1") == "1"
+
 GOOGLE_CLIENT_FILE = os.environ.get("GOOGLE_CLIENT_FILE") or str(
     Path.home() / ".hermes" / "google_client_secret.json")
 
@@ -80,6 +85,40 @@ GOOGLE_TEST_EMAILS = {
     for e in os.environ.get("GOOGLE_TEST_EMAILS", "").replace(";", ",").split(",")
     if e.strip()
 }
+
+
+def aprovar_pedido(con, pid, automatico=False):
+    """Efetiva a aprovação de um pedido: cria/libera o usuário e concede o
+    escopo pedido. Não fecha a conexão. Retorna (ok, payload, status)."""
+    ped = con.execute("SELECT * FROM pedidos WHERE id=?", (pid,)).fetchone()
+    if not ped or ped["status"] != "pendente":
+        return False, {"erro": "pedido não encontrado"}, 404
+    con.execute(
+        "INSERT INTO usuarios (usuario, senha_sha256, aprovado, email)"
+        " VALUES (?,?,1,?) ON CONFLICT(usuario) DO UPDATE SET aprovado=1,"
+        " email=excluded.email",
+        (ped["usuario_desejado"], "google-oauth:" + secrets.token_hex(16), ped["email"]))
+    uid_novo = con.execute(
+        "SELECT id FROM usuarios WHERE usuario=?",
+        (ped["usuario_desejado"],)).fetchone()["id"]
+    if ped["comarca_id"] and not ped["alvo_id"]:
+        con.execute(
+            "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
+            " VALUES (?, 'comarca', ?) ON CONFLICT DO NOTHING",
+            (uid_novo, ped["comarca_id"]))
+    if ped["alvo_id"]:
+        con.execute(
+            "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
+            " VALUES (?,?,?) ON CONFLICT DO NOTHING",
+            (uid_novo, ped["nivel"] or "comarca", ped["alvo_id"]))
+    con.execute("UPDATE pedidos SET status='aprovado' WHERE id=?", (pid,))
+    marca = " (aprovação automática — simulação)" if automatico else ""
+    log(con, "aprovar", None, f"acesso aprovado: {ped['usuario_desejado']}{marca}")
+    notify(con, uid_novo, "aprovada",
+           "Seu acesso foi aprovado. Entre com sua conta Google." +
+           (" (Aprovação automática — simulação.)" if automatico else ""))
+    con.commit()
+    return True, {"ok": True, "usuario": ped["usuario_desejado"]}, 200
 
 
 def _ip_rede_local(ip):
@@ -842,12 +881,6 @@ class Handler(BaseHTTPRequestHandler):
             if not email or ui.get("email_verified") is False:
                 return self._page(403, "E-mail não verificado",
                                    "Use uma conta Google com e-mail verificado.")
-            if not email.endswith("@" + DOMINIO_INSTITUCIONAL) and email not in GOOGLE_TEST_EMAILS:
-                return self._page(403, "Acesso restrito à intranet",
-                                   f"Somente e-mails institucionais (@{DOMINIO_INSTITUCIONAL}) "
-                                   "acessam o sistema — igual ao privado do v1, que só abre "
-                                   "dentro da rede do tribunal. Se esse é seu caso, "
-                                   "use Solicitar acesso na página inicial.")
             con = get_db()
             try:
                 row = con.execute(
@@ -1098,13 +1131,25 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"erro": "credenciais inválidas ou acesso não aprovado"}, 401)
         if u.path == "/api/pedidos":
             data = self._body()
+            uid_post = self._uid()
+            if not uid_post:
+                return self._json({"erro": "Entre com sua conta Google para solicitar acesso."}, 401)
+            con = get_db()
+            try:
+                sess_user = con.execute(
+                    "SELECT email FROM usuarios WHERE id=?", (uid_post,)).fetchone()
+            except Exception:
+                sess_user = None
+            if not sess_user:
+                con.close()
+                return self._json({"erro": "Sessão inválida. Entre de novo."}, 401)
+            data["email"] = sess_user["email"]
             if not data.get("nome"):
                 return self._json({"erro": "nome é obrigatório"}, 400)
             email = (data.get("email") or "").strip().lower()
-            if not email.endswith("@" + DOMINIO_INSTITUCIONAL):
-                return self._json({"erro": "use seu e-mail institucional (@" + DOMINIO_INSTITUCIONAL + ")"}, 400)
+            if "@" not in email or "." not in email.split("@")[-1]:
+                return self._json({"erro": "informe um e-mail válido"}, 400)
             usuario = (data.get("usuario") or "").strip() or email.split("@")[0]
-            con = get_db()
             # árvore de locais: escopos=[{tipo|nivel, id|alvo_id}] -> um pedido por local.
             # Sem escopos, vale o caminho único (nivel+alvo_id ou comarca_id).
             itens = []
@@ -1133,7 +1178,39 @@ class Handler(BaseHTTPRequestHandler):
                 itens = [(nivel, alvo)]
             nomes_nivel = {"comarca": "comarca", "forum": "fórum",
                            "unidade": "unidade", "setor": "setor"}
+            existentes = con.execute(
+                "SELECT nivel, alvo_id FROM pedidos WHERE lower(email)=? AND status='pendente'",
+                (email,)).fetchall()
+            if len(existentes) >= 5:
+                con.close()
+                return self._json({"erro": "Você já tem 5 pedidos pendentes. Aguarde a análise."}, 400)
+            concedidos = set()
+            ureg = con.execute(
+                "SELECT id FROM usuarios WHERE lower(email)=? AND aprovado=1",
+                (email,)).fetchall()
+            if ureg:
+                concedidos = {(r["nivel"], r["alvo_id"]) for r in con.execute(
+                    "SELECT nivel, alvo_id FROM acessos WHERE usuario_id=?",
+                    (ureg[0]["id"],)).fetchall()}
+            vistos = {(r["nivel"], r["alvo_id"]) for r in existentes}
+            novos = []
+            ja_liberados = 0
+            for (nv, aid) in itens:
+                if (nv, aid) in concedidos:
+                    ja_liberados += 1
+                    continue
+                if (nv, aid) in vistos:
+                    continue
+                vistos.add((nv, aid))
+                novos.append((nv, aid))
+            if not novos:
+                con.close()
+                if ja_liberados:
+                    return self._json({"erro": "Você já tem esse acesso liberado."}, 400)
+                return self._json({"erro": "Pedido idêntico já está pendente."}, 400)
+            itens = novos
             primeiro_id = None
+            novos_ids = []
             for (nivel, alvo) in itens:
                 # comarca do alvo (para exibir ao admin)
                 com_id = data.get("comarca_id") or None
@@ -1149,8 +1226,14 @@ class Handler(BaseHTTPRequestHandler):
                     (data.get("nome"), data.get("email", ""),
                      usuario, data.get("motivo", ""),
                      com_id, nivel, alvo))
+                novos_ids.append(cur.lastrowid)
                 if primeiro_id is None:
                     primeiro_id = cur.lastrowid
+            auto = False
+            if SIMULACAO_AUTO_APROVAR:
+                auto = True
+                for pid in novos_ids:
+                    aprovar_pedido(con, pid, automatico=True)
             if len(itens) == 1:
                 nv_txt = nomes_nivel.get(itens[0][0], itens[0][0])
                 detalhe = f" {nv_txt} id {itens[0][1] or '-'}"
@@ -1158,12 +1241,14 @@ class Handler(BaseHTTPRequestHandler):
                 detalhe = f" {len(itens)} locais"
             for aid in admin_ids(con):
                 notify(con, aid, "solicitacao",
-                       f"Nova solicitação de {data.get('nome')} ({usuario}):{detalhe}")
+                       f"Nova solicitação de {data.get('nome')} ({usuario}):{detalhe}" +
+                       (" (aprovada automaticamente — simulação)" if auto else ""))
             log(con, "pedido", None,
-                f"solicitação de acesso: {data.get('nome')} ({usuario})")
+                f"solicitação de acesso: {data.get('nome')} ({usuario})" +
+                (" (auto-aprovada — simulação)" if auto else ""))
             con.commit()
             con.close()
-            return self._json({"ok": True, "id": primeiro_id}, 201)
+            return self._json({"ok": True, "id": primeiro_id, "auto_aprovado": auto}, 201)
         parts = u.path.rstrip("/").split("/")
         if len(parts) == 5 and parts[1] == "api" and parts[2] == "pedidos" \
                 and parts[4] == "aprovar":
@@ -1174,37 +1259,11 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError:
                 return self._json({"erro": "id inválido"}, 400)
             con = get_db()
-            ped = con.execute(
-                "SELECT * FROM pedidos WHERE id=?", (pid,)).fetchone()
-            if not ped or ped["status"] != "pendente":
+            try:
+                ok, payload, st = aprovar_pedido(con, pid)
+            finally:
                 con.close()
-                return self._json({"erro": "pedido não encontrado"}, 404)
-            con.execute(
-                "INSERT INTO usuarios (usuario, senha_sha256, aprovado, email)"
-                " VALUES (?,?,1,?) ON CONFLICT(usuario) DO UPDATE SET aprovado=1,"
-                " email=excluded.email",
-                (ped["usuario_desejado"], sha(SENHA_INICIAL), ped["email"]))
-            uid_novo = con.execute(
-                "SELECT id FROM usuarios WHERE usuario=?",
-                (ped["usuario_desejado"],)).fetchone()["id"]
-            if ped["comarca_id"] and not ped["alvo_id"]:
-                con.execute(
-                    "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
-                    " VALUES (?, 'comarca', ?) ON CONFLICT DO NOTHING",
-                    (uid_novo, ped["comarca_id"]))
-            if ped["alvo_id"]:
-                con.execute(
-                    "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
-                    " VALUES (?,?,?) ON CONFLICT DO NOTHING",
-                    (uid_novo, ped["nivel"] or "comarca", ped["alvo_id"]))
-            con.execute("UPDATE pedidos SET status='aprovado' WHERE id=?", (pid,))
-            log(con, "aprovar", None, f"acesso aprovado: {ped['usuario_desejado']}")
-            notify(con, uid_novo, "aprovada",
-                   "Seu acesso foi aprovado. Senha inicial: " + SENHA_INICIAL)
-            con.commit()
-            con.close()
-            return self._json({"ok": True, "usuario": ped["usuario_desejado"],
-                               "senha_inicial": SENHA_INICIAL})
+            return self._json(payload, st)
         if u.path == "/api/notificacoes/lidas":
             uid = self._uid()
             if not uid:
