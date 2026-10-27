@@ -985,9 +985,15 @@ async function refresh() {
     location.href = '/oauth/login';
   };
   $('btn-pedir-locais').onclick = () => abrirPedidoNovo('locais');
-  $('estado-hint').textContent = dentro
-    ? 'Logado como ' + me.usuario + (me.escopo === 'all' ? ' (admin: todos os locais).' : ` (locais liberados: ${me.escopo.length}).`)
-    : 'Consulta sem login. Com cadastro, entre para gerenciar seus locais.';
+  const ehAdmin = dentro && (me.admin === 1 || me.escopo === 'all');
+  const ehVisitante = dentro && !ehAdmin && !(me.escopo || []).length;
+  $('estado-hint').textContent = !dentro
+    ? 'Consulta sem login. Com cadastro, entre para gerenciar seus locais.'
+    : (ehAdmin
+      ? 'Logado como ' + me.usuario + ' (admin: todos os locais).'
+      : (ehVisitante
+        ? 'Visitante — ' + me.usuario + ' (' + (me.email || 'sem e-mail') + '). Solicite acesso ou locais.'
+        : 'Logado como ' + me.usuario + ` (locais liberados: ${me.escopo.length}).`));
   $('profile-badge').innerHTML = dentro
     ? '👤 ' + esc(me.usuario)
     : '<i>●</i> Visitante';
