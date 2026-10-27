@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Diretório de Contatos — Acesso interno</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css?v=51">
+<link rel="stylesheet" href="style.css?v=52">
 </head>
 <body>
 <div class="app-container">
@@ -15,14 +15,16 @@
       <div class="sidebar-brand-copy"><strong>PJES</strong><span>Tribunal de Justiça do<br>Estado do Espírito Santo</span></div>
     </div>
     <nav class="sidebar-menu" aria-label="Navegação principal">
+      <div class="sidebar-section" id="secao-consulta">Consulta</div>
       <button class="menu-item active" data-view="consulta"><span class="icon icon-white">📞</span><span>Comarcas</span></button>
       <button class="menu-item" data-view="tjes"><span class="icon icon-txt">🏛</span><span>TJES</span></button>
       <button class="menu-item" data-view="uteis"><span class="icon icon-white">☎</span><span>Telefones Úteis</span></button>
+      <button class="menu-item" data-view="config" id="menu-conf"><span class="icon icon-txt">⚙</span><span>Configurações</span></button>
+      <div class="sidebar-section hidden" id="secao-admin">Administração</div>
       <button class="menu-item hidden" data-view="dashboard" id="menu-dash"><span class="icon">📊</span><span>Dashboard</span></button>
       <button class="menu-item hidden" data-view="solicitacoes" id="menu-sol"><span class="icon icon-txt">◎</span><span>Solicitações de acesso</span><span id="ped-count" class="badge"></span></button>
       <button class="menu-item hidden" data-view="notificacoes" id="menu-notif"><span class="icon">🔔</span><span>Notificações</span><span id="notif-count" class="badge"></span></button>
       <button class="menu-item hidden" data-view="registro" id="menu-reg"><span class="icon icon-txt">≡</span><span>Registro de alterações</span></button>
-      <button class="menu-item" data-view="config" id="menu-conf"><span class="icon icon-txt">⚙</span><span>Configurações</span></button>
     </nav>
     <div class="sidebar-footer">
       <div id="who-mail" class="sidebar-user sidebar-mail hidden"></div>
@@ -371,6 +373,6 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="mapa.js?v=21"></script>
-<script src="admin.js?v=44"></script>
+<script src="admin.js?v=46"></script>
 </body>
 </html>

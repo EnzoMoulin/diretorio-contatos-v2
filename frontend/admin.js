@@ -979,6 +979,8 @@ async function refresh() {
   $('btn-pedir').classList.toggle('hidden', dentro);
   $('btn-pedir-locais').classList.toggle('hidden', !dentro);
   $('btn-sair').classList.toggle('hidden', !dentro);
+  $('secao-admin').classList.toggle('hidden', !dentro);
+  $('secao-consulta').classList.toggle('hidden', !dentro);
   $('btn-pedir').onclick = () => {
     if (logado()) { abrirPedidoNovo('cadastro'); return; }
     sessionStorage.setItem('pedirAposLogin', 'cadastro');
