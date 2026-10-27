@@ -89,6 +89,12 @@ python3 app.py
 bash teste_rapido.sh   # verifica o fluxo completo, incl. escopo por local
 ```
 
+## Como avaliar este demo (2 minutos)
+1. Abra `/admin` e entre com qualquer conta Google → você entra como visitante.
+2. Peça acesso em **Solicitar acesso** → liberação automática (simulação).
+3. Peça locais em **Solicitar locais** (marque a caixa de Gestor do Sistema para ver a parte administrativa).
+4. No projeto real, os passos 2–3 aguardam aprovação manual de um Gestor do Sistema — aqui é automático só para você testar sem depender de ninguém.
+
 ## E-mail de verdade (opcional)
 Sem SMTP configurado, os avisos ficam só dentro do sistema. Para enviar de
 verdade (Gmail), crie uma **senha de app** em
