@@ -1002,18 +1002,18 @@ async function refresh() {
 }
 $('btn-entrar').onclick = () => { $('modal-login').classList.remove('hidden'); $('l-status').textContent = ''; };
 $('l-cancel').onclick = () => $('modal-login').classList.add('hidden');
-$('login').onclick = async () => {
-  const r = await fetch('/api/login', { method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ usuario: $('user').value, senha: $('pass').value }) });
-  const j = await r.json();
-  if (j.token) {
-    token = j.token; localStorage.setItem('contatos-token', token);
-    $('modal-login').classList.add('hidden');
-    refresh();
-  } else $('l-status').textContent = j.erro || 'falhou';
-};
-$('btn-sair').onclick = () => {
+$('l-pedir').onclick = () => { $('modal-login').classList.add('hidden'); abrirPedidoNovo(); };
+(function capturarTokenGoogle() {
+  const m = (location.hash || '').match(/[#&]token=([A-Za-z0-9]+)/);
+  if (m) {
+    token = m[1]; localStorage.setItem('contatos-token', token);
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+})();
+$('btn-sair').onclick = async () => {
+  try {
+    await fetch('/api/logout', { method: 'POST', headers: auth() });
+  } catch (e) {}
   token = ''; localStorage.removeItem('contatos-token');
   refresh();
 };
@@ -1249,15 +1249,7 @@ async function carregarDashboard() {
   ).join('') || '<li>Sem registros.</li>';
 }
 
-/* ---- configurações: senha + tema ---- */
-$('s-salvar').onclick = async () => {
-  const r = await fetch('/api/me/senha', { method: 'POST', headers: auth(),
-    body: JSON.stringify({ atual: $('s-atual').value, nova: $('s-nova').value }) });
-  $('s-status').textContent = r.ok
-    ? 'Senha atualizada.'
-    : 'Erro: ' + (await r.json()).erro;
-  if (r.ok) { $('s-atual').value = ''; $('s-nova').value = ''; }
-};
+/* ---- configurações: tema ---- */
 function aplicarTema() {
   const dark = (localStorage.getItem('contatos-theme') || 'light') === 'dark';
   document.body.dataset.theme = dark ? 'dark' : 'light';

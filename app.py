@@ -11,9 +11,17 @@ telefones e e-mails 100% fictícios. Nenhum dado real ou interno é utilizado.
 Como rodar:
     python3 app.py
     -> pública: http://localhost:8000
-    -> admin:   http://localhost:8000/admin  (acesso: admin / admin123)
+    -> admin:   http://localhost:8000/admin  (login com Google)
+
+Autenticação: identidade via Google OAuth (sem senha, como o privado do v1).
+Primeiro login vira admin se não houver nenhum; demais e-mails precisam de
+acesso aprovado (Solicitar acesso). Credencial em GOOGLE_CLIENT_FILE
+(padrão: ~/.hermes/google_client_secret.json).
 
 Endpoints (JSON):
+    GET  /oauth/login                         inicia login com Google
+    GET  /oauth/callback                      retorno do Google -> sessão
+    POST /api/logout                          encerra sessão (token)
     GET  /api/comarcas                        comarcas + contagens
     GET  /api/foruns?comarca_id=N
     GET  /api/unidades?forum_id=N
@@ -32,9 +40,12 @@ Endpoints (JSON):
 
 import hashlib
 import json
+import os
 import secrets
 import sqlite3
+import time
 import urllib.parse
+import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
@@ -43,8 +54,42 @@ DB = BASE / "contatos.db"
 FRONT = BASE / "frontend"
 
 SESSIONS = {}  # token -> usuario_id (memória local)
+OAUTH_STATES = {}  # state -> expiração (login Google)
+
+GOOGLE_CLIENT_FILE = os.environ.get("GOOGLE_CLIENT_FILE") or str(
+    Path.home() / ".hermes" / "google_client_secret.json")
+
+
+def google_client():
+    """Lê client_id/secret do OAuth Google (arquivo local, nunca commitado)."""
+    try:
+        d = json.load(open(GOOGLE_CLIENT_FILE, encoding="utf-8"))
+        cfg = d.get("installed") or d.get("web") or {}
+        if cfg.get("client_id"):
+            return cfg
+    except (OSError, ValueError):
+        pass
+    return {}
 
 NIVEIS = ("comarca", "forum", "unidade", "setor")
+
+INTRANET_ONLY = os.environ.get("INTRANET_ONLY", "1") == "1"
+
+GOOGLE_TEST_EMAILS = {
+    e.strip().lower()
+    for e in os.environ.get("GOOGLE_TEST_EMAILS", "").replace(";", ",").split(",")
+    if e.strip()
+}
+
+
+def _ip_rede_local(ip):
+    """Simula a intranet: só loopback e redes privadas alcançam o /admin."""
+    try:
+        import ipaddress
+        addr = ipaddress.ip_address(ip)
+        return addr.is_loopback or addr.is_private
+    except ValueError:
+        return False
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS comarcas (
@@ -631,8 +676,29 @@ class Handler(BaseHTTPRequestHandler):
             return {}
 
     def _uid(self):
-        tok = self.headers.get("X-Admin-Token") or ""
+        tok = self.headers.get("X-Admin-Token") or self._cookie("tc_session") or ""
         return SESSIONS.get(tok)
+
+    def _cookie(self, name):
+        raw = self.headers.get("Cookie") or ""
+        for part in raw.split(";"):
+            k, _, v = part.strip().partition("=")
+            if k == name:
+                return v
+        return ""
+
+    def _page(self, status, title, msg):
+        body = (f"<!DOCTYPE html><html lang='pt-BR'><head><meta charset='utf-8'>"
+                f"<title>{title}</title></head>"
+                f"<body style='font-family:sans-serif;padding:40px;max-width:640px'>"
+                f"<h1>{title}</h1><p>{msg}</p>"
+                f"<p><a href='/admin'>Voltar ao acesso interno</a></p>"
+                f"</body></html>").encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def _user(self, con, uid):
         return con.execute(
@@ -714,11 +780,119 @@ class Handler(BaseHTTPRequestHandler):
         if u.path in ("/", "/public.html"):
             return self._static("public.html", "text/html; charset=utf-8")
         if u.path == "/admin":
+            if INTRANET_ONLY and not _ip_rede_local(self.client_address[0]):
+                return self._page(403, "Restrito à intranet",
+                                   "O acesso interno só abre dentro da rede do tribunal. "
+                                   "Esta é a simulação da intranet no v2 (no v1 real, a URL "
+                                   "privada só resolve dentro da rede). Para desligar, "
+                                   "rode com INTRANET_ONLY=0.")
             return self._static("admin.html", "text/html; charset=utf-8")
         if u.path in ("/public.js", "/admin.js", "/mapa.js"):
             return self._static(u.path[1:], "application/javascript; charset=utf-8")
         if u.path == "/style.css":
             return self._static("style.css", "text/css; charset=utf-8")
+        if u.path == "/oauth/login":
+            cfg = google_client()
+            if not cfg.get("client_id"):
+                return self._page(500, "Login Google não configurado",
+                                   "Defina GOOGLE_CLIENT_FILE com um client OAuth válido.")
+            host = (self.headers.get("Host") or "localhost:8000").strip()
+            redir = f"http://{host}/oauth/callback"
+            st = secrets.token_urlsafe(24)
+            OAUTH_STATES[st] = time.time() + 600
+            q = urllib.parse.urlencode({
+                "client_id": cfg["client_id"], "redirect_uri": redir,
+                "response_type": "code", "scope": "openid email profile",
+                "state": st, "prompt": "select_account"})
+            self.send_response(302)
+            self.send_header("Location",
+                             "https://accounts.google.com/o/oauth2/v2/auth?" + q)
+            self.end_headers()
+            return
+        if u.path == "/oauth/callback":
+            q = urllib.parse.parse_qs(u.query)
+            code = (q.get("code") or [""])[0]
+            st = (q.get("state") or [""])[0]
+            if not code or not st or OAUTH_STATES.pop(st, 0) < time.time():
+                return self._page(400, "Login expirado",
+                                   "A sessão de login expirou. Tente entrar de novo.")
+            cfg = google_client()
+            host = (self.headers.get("Host") or "localhost:8000").strip()
+            redir = f"http://{host}/oauth/callback"
+            try:
+                treq = urllib.request.Request(
+                    "https://oauth2.googleapis.com/token",
+                    data=urllib.parse.urlencode({
+                        "code": code, "client_id": cfg.get("client_id", ""),
+                        "client_secret": cfg.get("client_secret", ""),
+                        "redirect_uri": redir,
+                        "grant_type": "authorization_code"}).encode(),
+                    method="POST")
+                with urllib.request.urlopen(treq, timeout=30) as r:
+                    tdata = json.load(r)
+                ureq = urllib.request.Request(
+                    "https://openidconnect.googleapis.com/v1/userinfo",
+                    headers={"Authorization": "Bearer " + tdata["access_token"]})
+                with urllib.request.urlopen(ureq, timeout=30) as r:
+                    ui = json.load(r)
+            except Exception:
+                return self._page(502, "Falha no Google",
+                                   "Não foi possível validar a conta. Tente de novo.")
+            email = str(ui.get("email") or "").strip().lower()
+            if not email or ui.get("email_verified") is False:
+                return self._page(403, "E-mail não verificado",
+                                   "Use uma conta Google com e-mail verificado.")
+            if not email.endswith("@" + DOMINIO_INSTITUCIONAL) and email not in GOOGLE_TEST_EMAILS:
+                return self._page(403, "Acesso restrito à intranet",
+                                   f"Somente e-mails institucionais (@{DOMINIO_INSTITUCIONAL}) "
+                                   "acessam o sistema — igual ao privado do v1, que só abre "
+                                   "dentro da rede do tribunal. Se esse é seu caso, "
+                                   "use Solicitar acesso na página inicial.")
+            con = get_db()
+            try:
+                row = con.execute(
+                    "SELECT * FROM usuarios WHERE lower(email)=? AND aprovado=1",
+                    (email,)).fetchone()
+                if not row:
+                    # Intranet simulada: e-mail institucional entra sozinho como
+                    # visitante (só consulta); locais e gestão continuam por
+                    # solicitação aprovada. O primeiro acesso vira admin se não
+                    # houver nenhum.
+                    n_admin = con.execute(
+                        "SELECT COUNT(*) FROM usuarios WHERE admin=1 AND aprovado=1"
+                    ).fetchone()[0]
+                    base = email.split("@")[0]
+                    nm, i = base, 0
+                    while con.execute(
+                            "SELECT 1 FROM usuarios WHERE usuario=?",
+                            (nm,)).fetchone():
+                        i += 1
+                        nm = f"{base}{i}"
+                    con.execute(
+                        "INSERT INTO usuarios (usuario, senha_sha256, aprovado,"
+                        " admin, email) VALUES (?,?,?,?)",
+                        (nm, "google-oauth:" + secrets.token_hex(16), 1,
+                         1 if n_admin == 0 else 0, email))
+                    con.commit()
+                    row = con.execute(
+                        "SELECT * FROM usuarios WHERE lower(email)=? AND aprovado=1",
+                        (email,)).fetchone()
+                tok = secrets.token_hex(16)
+                SESSIONS[tok] = row["id"]
+                con.close()
+                self.send_response(302)
+                self.send_header(
+                    "Set-Cookie",
+                    f"tc_session={tok}; Path=/; HttpOnly; SameSite=Lax; Max-Age=43200")
+                self.send_header("Location", f"http://{host}/admin#token={tok}")
+                self.end_headers()
+            except Exception:
+                try:
+                    con.close()
+                except Exception:
+                    pass
+                raise
+            return
         con = get_db()
         try:
             if u.path == "/api/hierarquia":
@@ -898,6 +1072,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         u = urllib.parse.urlparse(self.path)
+        if u.path == "/api/logout":
+            tok = self.headers.get("X-Admin-Token") or self._cookie("tc_session") or ""
+            SESSIONS.pop(tok, None)
+            self.send_response(200)
+            self.send_header("Set-Cookie",
+                             "tc_session=; Path=/; Max-Age=0; SameSite=Lax")
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"ok": true}')
+            return
         if u.path == "/api/login":
             data = self._body()
             con = get_db()

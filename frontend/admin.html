@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Diretório de Contatos — Acesso interno</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css?v=41">
+<link rel="stylesheet" href="style.css?v=47">
 </head>
 <body>
 <div class="app-container">
@@ -74,7 +74,7 @@
         <div>
           <h1 class="fc-title">Solicitar acesso</h1>
         </div>
-        <button class="btn-ghost dark" id="ped-voltar" type="button">← Voltar à consulta</button>
+        <button class="btn-ghost dark" id="ped-voltar" type="button" style="background:#fff">← Voltar à consulta</button>
       </div>
       <div class="fa-card">
         <div class="fa-head">
@@ -170,13 +170,7 @@
             <div class="config-kv">
               <div class="config-row"><span class="config-label">Conta</span><span class="config-value" id="conf-conta"></span></div>
             </div>
-            <h3 style="margin:14px 0 8px;font-size:14px">Trocar senha</h3>
-            <div class="form-grid">
-              <input id="s-atual" type="password" placeholder="Senha atual" autocomplete="current-password">
-              <input id="s-nova" type="password" placeholder="Nova senha (6+ caracteres)" autocomplete="new-password">
-              <button id="s-salvar" class="btn-primary">Salvar nova senha</button>
-              <span id="s-status"></span>
-            </div>
+            <p class="config-hint">Identidade via conta Google institucional — sem senha para gerenciar.</p>
           </div>
         </div>
         <div class="config-card">
@@ -266,7 +260,7 @@
           <div class="manual-section-head"><div><h3>🔑 03 — Acesso e solicitação</h3><p>Sem cadastro a visão é só consulta; com cadastro, gestão no seu escopo.</p></div></div>
           <ol class="manual-steps">
             <li><span class="manual-step-num">1</span><div><strong>Sem cadastro: Solicitar acesso</strong><p>Preencha nome, e-mail institucional <code>@exemplo.jus.br</code> e o local. Usuário é opcional — vira o início do e-mail.</p></div></li>
-            <li><span class="manual-step-num">2</span><div><strong>Com cadastro: Acesso administrativo</strong><p>Entre com e-mail + senha. Os níveis editáveis vêm marcados com <code>✓</code>.</p></div></li>
+            <li><span class="manual-step-num">2</span><div><strong>Com cadastro: Acesso administrativo</strong><p>Entre com o Google (conta institucional). Os níveis editáveis vêm marcados com <code>✓</code>.</p></div></li>
             <li><span class="manual-step-num">3</span><div><strong>Sair do acesso administrativo</strong><p>Volta à consulta sem sair do acesso interno.</p></div></li>
           </ol>
         </section>
@@ -288,7 +282,7 @@
           <div class="manual-section-head"><div><h3>👥 06 — Aprovar solicitações</h3><p>Fila de pedidos pendentes; ao aprovar, o usuário já entra com escopo.</p></div></div>
           <ol class="manual-steps">
             <li><span class="manual-step-num">1</span><div><strong>Abra Solicitações de acesso</strong><p>O pedido mostra nome, e-mail, usuário e o nível pedido (comarca, fórum, unidade ou setor).</p></div></li>
-            <li><span class="manual-step-num">2</span><div><strong>Aprove</strong><p>O novo usuário entra com a senha inicial e recebe uma notificação avisando.</p></div></li>
+            <li><span class="manual-step-num">2</span><div><strong>Aprove</strong><p>O acesso libera na conta Google do e-mail e o usuário recebe uma notificação avisando.</p></div></li>
           </ol>
         </section>
         <section id="m-notif" class="panel manual-section">
@@ -305,7 +299,7 @@
           <div class="manual-section-head"><div><h3>📊 09 — Dashboard</h3><p>Totais e barras recortados pelo seu escopo: o que você vê é o que você edita.</p></div></div>
         </section>
         <section id="m-config" class="panel manual-section">
-          <div class="manual-section-head"><div><h3>⚙️ 10 — Configurações</h3><p>Modo escuro para todos; conta e troca de senha para logados.</p></div></div>
+          <div class="manual-section-head"><div><h3>⚙️ 10 — Configurações</h3><p>Modo escuro para todos; dados da conta para logados.</p></div></div>
         </section>
         <section id="m-imprimir" class="panel manual-section">
           <div class="manual-section-head"><div><h3>🖨️ 11 — Imprimir ou salvar PDF</h3><p>O botão aparece após selecionar uma comarca e imprime todos os contatos do nível atual (comarca, fórum, unidade ou setor). Dashboard e Registro têm botão próprio; a folha sai limpa em A4.</p></div></div>
@@ -314,7 +308,7 @@
           <div class="manual-section-head"><div><h3>❓ 12 — Perguntas frequentes</h3></div></div>
           <div class="manual-faq">
             <details><summary>Não vejo botões de edição — por quê?</summary><p>Você só edita onde tem cobertura (✓ nos menus). No resto, só consulta — peça acesso pelo botão ao lado do menu.</p></details>
-            <details><summary>Esqueci minha senha. E agora?</summary><p>Peça ao admin para reprovar e reaprovar? Não — neste sistema, entre em contato com o administrador, que pode recriar seu acesso.</p></details>
+            <details><summary>Troquei de conta Google. E agora?</summary><p>Entre com a nova conta institucional e peça acesso de novo; o admin libera e pronto. Sem senha para esquecer.</p></details>
             <details><summary>O que o admin vê de diferente?</summary><p>Tudo: todos os escopos, a fila de solicitações e todas as notificações de mudança.</p></details>
           </div>
         </section>
@@ -325,16 +319,24 @@
   </main>
 </div>
 <div class="modal hidden" id="modal-login">
-  <div class="modal-box">
-    <h2>Acesso administrativo</h2>
-    <p class="hint">Entre com sua conta cadastrada. Acesso: admin@exemplo.jus.br / admin123.</p>
-    <label>E-mail ou usuário<input id="user" value="admin@exemplo.jus.br" autocomplete="username"></label>
-    <label>Senha<input id="pass" type="password" value="admin123" autocomplete="current-password"></label>
-    <div class="modal-actions">
-      <button id="l-cancel" class="btn-ghost">Cancelar</button>
-      <button id="login" class="btn-primary">Entrar</button>
+  <div class="modal-box modal-box--clean" style="width:min(440px,94vw)">
+    <div class="fa-card">
+      <div class="fa-head fa-head--login">
+        <h2>Acesso administrativo</h2>
+        <p>Entre com a conta Google institucional (@exemplo.jus.br). O primeiro acesso entra como visitante; locais e gestão são liberados por aprovação.</p>
+      </div>
+      <div class="fa-body">
+        <a class="fa-google-btn" href="/oauth/login">
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.8 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.2-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.8 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.2-3.9z"/></svg>
+          Continuar com Google
+        </a>
+        <p class="fa-dica" style="text-align:center;margin:16px 0 0">Você será redirecionado ao Google. Sem acesso liberado? <button id="l-pedir" class="fa-link" type="button">Solicitar acesso</button></p>
+        <div class="fa-acoes" style="justify-content:center;margin-top:10px">
+          <button id="l-cancel" class="btn-ghost dark" style="margin-top:10px">Cancelar</button>
+        </div>
+        <p class="hint" id="l-status"></p>
+      </div>
     </div>
-    <p class="hint" id="l-status"></p>
   </div>
 </div>
 <div class="modal hidden" id="modal-edit">
@@ -365,6 +367,6 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="mapa.js?v=21"></script>
-<script src="admin.js?v=32"></script>
+<script src="admin.js?v=35"></script>
 </body>
 </html>

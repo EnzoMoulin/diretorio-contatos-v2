@@ -19,7 +19,7 @@
   - `/` pública: só consulta; falha fechada (nenhuma mutação sem token)
   - `/admin` interna: portão de login; sem token válido, nada além do portão aparece
 - **Portão institucional**: no original, sessão Google + intranet + domínio
-  institucional (`AuthService.emailPermitidoNoPrivado`); aqui, login local +
+  institucional (`AuthService.emailPermitidoNoPrivado`); aqui, login Google +
   pedido exigindo e-mail `@exemplo.jus.br` (validado no servidor, 400 fora do domínio)
 - **Tabela de usuários decide permissões**: sem cadastro, mesmo no interno a
   visão seria só consulta; com cadastro, edita os locais do seu escopo
@@ -39,20 +39,23 @@
   público): entra direto em **consulta** (mapa + cascata + tabela vazia), sem login e
   sem funções administrativas; logado, os locais liberados vêm marcados com ✓
   (consulta em todos, edição só no escopo); clicar no mapa filtra qualquer local.
-  Botões na base da sidebar: **Acesso administrativo** (modal de login com
-  e-mail + senha; com cadastro, eleva e libera gestão por escopo + Solicitações
-  + Registro) e **Solicitar acesso** (modal do formulário); **Sair do acesso
-  administrativo** volta à consulta, continua no interno.
-  Acesso: admin@exemplo.jus.br / admin123.
+  Botões na base da sidebar: **Acesso administrativo** (login com Google, sem
+  senha — identidade igual ao privado do v1; com acesso aprovado, eleva e libera
+  gestão por escopo + Solicitações + Registro) e **Solicitar acesso** (página do
+  formulário com árvore de locais); **Sair do acesso administrativo** volta à
+  consulta, continua no interno e invalida a sessão no servidor.
+  Primeiro login vira admin se não houver nenhum; demais e-mails precisam de
+  acesso aprovado.
 - **Gestão dentro da consulta, com escopo por nível**: o usuário cria/edita/remove
   contatos só onde tem cobertura (comarca, fórum, unidade ou setor, com herança de
   cima); fora dela, só consulta. Ao lado de cada nível selecionado sem cobertura,
   botão **Solicitar acesso** com modal de confirmação dinâmico (comarca inteira
   = tudo abaixo; fórum inteiro = unidades e setores; unidade inteira = setores; setor = só ele).
   Admin aprova e a cobertura amplia. Servidor barra tudo fora do escopo (403).
-- **Solicitação de acesso**: modal (nome, e-mail institucional, usuário, local,
-  motivo) → pedido pendente → admin aprova e o novo usuário entra com senha
-  inicial, já com o escopo do local pedido (e-mails fora do domínio: 400)
+- **Solicitação de acesso**: página (nome, e-mail institucional, usuário, motivo
+  opcional, árvore comarca > fórum > unidade > setor) → um pedido por local →
+  admin aprova e o acesso libera na conta Google do e-mail (e-mails fora do
+  domínio: 400)
 - **Registro de alterações**: criar / editar / remover / pedidos / aprovações
 - **Dashboard** (só logado): cards (comarcas, fóruns, unidades, setores, contatos,
   editáveis, pendências), barras por comarca com ✓ de cobertura e últimas
@@ -61,7 +64,7 @@
   chega ao solicitante, criar/editar/remover avisa os admins; badge de não
   lidas, marcar uma/todas como lidas. A aba só aparece após o login.
 - **Configurações**: tema claro/escuro para todo mundo (externo e interno,
-  com ou sem login); logado ganha dados da conta e troca de senha
+  com ou sem login); logado ganha dados da conta (sem senha: identidade Google)
 - **E-mails clicáveis**: toda coluna de e-mail abre o app de e-mail (mailto),
   igual ao original
 - **Imprimir / Salvar PDF**: botão aparece após selecionar uma comarca e
@@ -77,7 +80,7 @@
 ```bash
 python3 app.py
 # pública: http://localhost:8000
-# admin:   http://localhost:8000/admin   (acesso: admin / admin123)
+# admin:   http://localhost:8000/admin   (login com Google; primeiro vira admin)
 bash teste_rapido.sh   # verifica o fluxo completo, incl. escopo por local
 ```
 
@@ -91,7 +94,10 @@ bash teste_rapido.sh   # verifica o fluxo completo, incl. escopo por local
 | GET | `/api/contatos?q=&setor_id=&unidade_id=&forum_id=&comarca_id=` | não | lista/busca com escopo |
 | GET | `/api/me` | `X-Admin-Token` | usuário + flag admin + escopo |
 | GET | `/api/historico` | `X-Admin-Token` | últimas 50 alterações |
-| POST | `/api/login` | não | `{usuario, senha}` → `{token}` |
+| GET | `/oauth/login` | não | inicia login com Google |
+| GET | `/oauth/callback` | não | retorno do Google → sessão |
+| POST | `/api/logout` | token | encerra a sessão |
+| POST | `/api/login` | não | legado `{usuario, senha}` → `{token}` |
 | POST | `/api/contatos` | `X-Admin-Token` | cria (só no seu escopo) |
 | DELETE | `/api/contatos/<id>` | `X-Admin-Token` | remove (só no seu escopo) |
 | POST | `/api/pedidos` | não | solicita acesso (com local) |
