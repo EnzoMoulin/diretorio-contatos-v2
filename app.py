@@ -11,9 +11,20 @@ telefones e e-mails 100% fictícios. Nenhum dado real ou interno é utilizado.
 Como rodar:
     python3 app.py
     -> pública: http://localhost:8000
-    -> admin:   http://localhost:8000/admin  (demo: admin / admin123)
+    -> admin:   http://localhost:8000/admin  (login com Google)
+
+Autenticação: identidade via Google OAuth (sem senha, como o privado do v1).
+Entrada aberta: qualquer conta Google vira visitante; locais e gestão saem
+por aprovação — automática nesta demonstração (SIMULACAO_AUTO_APROVAR=1),
+marcada como "SIMULAÇÃO AUTOMÁTICA". O primeiro login vira admin se não
+houver nenhum. Intranet simulada: /admin só abre de localhost/rede local
+(INTRANET_ONLY=1). Credencial em GOOGLE_CLIENT_FILE
+(padrão: ~/.hermes/google_client_secret.json).
 
 Endpoints (JSON):
+    GET  /oauth/login                         inicia login com Google
+    GET  /oauth/callback                      retorno do Google -> sessão
+    POST /api/logout                          encerra sessão (token)
     GET  /api/comarcas                        comarcas + contagens
     GET  /api/foruns?comarca_id=N
     GET  /api/unidades?forum_id=N
@@ -32,9 +43,12 @@ Endpoints (JSON):
 
 import hashlib
 import json
+import os
 import secrets
 import sqlite3
+import time
 import urllib.parse
+import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
@@ -42,9 +56,85 @@ BASE = Path(__file__).parent
 DB = BASE / "contatos.db"
 FRONT = BASE / "frontend"
 
-SESSIONS = {}  # token -> usuario_id (memória; demo)
+SESSIONS = {}  # token -> usuario_id (memória local)
+OAUTH_STATES = {}  # state -> expiração (login Google)
+
+SIMULACAO_AUTO_APROVAR = os.environ.get("SIMULACAO_AUTO_APROVAR", "1") == "1"
+
+GOOGLE_CLIENT_FILE = os.environ.get("GOOGLE_CLIENT_FILE") or str(
+    Path.home() / ".hermes" / "google_client_secret.json")
+
+
+def google_client():
+    """Lê client_id/secret do OAuth Google (arquivo local, nunca commitado)."""
+    try:
+        d = json.load(open(GOOGLE_CLIENT_FILE, encoding="utf-8"))
+        cfg = d.get("installed") or d.get("web") or {}
+        if cfg.get("client_id"):
+            return cfg
+    except (OSError, ValueError):
+        pass
+    return {}
 
 NIVEIS = ("comarca", "forum", "unidade", "setor")
+
+INTRANET_ONLY = os.environ.get("INTRANET_ONLY", "1") == "1"
+
+GOOGLE_TEST_EMAILS = {
+    e.strip().lower()
+    for e in os.environ.get("GOOGLE_TEST_EMAILS", "").replace(";", ",").split(",")
+    if e.strip()
+}
+
+
+def aprovar_pedido(con, pid, automatico=False):
+    """Efetiva a aprovação de um pedido: cria/libera o usuário e concede o
+    escopo pedido. Não fecha a conexão. Retorna (ok, payload, status)."""
+    ped = con.execute("SELECT * FROM pedidos WHERE id=?", (pid,)).fetchone()
+    if not ped or ped["status"] != "pendente":
+        return False, {"erro": "pedido não encontrado"}, 404
+    con.execute(
+        "INSERT INTO usuarios (usuario, senha_sha256, aprovado, email)"
+        " VALUES (?,?,1,?) ON CONFLICT(usuario) DO UPDATE SET aprovado=1,"
+        " email=excluded.email",
+        (ped["usuario_desejado"], "google-oauth:" + secrets.token_hex(16), ped["email"]))
+    uid_novo = con.execute(
+        "SELECT id FROM usuarios WHERE usuario=?",
+        (ped["usuario_desejado"],)).fetchone()["id"]
+    if ped["comarca_id"] and not ped["alvo_id"]:
+        con.execute(
+            "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
+            " VALUES (?, 'comarca', ?) ON CONFLICT DO NOTHING",
+            (uid_novo, ped["comarca_id"]))
+    if ped["alvo_id"]:
+        con.execute(
+            "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
+            " VALUES (?,?,?) ON CONFLICT DO NOTHING",
+            (uid_novo, ped["nivel"] or "comarca", ped["alvo_id"]))
+    if ped["nivel"] == "admin" and not ped["alvo_id"]:
+        con.execute("UPDATE usuarios SET admin=1 WHERE id=?", (uid_novo,))
+    con.execute("UPDATE pedidos SET status='aprovado' WHERE id=?", (pid,))
+    marca = " (aprovação automática — simulação)" if automatico else ""
+    log(con, "aprovar", None, f"acesso aprovado: {ped['usuario_desejado']}{marca}")
+    texto_aprov = ("Seu acesso foi aprovado. Entre com sua conta Google." +
+                   (" (Aprovação automática — simulação.)" if automatico else ""))
+    notify(con, uid_novo, "aprovada", texto_aprov)
+    if not automatico:
+        _send_email(ped["email"], "Acesso liberado — Diretório de Contatos",
+                    f"Olá {ped['nome']},\n\nSeu acesso foi liberado pelo administrador.\n"
+                    f"Entre com sua conta Google: http://localhost:8000/admin")
+    con.commit()
+    return True, {"ok": True, "usuario": ped["usuario_desejado"]}, 200
+
+
+def _ip_rede_local(ip):
+    """Simula a intranet: só loopback e redes privadas alcançam o /admin."""
+    try:
+        import ipaddress
+        addr = ipaddress.ip_address(ip)
+        return addr.is_loopback or addr.is_private
+    except ValueError:
+        return False
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS comarcas (
@@ -168,6 +258,33 @@ DOMINIO_INSTITUCIONAL = "exemplo.jus.br"
 
 def sha(s):
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+
+def _send_email(to_addrs, subject, body):
+    """E-mail real via SMTP (env SMTP_HOST/PORT/USER/PASS/FROM). Sem SMTP
+    configurado, retorna False e o aviso fica só dentro do sistema."""
+    host = os.environ.get("SMTP_HOST", "")
+    if not host:
+        return False
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        port = int(os.environ.get("SMTP_PORT", "587"))
+        user = os.environ.get("SMTP_USER", "")
+        pwd = os.environ.get("SMTP_PASS", "")
+        dests = to_addrs if isinstance(to_addrs, list) else [to_addrs]
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["Subject"] = subject
+        msg["From"] = os.environ.get("SMTP_FROM", user)
+        msg["To"] = ", ".join(dests)
+        with smtplib.SMTP(host, port, timeout=20) as s:
+            s.starttls()
+            if user:
+                s.login(user, pwd)
+            s.send_message(msg)
+        return True
+    except Exception:
+        return False
 
 
 def get_db():
@@ -534,7 +651,7 @@ def init_db():
         except Exception:
             precisa_migrar = True
     if precisa_migrar:
-        # esquema antigo -> recria do zero (demo)
+        # esquema antigo -> recria do zero (uso local)
         con.executescript("""
             DROP TABLE IF EXISTS pedidos; DROP TABLE IF EXISTS usuarios;
             DROP TABLE IF EXISTS historico; DROP TABLE IF EXISTS contatos;
@@ -578,7 +695,7 @@ def init_db():
             ("admin", sha("admin123"), "admin@" + DOMINIO_INSTITUCIONAL))
         con.execute(
             "INSERT INTO historico (acao, detalhe) VALUES (?,?)",
-            ("init", "base de demonstração criada com dados fictícios"))
+            ("init", "base inicial criada com dados fictícios"))
     con.commit()
     con.close()
 
@@ -599,7 +716,7 @@ def admin_ids(con):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "ContatosDemo/3.0"
+    server_version = "DiretorioContatos/3.0"
 
     def _json(self, obj, status=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -631,8 +748,29 @@ class Handler(BaseHTTPRequestHandler):
             return {}
 
     def _uid(self):
-        tok = self.headers.get("X-Admin-Token") or ""
+        tok = self.headers.get("X-Admin-Token") or self._cookie("tc_session") or ""
         return SESSIONS.get(tok)
+
+    def _cookie(self, name):
+        raw = self.headers.get("Cookie") or ""
+        for part in raw.split(";"):
+            k, _, v = part.strip().partition("=")
+            if k == name:
+                return v
+        return ""
+
+    def _page(self, status, title, msg):
+        body = (f"<!DOCTYPE html><html lang='pt-BR'><head><meta charset='utf-8'>"
+                f"<title>{title}</title></head>"
+                f"<body style='font-family:sans-serif;padding:40px;max-width:640px'>"
+                f"<h1>{title}</h1><p>{msg}</p>"
+                f"<p><a href='/admin'>Voltar ao acesso interno</a></p>"
+                f"</body></html>").encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def _user(self, con, uid):
         return con.execute(
@@ -714,11 +852,113 @@ class Handler(BaseHTTPRequestHandler):
         if u.path in ("/", "/public.html"):
             return self._static("public.html", "text/html; charset=utf-8")
         if u.path == "/admin":
+            if INTRANET_ONLY and not _ip_rede_local(self.client_address[0]):
+                return self._page(403, "Restrito à intranet",
+                                   "O acesso interno só abre dentro da rede do tribunal. "
+                                   "Esta é a simulação da intranet no v2 (no v1 real, a URL "
+                                   "privada só resolve dentro da rede). Para desligar, "
+                                   "rode com INTRANET_ONLY=0.")
             return self._static("admin.html", "text/html; charset=utf-8")
         if u.path in ("/public.js", "/admin.js", "/mapa.js"):
             return self._static(u.path[1:], "application/javascript; charset=utf-8")
         if u.path == "/style.css":
             return self._static("style.css", "text/css; charset=utf-8")
+        if u.path == "/oauth/login":
+            cfg = google_client()
+            if not cfg.get("client_id"):
+                return self._page(500, "Login Google não configurado",
+                                   "Defina GOOGLE_CLIENT_FILE com um client OAuth válido.")
+            host = (self.headers.get("Host") or "localhost:8000").strip()
+            redir = f"http://{host}/oauth/callback"
+            st = secrets.token_urlsafe(24)
+            OAUTH_STATES[st] = time.time() + 600
+            q = urllib.parse.urlencode({
+                "client_id": cfg["client_id"], "redirect_uri": redir,
+                "response_type": "code", "scope": "openid email profile",
+                "state": st, "prompt": "select_account"})
+            self.send_response(302)
+            self.send_header("Location",
+                             "https://accounts.google.com/o/oauth2/v2/auth?" + q)
+            self.end_headers()
+            return
+        if u.path == "/oauth/callback":
+            q = urllib.parse.parse_qs(u.query)
+            code = (q.get("code") or [""])[0]
+            st = (q.get("state") or [""])[0]
+            if not code or not st or OAUTH_STATES.pop(st, 0) < time.time():
+                return self._page(400, "Login expirado",
+                                   "A sessão de login expirou. Tente entrar de novo.")
+            cfg = google_client()
+            host = (self.headers.get("Host") or "localhost:8000").strip()
+            redir = f"http://{host}/oauth/callback"
+            try:
+                treq = urllib.request.Request(
+                    "https://oauth2.googleapis.com/token",
+                    data=urllib.parse.urlencode({
+                        "code": code, "client_id": cfg.get("client_id", ""),
+                        "client_secret": cfg.get("client_secret", ""),
+                        "redirect_uri": redir,
+                        "grant_type": "authorization_code"}).encode(),
+                    method="POST")
+                with urllib.request.urlopen(treq, timeout=30) as r:
+                    tdata = json.load(r)
+                ureq = urllib.request.Request(
+                    "https://openidconnect.googleapis.com/v1/userinfo",
+                    headers={"Authorization": "Bearer " + tdata["access_token"]})
+                with urllib.request.urlopen(ureq, timeout=30) as r:
+                    ui = json.load(r)
+            except Exception:
+                return self._page(502, "Falha no Google",
+                                   "Não foi possível validar a conta. Tente de novo.")
+            email = str(ui.get("email") or "").strip().lower()
+            if not email or ui.get("email_verified") is False:
+                return self._page(403, "E-mail não verificado",
+                                   "Use uma conta Google com e-mail verificado.")
+            con = get_db()
+            try:
+                row = con.execute(
+                    "SELECT * FROM usuarios WHERE lower(email)=? AND aprovado=1",
+                    (email,)).fetchone()
+                if not row:
+                    # Intranet simulada: e-mail institucional entra sozinho como
+                    # visitante (só consulta); locais e gestão continuam por
+                    # solicitação aprovada. O primeiro acesso vira admin se não
+                    # houver nenhum.
+                    n_admin = con.execute(
+                        "SELECT COUNT(*) FROM usuarios WHERE admin=1 AND aprovado=1"
+                    ).fetchone()[0]
+                    base = email.split("@")[0]
+                    nm, i = base, 0
+                    while con.execute(
+                            "SELECT 1 FROM usuarios WHERE usuario=?",
+                            (nm,)).fetchone():
+                        i += 1
+                        nm = f"{base}{i}"
+                    con.execute(
+                        "INSERT INTO usuarios (usuario, senha_sha256, aprovado,"
+                        " admin, email) VALUES (?,?,?,?)",
+                        (nm, "google-oauth:" + secrets.token_hex(16), 1,
+                         1 if n_admin == 0 else 0, email))
+                    con.commit()
+                    row = con.execute(
+                        "SELECT * FROM usuarios WHERE lower(email)=? AND aprovado=1",
+                        (email,)).fetchone()
+                tok = secrets.token_hex(16)
+                SESSIONS[tok] = row["id"]
+                con.close()
+                self.send_response(302)
+                self.send_header(
+                    "Set-Cookie",
+                    f"tc_session={tok}; Path=/; HttpOnly; SameSite=Lax; Max-Age=43200")
+                self.send_header("Location", f"http://{host}/admin#token={tok}")
+                self.end_headers()
+            except Exception:
+                try:
+                    con.close()
+                except Exception:
+                    pass
+                raise
+            return
         con = get_db()
         try:
             if u.path == "/api/hierarquia":
@@ -898,6 +1138,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         u = urllib.parse.urlparse(self.path)
+        if u.path == "/api/logout":
+            tok = self.headers.get("X-Admin-Token") or self._cookie("tc_session") or ""
+            SESSIONS.pop(tok, None)
+            self.send_response(200)
+            self.send_header("Set-Cookie",
+                             "tc_session=; Path=/; Max-Age=0; SameSite=Lax")
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"ok": true}')
+            return
         if u.path == "/api/login":
             data = self._body()
             con = get_db()
@@ -914,45 +1164,151 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"erro": "credenciais inválidas ou acesso não aprovado"}, 401)
         if u.path == "/api/pedidos":
             data = self._body()
+            uid_post = self._uid()
+            if not uid_post:
+                return self._json({"erro": "Entre com sua conta Google para solicitar acesso."}, 401)
+            con = get_db()
+            try:
+                sess_user = con.execute(
+                    "SELECT email, admin FROM usuarios WHERE id=?", (uid_post,)).fetchone()
+            except Exception:
+                sess_user = None
+            if not sess_user:
+                con.close()
+                return self._json({"erro": "Sessão inválida. Entre de novo."}, 401)
+            data["email"] = sess_user["email"]
             if not data.get("nome"):
                 return self._json({"erro": "nome é obrigatório"}, 400)
             email = (data.get("email") or "").strip().lower()
-            if not email.endswith("@" + DOMINIO_INSTITUCIONAL):
-                return self._json({"erro": "use seu e-mail institucional (@" + DOMINIO_INSTITUCIONAL + ")"}, 400)
+            if "@" not in email or "." not in email.split("@")[-1]:
+                return self._json({"erro": "informe um e-mail válido"}, 400)
             usuario = (data.get("usuario") or "").strip() or email.split("@")[0]
-            con = get_db()
-            nivel = (data.get("nivel") or "comarca").strip().lower()
-            if nivel not in NIVEIS:
-                nivel = "comarca"
-            try:
-                alvo = int(data.get("alvo_id") or data.get("comarca_id") or 0) or None
-            except (TypeError, ValueError):
-                alvo = None
-            # comarca do alvo (para exibir ao admin)
-            com_id = data.get("comarca_id") or None
-            if alvo:
-                pais = self._pais(con, nivel, alvo)
-                for nv, aid in pais:
-                    if nv == "comarca":
-                        com_id = aid
-                        break
-            cur = con.execute(
-                "INSERT INTO pedidos (nome, email, usuario_desejado, motivo,"
-                " comarca_id, nivel, alvo_id) VALUES (?,?,?,?,?,?,?)",
-                (data.get("nome"), data.get("email", ""),
-                 usuario, data.get("motivo", ""),
-                 com_id, nivel, alvo))
+            # árvore de locais: escopos=[{tipo|nivel, id|alvo_id}] -> um pedido por local.
+            # Sem escopos, vale o caminho único (nivel+alvo_id ou comarca_id).
+            itens = []
+            raw_esc = data.get("escopos")
+            esc_validos = 0
+            if isinstance(raw_esc, list):
+                for e in raw_esc:
+                    if not isinstance(e, dict):
+                        continue
+                    nv = str(e.get("tipo") or e.get("nivel") or "").strip().lower()
+                    if nv not in NIVEIS:
+                        continue
+                    try:
+                        aid = int(e.get("id") or e.get("alvo_id") or 0) or None
+                    except (TypeError, ValueError):
+                        aid = None
+                    if aid and (nv, aid) not in itens:
+                        itens.append((nv, aid))
+                        esc_validos += 1
+            quer_admin = data.get("admin") is True
+            if quer_admin:
+                if sess_user["admin"]:
+                    con.close()
+                    return self._json({"erro": "Você já é Administrador."}, 400)
+                itens.append(("admin", None))
+            if not itens:
+                nivel = (data.get("nivel") or "comarca").strip().lower()
+                if nivel not in NIVEIS:
+                    nivel = "comarca"
+                try:
+                    alvo = int(data.get("alvo_id") or data.get("comarca_id") or 0) or None
+                except (TypeError, ValueError):
+                    alvo = None
+                itens = [(nivel, alvo)]
+            nomes_nivel = {"comarca": "comarca", "forum": "fórum",
+                           "unidade": "unidade", "setor": "setor",
+                           "admin": "administrador"}
+            existentes = con.execute(
+                "SELECT nivel, alvo_id FROM pedidos WHERE lower(email)=? AND status='pendente'",
+                (email,)).fetchall()
+            if len(existentes) >= 5:
+                con.close()
+                return self._json({"erro": "Você já tem 5 pedidos pendentes. Aguarde a análise."}, 400)
+            concedidos = set()
+            ureg = con.execute(
+                "SELECT id FROM usuarios WHERE lower(email)=? AND aprovado=1",
+                (email,)).fetchall()
+            if ureg:
+                concedidos = {(r["nivel"], r["alvo_id"]) for r in con.execute(
+                    "SELECT nivel, alvo_id FROM acessos WHERE usuario_id=?",
+                    (ureg[0]["id"],)).fetchall()}
+            vistos = {(r["nivel"], r["alvo_id"]) for r in existentes}
+            novos = []
+            ja_liberados = 0
+            for (nv, aid) in itens:
+                if (nv, aid) in concedidos:
+                    ja_liberados += 1
+                    continue
+                if (nv, aid) in vistos:
+                    continue
+                vistos.add((nv, aid))
+                novos.append((nv, aid))
+            if not novos:
+                con.close()
+                if ja_liberados:
+                    return self._json({"erro": "Você já tem esse acesso liberado."}, 400)
+                return self._json({"erro": "Pedido idêntico já está pendente."}, 400)
+            itens = novos
+            primeiro_id = None
+            novos_ids = []
+            for (nivel, alvo) in itens:
+                # comarca do alvo (para exibir ao admin)
+                com_id = data.get("comarca_id") or None
+                if alvo:
+                    pais = self._pais(con, nivel, alvo)
+                    for nv, aid in pais:
+                        if nv == "comarca":
+                            com_id = aid
+                            break
+                cur = con.execute(
+                    "INSERT INTO pedidos (nome, email, usuario_desejado, motivo,"
+                    " comarca_id, nivel, alvo_id) VALUES (?,?,?,?,?,?,?)",
+                    (data.get("nome"), data.get("email", ""),
+                     usuario, data.get("motivo", ""),
+                     com_id, nivel, alvo))
+                novos_ids.append(cur.lastrowid)
+                if primeiro_id is None:
+                    primeiro_id = cur.lastrowid
+            auto = False
+            if SIMULACAO_AUTO_APROVAR:
+                auto = True
+                for pid in novos_ids:
+                    aprovar_pedido(con, pid, automatico=True)
+            if len(itens) == 1:
+                nv_txt = nomes_nivel.get(itens[0][0], itens[0][0])
+                detalhe = f" {nv_txt} id {itens[0][1] or '-'}"
+            else:
+                detalhe = f" {len(itens)} locais"
             for aid in admin_ids(con):
-                nivel_txt = {"comarca": "comarca", "forum": "fórum",
-                             "unidade": "unidade", "setor": "setor"}.get(nivel, nivel)
                 notify(con, aid, "solicitacao",
-                       f"Nova solicitação de {data.get('nome')} ({usuario}):"
-                       f" {nivel_txt} id {alvo or '-'}")
+                       f"Nova solicitação de {data.get('nome')} ({usuario}):{detalhe}" +
+                       (" (aprovada automaticamente — simulação)" if auto else ""))
+            if auto:
+                _send_email(email, "Acesso liberado — Diretório de Contatos",
+                            f"Olá {data.get('nome')},\n\nSeu acesso foi liberado "
+                            f"automaticamente (demonstração — simulação).\n"
+                            f"Entre com sua conta Google: http://localhost:8000/admin")
+            else:
+                chefes = [r["email"] for r in con.execute(
+                    "SELECT email FROM usuarios WHERE admin=1 AND aprovado=1").fetchall()
+                    if r["email"]]
+                extras = [e.strip() for e in
+                          os.environ.get("NOTIFY_EMAILS", "").split(",") if e.strip()]
+                for e in extras:
+                    if e not in chefes:
+                        chefes.append(e)
+                if chefes:
+                    _send_email(chefes, "Nova solicitação de acesso — Diretório de Contatos",
+                                f"Nova solicitação de {data.get('nome')} ({usuario}):{detalhe}\n\n"
+                                f"Analise em Solicitações de Acesso: http://localhost:8000/admin")
             log(con, "pedido", None,
-                f"solicitação de acesso: {data.get('nome')} ({usuario})")
+                f"solicitação de acesso: {data.get('nome')} ({usuario})" +
+                (" (auto-aprovada — simulação)" if auto else ""))
             con.commit()
             con.close()
-            return self._json({"ok": True, "id": cur.lastrowid}, 201)
+            return self._json({"ok": True, "id": primeiro_id, "auto_aprovado": auto}, 201)
         parts = u.path.rstrip("/").split("/")
         if len(parts) == 5 and parts[1] == "api" and parts[2] == "pedidos" \
                 and parts[4] == "aprovar":
@@ -963,37 +1319,11 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError:
                 return self._json({"erro": "id inválido"}, 400)
             con = get_db()
-            ped = con.execute(
-                "SELECT * FROM pedidos WHERE id=?", (pid,)).fetchone()
-            if not ped or ped["status"] != "pendente":
+            try:
+                ok, payload, st = aprovar_pedido(con, pid)
+            finally:
                 con.close()
-                return self._json({"erro": "pedido não encontrado"}, 404)
-            con.execute(
-                "INSERT INTO usuarios (usuario, senha_sha256, aprovado, email)"
-                " VALUES (?,?,1,?) ON CONFLICT(usuario) DO UPDATE SET aprovado=1,"
-                " email=excluded.email",
-                (ped["usuario_desejado"], sha(SENHA_INICIAL), ped["email"]))
-            uid_novo = con.execute(
-                "SELECT id FROM usuarios WHERE usuario=?",
-                (ped["usuario_desejado"],)).fetchone()["id"]
-            if ped["comarca_id"] and not ped["alvo_id"]:
-                con.execute(
-                    "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
-                    " VALUES (?, 'comarca', ?) ON CONFLICT DO NOTHING",
-                    (uid_novo, ped["comarca_id"]))
-            if ped["alvo_id"]:
-                con.execute(
-                    "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
-                    " VALUES (?,?,?) ON CONFLICT DO NOTHING",
-                    (uid_novo, ped["nivel"] or "comarca", ped["alvo_id"]))
-            con.execute("UPDATE pedidos SET status='aprovado' WHERE id=?", (pid,))
-            log(con, "aprovar", None, f"acesso aprovado: {ped['usuario_desejado']}")
-            notify(con, uid_novo, "aprovada",
-                   "Seu acesso foi aprovado. Senha inicial: " + SENHA_INICIAL)
-            con.commit()
-            con.close()
-            return self._json({"ok": True, "usuario": ped["usuario_desejado"],
-                               "senha_inicial": SENHA_INICIAL})
+            return self._json(payload, st)
         if u.path == "/api/notificacoes/lidas":
             uid = self._uid()
             if not uid:
@@ -1127,5 +1457,5 @@ if __name__ == "__main__":
     init_db()
     HTTPServer.allow_reuse_address = True
     print("Pública: http://localhost:8000  |  Admin: http://localhost:8000/admin"
-          "  (demo: admin / admin123)")
+          "  (acesso: admin / admin123)")
     HTTPServer(("127.0.0.1", 8000), Handler).serve_forever()

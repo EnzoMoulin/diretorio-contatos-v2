@@ -882,14 +882,31 @@
             layer.bindTooltip(
               rotuloMapaComarca(codigo, nome),
               { sticky: true });
-            if (tem) {
-              layer.on("click", function () {
-                var m = (estado.dados.comarcas || []).filter(function (x) {
-                  return String(x.codigoIbge || "").replace(/\D/g, "") === codigo;
-                })[0];
-                if (m) abrirComarca(m.id);
-              });
-            }
+            layer.on("click", function () {
+              var lista = (estado.dados && estado.dados.comarcas) || [];
+              var m = null;
+              for (var i = 0; i < lista.length; i++) {
+                if (String(lista[i].codigoIbge || "").replace(/\D/g, "") === codigo) { m = lista[i]; break; }
+              }
+              if (!m) {
+                var alvo = String(nome || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+                for (var j = 0; j < lista.length; j++) {
+                  var nm = String(lista[j].nome || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+                  if (nm && nm === alvo) { m = lista[j]; break; }
+                }
+              }
+              if (m) abrirComarca(m.id);
+            });
+            layer.on("mouseover", function () {
+              var sel = String((comarcaAtual() && comarcaAtual().codigoIbge) || "").replace(/\D/g, "");
+              if (sel !== codigo) {
+                layer.setStyle({ color: "#0f172a", weight: 2.2, fillColor: "#00adb5", fillOpacity: .78 });
+              }
+            });
+            layer.on("mouseout", function () {
+              var cur = comarcaAtual();
+              destacarMapa(cur ? cur.codigoIbge : "");
+            });
           }
         }).addTo(estado.mapa);
         var legenda = L.control({ position: "bottomright" });
@@ -953,7 +970,7 @@
 
   /* ---- menu + tema (padrão v2) ---- */
   function aplicarTema() {
-    var dark = (localStorage.getItem("demo-theme") || "light") === "dark";
+    var dark = (localStorage.getItem("contatos-theme") || "light") === "dark";
     document.body.dataset.theme = dark ? "dark" : "light";
     var t = $("toggle-dark-mode");
     if (t) t.checked = dark;
@@ -964,7 +981,7 @@
     vincularBuscaGlobal();
     var tg = $("toggle-dark-mode");
     if (tg) tg.onchange = function (e) {
-      localStorage.setItem("demo-theme", e.target.checked ? "dark" : "light");
+      localStorage.setItem("contatos-theme", e.target.checked ? "dark" : "light");
       aplicarTema();
     };
     var itens = document.querySelectorAll('.menu-item[data-view]');
@@ -975,7 +992,7 @@
           for (var j = 0; j < all.length; j++) all[j].classList.remove("active");
           btn.classList.add("active");
           var v = btn.getAttribute("data-view");
-          ["consulta", "config", "manual"].forEach(function (x) { $("view-" + x).classList.add("hidden"); });
+          ["consulta", "config"].forEach(function (x) { var s = $("view-" + x); if (s) s.classList.add("hidden"); });
           $("view-consulta").classList.remove("hidden");
           if (v === "consulta") { renderInicio(); }
           else if (v === "tjes") { abrirTJES(); }

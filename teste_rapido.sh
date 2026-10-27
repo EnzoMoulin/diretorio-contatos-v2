@@ -1,19 +1,19 @@
 #!/bin/bash
-# Verificação rápida da demo (1 comando, sem dependências).
+# Verificação rápida do app (1 comando, sem dependências).
 # Sobe o servidor, testa o fluxo completo (incl. escopo por nível) e desliga.
 set -u
 cd "$(dirname "$0")"
 rm -f contatos.db
 fuser -k 8000/tcp 2>/dev/null
 sleep 2
-python3 app.py &>/tmp/demo_test.log &
+python3 app.py &>/tmp/contatos_test.log &
 PID=$!
 # espera o servidor responder (com timeout)
 for i in $(seq 1 15); do
   curl -s -m 2 -o /dev/null http://localhost:8000/api/comarcas && break
   sleep 1
 done
-if ! kill -0 $PID 2>/dev/null; then echo "FALHOU: servidor não subiu"; cat /tmp/demo_test.log; exit 1; fi
+if ! kill -0 $PID 2>/dev/null; then echo "FALHOU: servidor não subiu"; cat /tmp/contatos_test.log; exit 1; fi
 B=http://localhost:8000
 TOK="import sys,json; print(json.load(sys.stdin)['token'])"
 SID="import sys,json; print(json.load(sys.stdin)[0]['id'])"
@@ -30,7 +30,7 @@ echo "== me =="; curl -s "$B/api/me" -H "X-Admin-Token: $TA"; echo
 echo -n "login via email (200 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/login -H 'Content-Type: application/json' -d '{"email":"admin@exemplo.jus.br","senha":"admin123"}'
 echo "== pedido c/ comarca =="
-curl -s -X POST $B/api/pedidos -H 'Content-Type: application/json' -d '{"nome":"User VV","email":"u@exemplo.jus.br","usuario":"uservv","motivo":"demo","comarca_id":2}'; echo
+curl -s -X POST $B/api/pedidos -H 'Content-Type: application/json' -d '{"nome":"User VV","email":"u@exemplo.jus.br","usuario":"uservv","motivo":"teste","comarca_id":2}'; echo
 echo -n "pedido c/ email externo (400 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/pedidos -H 'Content-Type: application/json' -d '{"nome":"Fora","email":"f@gmail.com","usuario":"fora","comarca_id":2}'
 echo "== aprovar =="; curl -s -X POST $B/api/pedidos/1/aprovar -H "X-Admin-Token: $TA"; echo
@@ -100,5 +100,5 @@ echo "marcar lida id=$NID:"; curl -s -X POST $B/api/notificacoes/lida -H 'Conten
 echo -n "marcar todas lidas (200 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/notificacoes/lidas -H "X-Admin-Token: $TA"
 kill $PID 2>/dev/null
-rm -f contatos.db /tmp/demo_test.log
+rm -f contatos.db /tmp/contatos_test.log
 echo "OK"

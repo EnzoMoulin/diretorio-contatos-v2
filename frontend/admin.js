@@ -4,7 +4,7 @@
    "Acesso administrativo" (login e-mail+senha) eleva quem tem cadastro;
    "Solicitar acesso" abre o formulário; "Sair" volta à consulta (continua no interno). */
 const $ = id => document.getElementById(id);
-let token = localStorage.getItem('demo-token') || '';
+let token = localStorage.getItem('contatos-token') || '';
 let me = null;            // {id, usuario, admin, escopo: 'all' | [{nivel, alvo_id}]}
 let H = { comarcas: [], uteis: [] };  // espelho de /api/hierarquia
 let estado = { comarcaId: '', forumId: '', noId: '' };
@@ -25,9 +25,9 @@ function esc(s) {
 const auth = () => ({ 'Content-Type': 'application/json', 'X-Admin-Token': token });
 const logado = () => !!me;
 
-const VIEWS = ['consulta', 'dashboard', 'solicitacoes', 'registro', 'manual', 'config', 'notificacoes'];
+const VIEWS = ['consulta', 'dashboard', 'solicitacoes', 'registro', 'config', 'notificacoes', 'pedido'];
 function mostrarConsulta() {
-  VIEWS.forEach(v => $('view-' + v).classList.add('hidden'));
+  VIEWS.forEach(v => { const s = $('view-' + v); if (s) s.classList.add('hidden'); });
   $('view-consulta').classList.remove('hidden');
 }
 function marcarMenu(v) {
@@ -425,7 +425,7 @@ function destacarMapaAdmin(nome) {
   if (typeof destacarComarcaMapa === 'function') destacarComarcaMapa(nome || '');
 }
 function locsMapa() {
-  return H.comarcas.filter(m => !ehOrgao(m)).map(m => ({ nome: m.nome, total: m.qtdContatos || 0 }));
+  return H.comarcas.filter(m => !ehOrgao(m)).map(m => ({ nome: m.nome, total: m.qtdContatos || 0, foruns: m.qtdForuns || 0 }));
 }
 
 /* ---- telas ---- */
@@ -965,20 +965,35 @@ async function refresh() {
   if (token) {
     const r = await fetch('/api/me', { headers: auth() });
     if (r.ok) me = await r.json();
-    else { token = ''; localStorage.removeItem('demo-token'); }
+    else { token = ''; localStorage.removeItem('contatos-token'); }
   }
   const dentro = logado();
   $('menu-dash').classList.toggle('hidden', !dentro);
   $('menu-notif').classList.toggle('hidden', !dentro);
   $('menu-sol').classList.toggle('hidden', !dentro);
   $('menu-reg').classList.toggle('hidden', !dentro);
+  $('who-mail').classList.toggle('hidden', !dentro);
+  if (dentro) $('who-mail').textContent = '👤 ' + (me.email || me.usuario);
   $('who-line').textContent = dentro ? '👤 ' + me.usuario : 'Sem acesso administrativo';
   $('btn-entrar').classList.toggle('hidden', dentro);
+  $('btn-pedir').classList.toggle('hidden', dentro);
+  $('btn-pedir-locais').classList.toggle('hidden', !dentro);
   $('btn-sair').classList.toggle('hidden', !dentro);
-  $('btn-pedir').onclick = dentro ? abrirPedidoMais : abrirPedidoNovo;
-  $('estado-hint').textContent = dentro
-    ? 'Logado como ' + me.usuario + (me.escopo === 'all' ? ' (admin: todos os locais).' : ` (locais liberados: ${me.escopo.length}).`)
-    : 'Consulta sem login. Com cadastro, entre para gerenciar seus locais.';
+  $('btn-pedir').onclick = () => {
+    if (logado()) { abrirPedidoNovo('cadastro'); return; }
+    sessionStorage.setItem('pedirAposLogin', 'cadastro');
+    location.href = '/oauth/login';
+  };
+  $('btn-pedir-locais').onclick = () => abrirPedidoNovo('locais');
+  const ehAdmin = dentro && (me.admin === 1 || me.escopo === 'all');
+  const ehVisitante = dentro && !ehAdmin && !(me.escopo || []).length;
+  $('estado-hint').textContent = !dentro
+    ? 'Consulta sem login. Com cadastro, entre para gerenciar seus locais.'
+    : (ehAdmin
+      ? 'Logado como ' + me.usuario + ' (admin: todos os locais).'
+      : (ehVisitante
+        ? 'Visitante — ' + me.usuario + ' (' + (me.email || 'sem e-mail') + '). Solicite acesso ou locais.'
+        : 'Logado como ' + me.usuario + ` (locais liberados: ${me.escopo.length}).`));
   $('profile-badge').innerHTML = dentro
     ? '👤 ' + esc(me.usuario)
     : '<i>●</i> Visitante';
@@ -1000,48 +1015,180 @@ async function refresh() {
 }
 $('btn-entrar').onclick = () => { $('modal-login').classList.remove('hidden'); $('l-status').textContent = ''; };
 $('l-cancel').onclick = () => $('modal-login').classList.add('hidden');
-$('login').onclick = async () => {
-  const r = await fetch('/api/login', { method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ usuario: $('user').value, senha: $('pass').value }) });
-  const j = await r.json();
-  if (j.token) {
-    token = j.token; localStorage.setItem('demo-token', token);
-    $('modal-login').classList.add('hidden');
-    refresh();
-  } else $('l-status').textContent = j.erro || 'falhou';
+$('l-pedir').onclick = () => {
+  $('modal-login').classList.add('hidden');
+  sessionStorage.setItem('pedirAposLogin', 'cadastro');
+  location.href = '/oauth/login';
 };
-$('btn-sair').onclick = () => {
-  token = ''; localStorage.removeItem('demo-token');
+(function capturarTokenGoogle() {
+  const m = (location.hash || '').match(/[#&]token=([A-Za-z0-9]+)/);
+  if (m) {
+    token = m[1]; localStorage.setItem('contatos-token', token);
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+})();
+$('btn-sair').onclick = async () => {
+  try {
+    await fetch('/api/logout', { method: 'POST', headers: auth() });
+  } catch (e) {}
+  token = ''; localStorage.removeItem('contatos-token');
   refresh();
 };
 
-/* ---- modal pedir acesso (novo cadastro ou mais locais) ---- */
+/* ---- árvore de locais do pedido (comarca > fórum > unidade > setor) ---- */
+let pedSel = new Set(), pedForumAberto = '', pedUnidAberta = '';
+const chavePed = (nivel, id) => nivel + ':' + id;
+function pedCobertos() {
+  if (!logado()) return new Set();
+  if (me.escopo === 'all') return 'all';
+  return new Set((me.escopo || []).map(a => a.nivel + ':' + a.alvo_id));
+}
+function pedDescendentes(com) {
+  const fora = [];
+  (com.foruns || []).forEach(f => {
+    fora.push(chavePed('forum', f.id));
+    (f.nos || []).forEach(u => {
+      fora.push(chavePed('unidade', u.id));
+      (u.filhos || []).forEach(s => fora.push(chavePed('setor', s.id)));
+    });
+  });
+  return fora;
+}
 function preencherLocais() {
-  if (!$('p-loc').options.length) {
-    $('p-loc').innerHTML = (H.comarcas || []).map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+  const sel = $('p-comarca');
+  sel.innerHTML = (H.comarcas || []).filter(m => !ehOrgao(m))
+    .map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+  sel.onchange = renderArvore;
+  pedSel = new Set(); pedForumAberto = ''; pedUnidAberta = '';
+  renderArvore();
+}
+function pedLinha(nivel, id, nome, detalhe, extraCls, temFilhos, aberto, onAbrir) {
+  const cob = pedCobertos();
+  const k = chavePed(nivel, id);
+  const ja = cob === 'all' || cob.has(k);
+  const linha = document.createElement('div');
+  linha.className = 'fa-loc' + (extraCls ? ' ' + extraCls : '');
+  const chk = document.createElement('input');
+  chk.type = 'checkbox'; chk.className = 'fa-loc-check';
+  chk.checked = pedSel.has(k); chk.disabled = ja;
+  chk.onchange = () => { pedAlternar(nivel, id, chk.checked); };
+  linha.appendChild(chk);
+  const meio = document.createElement('div');
+  meio.className = 'fa-loc-body';
+  if (temFilhos) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'fa-nome-btn';
+    btn.textContent = (aberto ? '▾ ' : '▸ ') + nome;
+    btn.onclick = e => { e.preventDefault(); e.stopPropagation(); onAbrir(); };
+    meio.appendChild(btn);
+  } else {
+    const b = document.createElement('span'); b.className = 'fa-loc-nome'; b.textContent = nome; meio.appendChild(b);
   }
+  if (detalhe) { const sm = document.createElement('small'); sm.textContent = detalhe; meio.appendChild(sm); }
+  if (ja && cob !== 'all') { const jv = document.createElement('small'); jv.textContent = 'já liberado'; meio.appendChild(jv); }
+  linha.appendChild(meio);
+  linha.onclick = e => {
+    if (e.target === chk || (e.target.closest && e.target.closest('button'))) return;
+    if (chk.disabled) return;
+    chk.checked = !chk.checked;
+    pedAlternar(nivel, id, chk.checked);
+  };
+  return linha;
 }
-function abrirPedidoNovo() {
-  $('modal-pedido').classList.remove('hidden');
-  $('p-status').textContent = '';
-  $('ped-hint').textContent = 'Exigido e-mail institucional @exemplo.jus.br (equivale ao vínculo da intranet).';
-  $('p-user').disabled = false;
-  preencherLocais();
+function pedAlternar(nivel, id, marcado) {
+  const k = chavePed(nivel, id);
+  const com = encontrarComarca($('p-comarca').value);
+  if (marcado) {
+    if (nivel === 'comarca' && com) pedDescendentes(com).forEach(x => pedSel.delete(x));
+    if (nivel === 'forum' && com) {
+      const f = (com.foruns || []).find(x => String(x.id) === String(id));
+      (f && f.nos || []).forEach(u => {
+        pedSel.delete(chavePed('unidade', u.id));
+        (u.filhos || []).forEach(s => pedSel.delete(chavePed('setor', s.id)));
+      });
+    }
+    if (nivel === 'unidade' && com) {
+      (com.foruns || []).forEach(f => (f.nos || []).forEach(u => {
+        if (String(u.id) === String(id)) (u.filhos || []).forEach(s => pedSel.delete(chavePed('setor', s.id)));
+      }));
+    }
+    pedSel.add(k);
+  } else pedSel.delete(k);
+  renderArvore();
 }
-function abrirPedidoMais() {
-  $('modal-pedido').classList.remove('hidden');
+function renderArvore() {
+  const box = $('p-arvore');
+  const com = encontrarComarca($('p-comarca') && $('p-comarca').value);
+  if (!com) { box.textContent = 'Selecione uma comarca.'; return; }
+  box.textContent = '';
+  const detC = `${(com.foruns || []).length} fórum(ns) • ${com.qtdContatos || 0} contato(s)`;
+  box.appendChild(pedLinha('comarca', com.id, com.nome + ' (inteira)', detC, '', false));
+  (com.foruns || []).forEach(f => {
+    const abertoF = String(pedForumAberto) === String(f.id);
+    box.appendChild(pedLinha('forum', f.id, f.nome + ' (' + (f.qtdContatos || 0) + ')', null, '', true, abertoF,
+      () => { pedForumAberto = abertoF ? '' : f.id; renderArvore(); }));
+    if (abertoF) (f.nos || []).forEach(u => {
+      const abertoU = String(pedUnidAberta) === String(u.id);
+      const disU = u.selecionavelAcesso === false;
+      const linhaU = pedLinha('unidade', u.id, u.nome, null, 'fa-loc--sub', (u.filhos || []).length > 0, abertoU,
+        () => { pedUnidAberta = abertoU ? '' : u.id; renderArvore(); });
+      if (disU) linhaU.querySelector('input').disabled = true;
+      box.appendChild(linhaU);
+      if (abertoU) (u.filhos || []).forEach(s => {
+        const linhaS = pedLinha('setor', s.id, s.nome, null, 'fa-loc--sub2', false);
+        if (s.selecionavelAcesso === false) linhaS.querySelector('input').disabled = true;
+        box.appendChild(linhaS);
+      });
+    });
+  });
+  const n = pedSel.size;
+  $('ped-sel-count').textContent = n ? `(${n} selecionado${n === 1 ? '' : 's'})` : '';
+}
+async function abrirPedidoNovo(modo) {
+  if (!logado()) {
+    sessionStorage.setItem('pedirAposLogin', modo === 'locais' ? 'locais' : 'cadastro');
+    $('modal-login').classList.remove('hidden');
+    $('l-status').textContent = 'Entre com sua conta Google para solicitar acesso.';
+    return;
+  }
+  window._pedModo = (modo === 'locais') ? 'locais' : 'cadastro';
+  mostrarPedido();
   $('p-status').textContent = '';
-  $('ped-hint').textContent = 'Pedir acesso a mais um local (entra como ' + me.usuario + ').';
-  $('p-user').value = me.usuario;
-  $('p-user').disabled = true;
-  $('p-email').value = '';
+  $('ped-hint').textContent = window._pedModo === 'locais'
+    ? 'Escolha mais locais para o seu acesso.'
+    : 'Primeiro acesso: só a identidade. Os locais vêm depois, em Solicitar locais.';
+  if (logado()) {
+    $('p-nome').value = '';
+    $('p-email').value = me.email || '';
+    $('p-email').readOnly = true;
+    $('p-user').value = me.usuario;
+    $('p-user').disabled = true;
+  } else {
+    $('p-email').readOnly = false;
+    $('p-user').disabled = false;
+  }
+  if (!(H.comarcas || []).length) { try { await recarregarHierarquia(true); } catch (e) {} }
   preencherLocais();
+  $('bloco-locais').classList.toggle('hidden', window._pedModo !== 'locais');
+  $('bloco-admin').classList.toggle('hidden', window._pedModo !== 'locais');
+  if (window._pedModo !== 'locais') { try { $('p-admin').checked = false; } catch (e) {} }
+}
+function mostrarPedido() {
+  VIEWS.forEach(v => { const s = $('view-' + v); if (s) s.classList.add('hidden'); });
+  $('view-pedido').classList.remove('hidden');
+  document.querySelectorAll('.menu-item[data-view]').forEach(b => b.classList.remove('active'));
+  try { window.scrollTo(0, 0); } catch (e) {}
+}
+function voltarConsulta() {
+  mostrarConsulta();
+  marcarMenu('consulta');
+  renderInicio();
 }
 $('p-cancel').onclick = () => {
-  $('modal-pedido').classList.add('hidden');
+  voltarConsulta();
   $('p-user').disabled = false;
 };
+$('ped-voltar').onclick = () => voltarConsulta();
 
 /* ---- confirmação dinâmica de solicitação por nível (via hierarquia) ---- */
 async function abrirConf(nivel, id, nome) {
@@ -1081,14 +1228,32 @@ $('c-enviar').onclick = async () => {
     : 'Erro: ' + await r.text();
 };
 $('p-enviar').onclick = async () => {
-  const corpo = { nome: $('p-nome').value.trim(), email: $('p-email').value.trim(),
-                  usuario: ($('p-user').disabled && logado() ? me.usuario : $('p-user').value.trim()),
-                  motivo: $('p-motivo').value.trim(), comarca_id: $('p-loc').value };
+  const emCadastro = window._pedModo !== 'locais';
+  const corpo = { nome: $('p-nome').value.trim(),
+                  email: (logado() ? me.email : $('p-email').value.trim()),
+                  usuario: (($('p-user').disabled && logado()) ? me.usuario : $('p-user').value.trim()),
+                  motivo: $('p-motivo').value.trim(),
+                  admin: (!emCadastro && $('p-admin').checked === true),
+                  escopos: [...pedSel].map(k => {
+                    const i = k.indexOf(':');
+                    return { tipo: k.slice(0, i), id: Number(k.slice(i + 1)) };
+                  }) };
+  if (!corpo.nome) { $('p-status').textContent = 'Informe seu nome.'; return; }
+  if (!emCadastro && !corpo.escopos.length && !corpo.admin) { $('p-status').textContent = 'Selecione ao menos um local na árvore.'; return; }
   const r = await fetch('/api/pedidos', { method: 'POST',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+  const txt = await r.text();
+  let j = {};
+  try { j = JSON.parse(txt); } catch (e) {}
+  if (r.ok && j.auto_aprovado) {
+    $('p-status').textContent = 'Acesso liberado automaticamente (demonstração).';
+    try { me = await (await fetch('/api/me', { headers: auth() })).json(); } catch (e) {}
+    setTimeout(() => voltarConsulta(), 900);
+    return;
+  }
   $('p-status').textContent = r.ok
     ? 'Pedido enviado. Aguarde a aprovação do administrador.'
-    : 'Erro: ' + await r.text();
+    : 'Erro: ' + (j.erro || txt);
 };
 
 /* ---- dashboard ---- */
@@ -1124,23 +1289,15 @@ async function carregarDashboard() {
   ).join('') || '<li>Sem registros.</li>';
 }
 
-/* ---- configurações: senha + tema ---- */
-$('s-salvar').onclick = async () => {
-  const r = await fetch('/api/me/senha', { method: 'POST', headers: auth(),
-    body: JSON.stringify({ atual: $('s-atual').value, nova: $('s-nova').value }) });
-  $('s-status').textContent = r.ok
-    ? 'Senha atualizada.'
-    : 'Erro: ' + (await r.json()).erro;
-  if (r.ok) { $('s-atual').value = ''; $('s-nova').value = ''; }
-};
+/* ---- configurações: tema ---- */
 function aplicarTema() {
-  const dark = (localStorage.getItem('demo-theme') || 'light') === 'dark';
+  const dark = (localStorage.getItem('contatos-theme') || 'light') === 'dark';
   document.body.dataset.theme = dark ? 'dark' : 'light';
   const t = $('toggle-dark-mode');
   if (t) t.checked = dark;
 }
 $('toggle-dark-mode').onchange = (e) => {
-  localStorage.setItem('demo-theme', e.target.checked ? 'dark' : 'light');
+  localStorage.setItem('contatos-theme', e.target.checked ? 'dark' : 'light');
   aplicarTema();
 };
 aplicarTema();
@@ -1182,7 +1339,8 @@ async function carregarPedidos() {
   $('ped-count').textContent = n || '';
   $('pedidos').innerHTML = (Array.isArray(lista) ? lista : []).map(p =>
     `<li><b>${esc(p.nome)}</b> (${esc(p.email)}) — usuário: <code>${esc(p.usuario_desejado)}</code>` +
-    (p.alvo_nome ? ` — ${esc({comarca:'comarca',forum:'fórum',unidade:'unidade',setor:'setor'}[p.nivel]||p.nivel)}: <b>${esc(p.alvo_nome)}</b>` : (p.localidade ? ` — local: <b>${esc(p.localidade)}</b>` : '')) +
+    (p.nivel === 'admin' && !p.alvo_id ? ` — <b>administrador</b>` :
+    (p.alvo_nome ? ` — ${esc({comarca:'comarca',forum:'fórum',unidade:'unidade',setor:'setor'}[p.nivel]||p.nivel)}: <b>${esc(p.alvo_nome)}</b>` : (p.localidade ? ` — local: <b>${esc(p.localidade)}</b>` : ''))) +
     (p.motivo ? ` — ${esc(p.motivo)}` : '') +
     ` <button class="btn-primary" data-id="${p.id}">aprovar</button></li>`
   ).join('') || '<li>Nenhuma solicitação pendente.</li>';
@@ -1191,7 +1349,7 @@ async function carregarPedidos() {
       const r = await fetch('/api/pedidos/' + b.dataset.id + '/aprovar',
         { method: 'POST', headers: auth() });
       const j = await r.json();
-      alert(r.ok ? `Aprovado: ${j.usuario} (senha inicial: ${j.senha_inicial})` : 'Erro: ' + (j.erro || ''));
+      alert(r.ok ? `Aprovado: ${j.usuario} (entra com a conta Google)` : 'Erro: ' + (j.erro || ''));
       carregarPedidos();
     };
   });
@@ -1207,4 +1365,10 @@ async function carregarHistorico() {
 (async () => {
   vincularBuscaGlobal();
   await refresh();
+  try {
+    if (sessionStorage.getItem('pedirAposLogin') && logado()) {
+      sessionStorage.removeItem('pedirAposLogin');
+      abrirPedidoNovo('cadastro');
+    }
+  } catch (e) {}
 })();
