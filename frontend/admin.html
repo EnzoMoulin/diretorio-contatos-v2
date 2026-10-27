@@ -89,6 +89,7 @@
             <div class="fa-field"><label for="p-user">Usuário desejado</label><input id="p-user"><span class="fa-dica">Opcional — padrão: início do e-mail.</span></div>
             <div class="fa-field"><label for="p-comarca">Comarca</label><select id="p-comarca"></select></div>
             <div class="fa-field fa-full"><label for="p-motivo">Motivo (opcional)</label><textarea id="p-motivo" rows="3"></textarea></div>
+            <div class="fa-field fa-full" id="bloco-admin"><label style="flex-direction:row;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="p-admin" style="width:auto"> Solicitar também perfil de Gestor do Sistema (administração total — para testar o fluxo de administrador)</label></div>
             <div class="fa-field fa-full" id="bloco-locais">
               <label>Locais solicitados <span class="fa-dica" id="ped-sel-count"></span></label>
               <p class="fa-dica" style="margin:0">Marque a comarca inteira ou abra os fóruns e marque unidades e setores. Marcar um nível já inclui tudo abaixo dele.</p>
@@ -261,7 +262,7 @@
           <div class="manual-section-head"><div><h3>🔑 03 — Acesso e solicitação</h3><p>Sem cadastro a visão é só consulta; com cadastro, gestão no seu escopo. Nesta demonstração a aprovação é automática e marcada como simulação.</p></div></div>
           <ol class="manual-steps">
             <li><span class="manual-step-num">1</span><div><strong>Sem cadastro: Solicitar acesso</strong><p>Na barra lateral, <code>📝 Solicitar acesso</code> abre o pedido só com identidade (é preciso estar logado com o Google — se não estiver, o sistema pede para entrar primeiro).</p></div></li>
-            <li><span class="manual-step-num">2</span><div><strong>Com cadastro: Solicitar locais</strong><p>O botão <code>📍 Solicitar locais</code> abre a árvore comarca &gt; fórum &gt; unidade &gt; setor. Marcar um nível inclui tudo abaixo.</p></div></li>
+            <li><span class="manual-step-num">2</span><div><strong>Com cadastro: Solicitar locais</strong><p>O botão <code>📍 Solicitar locais</code> abre a árvore comarca &gt; fórum &gt; unidade &gt; setor. Marcar um nível inclui tudo abaixo. A caixa “Gestor do Sistema” pede também o perfil de administrador (para testar o fluxo de administrador).</p></div></li>
             <li><span class="manual-step-num">3</span><div><strong>Com cadastro: Acesso administrativo</strong><p>Entre com o Google (conta usada no pedido). Os níveis editáveis vêm marcados com <code>✓</code>.</p></div></li>
             <li><span class="manual-step-num">4</span><div><strong>Sair do acesso administrativo</strong><p>Volta à consulta sem sair do acesso interno.</p></div></li>
           </ol>
@@ -369,6 +370,6 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="mapa.js?v=21"></script>
-<script src="admin.js?v=38"></script>
+<script src="admin.js?v=39"></script>
 </body>
 </html>

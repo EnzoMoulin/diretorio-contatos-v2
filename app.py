@@ -111,6 +111,8 @@ def aprovar_pedido(con, pid, automatico=False):
             "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
             " VALUES (?,?,?) ON CONFLICT DO NOTHING",
             (uid_novo, ped["nivel"] or "comarca", ped["alvo_id"]))
+    if ped["nivel"] == "sistema" and not ped["alvo_id"]:
+        con.execute("UPDATE usuarios SET admin=1 WHERE id=?", (uid_novo,))
     con.execute("UPDATE pedidos SET status='aprovado' WHERE id=?", (pid,))
     marca = " (aprovação automática — simulação)" if automatico else ""
     log(con, "aprovar", None, f"acesso aprovado: {ped['usuario_desejado']}{marca}")
@@ -1168,7 +1170,7 @@ class Handler(BaseHTTPRequestHandler):
             con = get_db()
             try:
                 sess_user = con.execute(
-                    "SELECT email FROM usuarios WHERE id=?", (uid_post,)).fetchone()
+                    "SELECT email, admin FROM usuarios WHERE id=?", (uid_post,)).fetchone()
             except Exception:
                 sess_user = None
             if not sess_user:
@@ -1185,6 +1187,7 @@ class Handler(BaseHTTPRequestHandler):
             # Sem escopos, vale o caminho único (nivel+alvo_id ou comarca_id).
             itens = []
             raw_esc = data.get("escopos")
+            esc_validos = 0
             if isinstance(raw_esc, list):
                 for e in raw_esc:
                     if not isinstance(e, dict):
@@ -1198,6 +1201,13 @@ class Handler(BaseHTTPRequestHandler):
                         aid = None
                     if aid and (nv, aid) not in itens:
                         itens.append((nv, aid))
+                        esc_validos += 1
+            quer_admin = data.get("admin") is True
+            if quer_admin:
+                if sess_user["admin"]:
+                    con.close()
+                    return self._json({"erro": "Você já é Gestor do Sistema."}, 400)
+                itens.append(("sistema", None))
             if not itens:
                 nivel = (data.get("nivel") or "comarca").strip().lower()
                 if nivel not in NIVEIS:
@@ -1208,7 +1218,8 @@ class Handler(BaseHTTPRequestHandler):
                     alvo = None
                 itens = [(nivel, alvo)]
             nomes_nivel = {"comarca": "comarca", "forum": "fórum",
-                           "unidade": "unidade", "setor": "setor"}
+                           "unidade": "unidade", "setor": "setor",
+                           "sistema": "gestor do sistema"}
             existentes = con.execute(
                 "SELECT nivel, alvo_id FROM pedidos WHERE lower(email)=? AND status='pendente'",
                 (email,)).fetchall()

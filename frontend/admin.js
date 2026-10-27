@@ -1164,6 +1164,8 @@ async function abrirPedidoNovo(modo) {
   if (!(H.comarcas || []).length) { try { await recarregarHierarquia(true); } catch (e) {} }
   preencherLocais();
   $('bloco-locais').classList.toggle('hidden', window._pedModo !== 'locais');
+  $('bloco-admin').classList.toggle('hidden', window._pedModo !== 'locais');
+  if (window._pedModo !== 'locais') { try { $('p-admin').checked = false; } catch (e) {} }
 }
 function mostrarPedido() {
   VIEWS.forEach(v => { const s = $('view-' + v); if (s) s.classList.add('hidden'); });
@@ -1225,12 +1227,13 @@ $('p-enviar').onclick = async () => {
                   email: (logado() ? me.email : $('p-email').value.trim()),
                   usuario: (($('p-user').disabled && logado()) ? me.usuario : $('p-user').value.trim()),
                   motivo: $('p-motivo').value.trim(),
+                  admin: (!emCadastro && $('p-admin').checked === true),
                   escopos: [...pedSel].map(k => {
                     const i = k.indexOf(':');
                     return { tipo: k.slice(0, i), id: Number(k.slice(i + 1)) };
                   }) };
   if (!corpo.nome) { $('p-status').textContent = 'Informe seu nome.'; return; }
-  if (!emCadastro && !corpo.escopos.length) { $('p-status').textContent = 'Selecione ao menos um local na árvore.'; return; }
+  if (!emCadastro && !corpo.escopos.length && !corpo.admin) { $('p-status').textContent = 'Selecione ao menos um local na árvore.'; return; }
   const r = await fetch('/api/pedidos', { method: 'POST',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
   const txt = await r.text();
@@ -1330,7 +1333,8 @@ async function carregarPedidos() {
   $('ped-count').textContent = n || '';
   $('pedidos').innerHTML = (Array.isArray(lista) ? lista : []).map(p =>
     `<li><b>${esc(p.nome)}</b> (${esc(p.email)}) — usuário: <code>${esc(p.usuario_desejado)}</code>` +
-    (p.alvo_nome ? ` — ${esc({comarca:'comarca',forum:'fórum',unidade:'unidade',setor:'setor'}[p.nivel]||p.nivel)}: <b>${esc(p.alvo_nome)}</b>` : (p.localidade ? ` — local: <b>${esc(p.localidade)}</b>` : '')) +
+    (p.nivel === 'sistema' && !p.alvo_id ? ` — <b>gestor do sistema</b>` :
+    (p.alvo_nome ? ` — ${esc({comarca:'comarca',forum:'fórum',unidade:'unidade',setor:'setor'}[p.nivel]||p.nivel)}: <b>${esc(p.alvo_nome)}</b>` : (p.localidade ? ` — local: <b>${esc(p.localidade)}</b>` : ''))) +
     (p.motivo ? ` — ${esc(p.motivo)}` : '') +
     ` <button class="btn-primary" data-id="${p.id}">aprovar</button></li>`
   ).join('') || '<li>Nenhuma solicitação pendente.</li>';
