@@ -980,13 +980,9 @@ async function refresh() {
   $('btn-pedir-locais').classList.toggle('hidden', !dentro);
   $('btn-sair').classList.toggle('hidden', !dentro);
   $('btn-pedir').onclick = () => {
-    if (!logado()) {
-      sessionStorage.setItem('pedirAposLogin', 'cadastro');
-      $('modal-login').classList.remove('hidden');
-      $('l-status').textContent = '';
-      return;
-    }
-    abrirPedidoNovo('cadastro');
+    if (logado()) { abrirPedidoNovo('cadastro'); return; }
+    sessionStorage.setItem('pedirAposLogin', 'cadastro');
+    location.href = '/oauth/login';
   };
   $('btn-pedir-locais').onclick = () => abrirPedidoNovo('locais');
   $('estado-hint').textContent = dentro
