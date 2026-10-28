@@ -61,7 +61,8 @@ code{background:#f1f5f9;padding:1px 6px;border-radius:4px}
 .badge{background:#dc2626;color:#fff;border-radius:999px;font-size:12px;
   padding:1px 8px;margin-left:4px}
 .btn-ghost{background:transparent;color:#cbd5e1;border:1px solid #475569;
-  border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer}
+  border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+#who-mail svg,#who-line svg,#profile-badge svg{width:1em;height:1em;vertical-align:-2px}
 .btn-del{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:6px;
   padding:5px 10px;font-size:13px;cursor:pointer}
 .btn-edit{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;
@@ -282,7 +283,7 @@ body[data-theme="dark"] .fc-page-head{border-color:#334155}
 .fc-section--comarcas h3{margin:0 0 10px}
 .main-content{display:flex;flex-direction:column}
 .main-content footer{margin:auto 0 0}
-.fc-btn{appearance:none;border:1px solid #cbd5e1;background:#fff;color:#0f172a;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.fc-btn{appearance:none;border:1px solid #cbd5e1;background:#fff;color:#0f172a;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .fc-btn:hover{background:#f8fafc}
 .fc-btn--primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
 .fc-btn--primary:hover{background:#1e40af}
@@ -448,7 +449,7 @@ body[data-theme="dark"] .tooltip-premium small{color:#cbd5e1}
 .fc-total-orgaos{display:inline-flex;background:#ede9fe;color:#5b21b6;font-weight:800}
 .fc-municipios-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
 .fc-municipios-grid .fc-card{margin-top:0}
-.fc-btn{appearance:none;border:1px solid #cbd5e1;background:#fff;color:#0f172a;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.fc-btn{appearance:none;border:1px solid #cbd5e1;background:#fff;color:#0f172a;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .fc-btn:hover{background:#f8fafc}
 .fc-print-footer{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin-top:22px;padding-top:16px;border-top:1px solid #e2e8f0}
 .fc-print-footer .fc-btn{min-height:42px;display:inline-flex;align-items:center;justify-content:center;padding-inline:18px}

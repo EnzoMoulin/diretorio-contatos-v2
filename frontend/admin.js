@@ -18,6 +18,7 @@ let setorAlvo = null;       // setor_id do create-box atual
 let editId = null;
 let confPed = null;         // {nivel, alvo_id}
 
+const ICON_PESSOA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, m =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -973,8 +974,8 @@ async function refresh() {
   $('menu-sol').classList.toggle('hidden', !dentro);
   $('menu-reg').classList.toggle('hidden', !dentro);
   $('who-mail').classList.toggle('hidden', !dentro);
-  if (dentro) $('who-mail').textContent = '👤 ' + (me.email || me.usuario);
-  $('who-line').textContent = dentro ? '👤 ' + me.usuario : 'Sem acesso administrativo';
+  if (dentro) $('who-mail').innerHTML = ICON_PESSOA + ' ' + esc(me.email || me.usuario);
+  $('who-line').innerHTML = dentro ? ICON_PESSOA + ' ' + esc(me.usuario) : 'Sem acesso administrativo';
   $('btn-entrar').classList.toggle('hidden', dentro);
   $('btn-pedir').classList.toggle('hidden', dentro);
   $('btn-pedir-locais').classList.toggle('hidden', !dentro);
@@ -997,7 +998,7 @@ async function refresh() {
         ? 'Visitante — ' + me.usuario + ' (' + (me.email || 'sem e-mail') + '). Solicite acesso ou locais.'
         : 'Logado como ' + me.usuario + ` (locais liberados: ${me.escopo.length}).`));
   $('profile-badge').innerHTML = dentro
-    ? '👤 ' + esc(me.usuario)
+    ? ICON_PESSOA + ' ' + esc(me.usuario)
     : '<i>●</i> Visitante';
   if (dentro) carregarPedidos();
   if (dentro) notifBadge(); else $('notif-count').textContent = '';
