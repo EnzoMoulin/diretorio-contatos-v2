@@ -281,7 +281,8 @@ body[data-theme="dark"] .fc-page-head{border-color:#334155}
 .fc-btn--primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
 .fc-btn--primary:hover{background:#1e40af}
 .fc-search{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 10px;font-size:14px}
-.fc-select{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;margin-bottom:12px}
+.fc-select{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;margin-bottom:12px;font-size:14px}
+@media (pointer:coarse){.fc-select{font-size:16px}}
 .fc-selects-row{display:flex;gap:8px;align-items:center}
 .fc-selects-row .fc-select{flex:1 1 0;min-width:0}
 .fc-selects-row .fc-btn{flex:0 0 auto;white-space:nowrap}
