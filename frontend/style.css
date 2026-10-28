@@ -25,7 +25,7 @@ html,body{margin:0;padding:0;width:100%;height:100vh;overflow:hidden;
 #map-msg:empty{display:none}
 
 /* ---- conteúdo ---- */
-.main-content{flex:1 1 auto;min-width:0;height:100vh;padding:15px 25px 8px;overflow-y:auto}
+.main-content{flex:1 1 auto;min-width:0;height:100vh;padding:15px 25px 8px;overflow-y:auto;scrollbar-gutter:stable}
 .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px 24px;
   margin-bottom:20px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
 .card h1{margin:0 0 14px;font-size:22px;color:#0f172a}
