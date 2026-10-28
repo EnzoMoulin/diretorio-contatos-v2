@@ -212,6 +212,7 @@ body[data-theme="dark"] code{background:#0f172a}
 #view-notificacoes h1 svg{width:1em;height:1em;flex:none}
 .menu-item .icon-white{filter:brightness(0) invert(1)}
 .menu-item .icon-txt{font-size:21px;font-weight:700}
+button:focus-visible,a:focus-visible,.menu-item:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
 .menu-item:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.08);color:#fff;transform:translateX(2px)}
 .menu-item.active{background:linear-gradient(90deg,rgba(37,99,235,.24),rgba(59,130,246,.1));border-color:rgba(96,165,250,.22);color:#fff;box-shadow:inset 3px 0 0 #60a5fa}
 .menu-item.active .icon{background:rgba(59,130,246,.2)}
