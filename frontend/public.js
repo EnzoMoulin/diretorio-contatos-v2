@@ -332,7 +332,8 @@
 
   function opcoesComarcas(comarcas, selecionado) {
     return '<option value="">Selecione a Comarca</option>' + (comarcas || []).filter(function (m) { return !ehOrgao(m); }).map(function (m) {
-      return '<option value="' + esc(m.id) + '"' + (String(m.id) === String(selecionado) ? " selected" : "") + ">" + esc(m.nome) + "</option>";
+      var n = m.qtdContatos || 0;
+      return '<option value="' + esc(m.id) + '"' + (String(m.id) === String(selecionado) ? " selected" : "") + ">" + esc(m.nome) + " (" + n + (n === 1 ? " contato)" : " contatos)") + "</option>";
     }).join("");
   }
 

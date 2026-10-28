@@ -305,7 +305,7 @@ function opcoesComarcas(comarcas, selecionado) {
   return '<option value="">Selecione a Comarca</option>' + (comarcas || [])
     .filter(m => !ehOrgao(m)).map(m =>
       '<option value="' + esc(m.id) + '"' + (String(m.id) === String(selecionado) ? ' selected' : '') +
-      '>' + esc(m.nome) + '</option>').join('');
+      '>' + esc(m.nome) + ' (' + (m.qtdContatos || 0) + ((m.qtdContatos || 0) === 1 ? ' contato)' : ' contatos)') + '</option>').join('');
 }
 // ctxOk: o contexto do contato está coberto → mostra Editar/Remover
 function contatosCards(contatos, ctxOk) {
@@ -1059,7 +1059,7 @@ function pedDescendentes(com) {
 function preencherLocais() {
   const sel = $('p-comarca');
   sel.innerHTML = (H.comarcas || []).filter(m => !ehOrgao(m))
-    .map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+    .map(c => `<option value="${c.id}">${esc(c.nome)} (${c.qtdContatos || 0}${(c.qtdContatos || 0) === 1 ? " contato" : " contatos"})</option>`).join('');
   sel.onchange = renderArvore;
   pedSel = new Set(); pedForumAberto = ''; pedUnidAberta = '';
   renderArvore();
@@ -1127,7 +1127,7 @@ function renderArvore() {
   box.appendChild(pedLinha('comarca', com.id, com.nome + ' (inteira)', detC, '', false));
   (com.foruns || []).forEach(f => {
     const abertoF = String(pedForumAberto) === String(f.id);
-    box.appendChild(pedLinha('forum', f.id, f.nome + ' (' + (f.qtdContatos || 0) + ')', null, '', true, abertoF,
+    box.appendChild(pedLinha('forum', f.id, f.nome + ' (' + (f.qtdContatos || 0) + ((f.qtdContatos || 0) === 1 ? ' contato)' : ' contatos)'), null, '', true, abertoF,
       () => { pedForumAberto = abertoF ? '' : f.id; renderArvore(); }));
     if (abertoF) (f.nos || []).forEach(u => {
       const abertoU = String(pedUnidAberta) === String(u.id);
