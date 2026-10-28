@@ -205,7 +205,11 @@ body[data-theme="dark"] code{background:#0f172a}
 .sidebar-menu{padding:14px 12px}
 .menu-item{min-height:43px;padding:10px 11px;margin-bottom:4px;border:1px solid transparent;border-radius:10px;color:#dbe4f0;font-size:15px;font-weight:650;line-height:1.25;display:flex;align-items:center;gap:10px;width:100%;background:transparent;cursor:pointer;text-align:left}
 .menu-item .icon{width:30px;min-width:30px;height:30px;display:grid;place-items:center;border-radius:8px;background:rgba(255,255,255,.055);font-size:17px}
-.menu-item[data-view="uteis"] .icon{font-size:32px;line-height:1}
+.menu-item .icon svg{width:16px;height:16px;flex:none}
+.sidebar-status-btn svg{width:16px;height:16px;flex:none}
+.fc-btn svg,.fc-icon-btn svg,.btn-ghost svg{width:15px;height:15px;flex:none}
+#view-notificacoes h1{display:flex;align-items:center;gap:8px}
+#view-notificacoes h1 svg{width:1em;height:1em;flex:none}
 .menu-item .icon-white{filter:brightness(0) invert(1)}
 .menu-item .icon-txt{font-size:21px;font-weight:700}
 .menu-item:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.08);color:#fff;transform:translateX(2px)}
