@@ -1375,3 +1375,23 @@ async function carregarHistorico() {
     }
   } catch (e) {}
 })();
+
+document.addEventListener("keydown", function(e){
+  if(e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+  var t = e.target;
+  if(t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+  var ids = ["fc-busca", "campo-pesquisa"];
+  for(var i = 0; i < ids.length; i++){
+    var b = document.getElementById(ids[i]);
+    if(b && b.offsetParent !== null){ e.preventDefault(); b.focus(); return; }
+  }
+});
+window.addEventListener("beforeprint", function(){
+  var m = document.getElementById("print-meta");
+  if(!m){ m = document.createElement("div"); m.id = "print-meta"; m.className = "print-meta"; document.body.prepend(m); }
+  m.textContent = "Diretório Institucional de Contatos – PJES · Gerado em " + new Date().toLocaleString("pt-BR");
+});
+window.addEventListener("afterprint", function(){
+  var m = document.getElementById("print-meta");
+  if(m) m.remove();
+});

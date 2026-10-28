@@ -952,7 +952,7 @@
   function recarregar(mostrarCarregando) {
     if (estado.carregando) return;
     estado.carregando = true;
-    if (mostrarCarregando && host()) host().innerHTML = '<div class="fc-empty">Carregando contatos...</div>';
+    if (mostrarCarregando && host()) host().innerHTML = '<div aria-hidden="true"><div class="fc-skel-card"><div class="fc-skel-line w60"></div><div class="fc-skel-line w80"></div><div class="fc-skel-line w40"></div></div><div class="fc-skel-card"><div class="fc-skel-line w80"></div><div class="fc-skel-line w40"></div><div class="fc-skel-line w60"></div></div><div class="fc-skel-card"><div class="fc-skel-line w40"></div><div class="fc-skel-line w60"></div><div class="fc-skel-line w80"></div></div></div>';
     fetch("/api/hierarquia").then(function (r) { return r.json(); }).then(function (dados) {
       estado.carregando = false;
       estado.dados = dados && dados.comarcas ? dados : { comarcas: [] };
@@ -1009,3 +1009,23 @@
   window.recarregarNavegacaoForum = function () { recarregar(false); };
   window.setLoc = function (id) { abrirComarca(String(id)); };
 })();
+
+document.addEventListener("keydown", function(e){
+  if(e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+  var t = e.target;
+  if(t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+  var ids = ["fc-busca", "campo-pesquisa"];
+  for(var i = 0; i < ids.length; i++){
+    var b = document.getElementById(ids[i]);
+    if(b && b.offsetParent !== null){ e.preventDefault(); b.focus(); return; }
+  }
+});
+window.addEventListener("beforeprint", function(){
+  var m = document.getElementById("print-meta");
+  if(!m){ m = document.createElement("div"); m.id = "print-meta"; m.className = "print-meta"; document.body.prepend(m); }
+  m.textContent = "Diretório Institucional de Contatos – PJES · Gerado em " + new Date().toLocaleString("pt-BR");
+});
+window.addEventListener("afterprint", function(){
+  var m = document.getElementById("print-meta");
+  if(m) m.remove();
+});

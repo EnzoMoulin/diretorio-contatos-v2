@@ -83,7 +83,9 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
   .fc-back,.fc-search,.fc-select,.fc-toolbar,.fc-access,.fc-print-footer,.fc-copy-btn{display:none!important}
   .fc-panel{height:auto;overflow:visible;border:0;box-shadow:none}
   .fc-contato,.fc-card{break-inside:avoid}
+  .print-meta{display:block;font-size:12px;color:#64748b;margin-bottom:12px;border-bottom:1px solid #cbd5e1;padding-bottom:8px}
 }
+.print-meta{display:none}
 .consulta-grid{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:16px;align-items:start}
 @media (max-width:900px){.consulta-grid{grid-template-columns:1fr}}
 .modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:flex-start;justify-content:center;z-index:2000;overflow-y:auto;padding:20px 12px;backdrop-filter:blur(4px)}
@@ -209,6 +211,13 @@ body[data-theme="dark"] code{background:#0f172a}
 .menu-item .icon svg{width:16px;height:16px;flex:none}
 .sidebar-status-btn svg{width:16px;height:16px;flex:none}
 .fc-btn svg,.fc-icon-btn svg,.btn-ghost svg{width:15px;height:15px;flex:none}
+.fc-skel-card{border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:10px;background:#fff}
+.fc-skel-line{height:12px;border-radius:6px;margin:8px 0;background:linear-gradient(90deg,#e8edf3 25%,#f5f7fb 50%,#e8edf3 75%);background-size:200% 100%;animation:fc-shimmer 1.1s linear infinite}
+.fc-skel-line.w40{width:40%}.fc-skel-line.w60{width:60%}.fc-skel-line.w80{width:80%}
+@keyframes fc-shimmer{to{background-position:-200% 0}}
+body[data-theme="dark"] .fc-skel-card{background:#0f172a;border-color:#334155}
+body[data-theme="dark"] .fc-skel-line{background:linear-gradient(90deg,#1e293b 25%,#273449 50%,#1e293b 75%);background-size:200% 100%}
+.fc-empty::before{content:"";display:block;width:46px;height:46px;margin:2px auto 10px;opacity:.6;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.5' y2='16.5'/%3E%3C/svg%3E") center/contain no-repeat}
 #view-notificacoes h1{display:flex;align-items:center;gap:8px}
 [id^="view-"]:not(.hidden){animation:fc-troca .18s ease}
 @keyframes fc-troca{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
