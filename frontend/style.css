@@ -247,6 +247,7 @@ body[data-theme="dark"] .fc-page-head{border-color:#334155}
 #view-consulta .consulta-direita .fc-busca-input{max-width:none;margin-bottom:0}
 .consulta-direita>.fc-panel{flex:1 1 auto;min-height:0}
 .fc-busca-input{width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#f8fafc;color:#0f172a}
+.fc-busca-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.25)}
 .fc-busca-resultados{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.18);z-index:60;max-height:320px;overflow-y:auto}
 .fc-busca-item{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #f1f5f9;padding:9px 12px;cursor:pointer}
 .fc-busca-item:last-child{border-bottom:0}
@@ -280,7 +281,7 @@ body[data-theme="dark"] .fc-page-head{border-color:#334155}
 .fc-btn:hover{background:#f8fafc}
 .fc-btn--primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
 .fc-btn--primary:hover{background:#1e40af}
-.fc-search{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 10px;font-size:14px}
+.fc-search{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 10px;font-size:14px;background:#fff}
 .fc-select{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;margin-bottom:12px;font-size:14px}
 @media (pointer:coarse){.fc-select{font-size:16px}}
 .fc-selects-row{display:flex;gap:8px;align-items:center}
