@@ -213,6 +213,10 @@ body[data-theme="dark"] code{background:#0f172a}
 [id^="view-"]:not(.hidden){animation:fc-troca .18s ease}
 @keyframes fc-troca{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 #view-notificacoes h1 svg{width:1em;height:1em;flex:none}
+/* Zoom do mapa no padrão do tema */
+body:not([data-theme="dark"]) .leaflet-bar{border:1px solid #cbd5e1!important;border-radius:10px!important;overflow:hidden;box-shadow:0 4px 12px rgba(15,23,42,.12)!important}
+body:not([data-theme="dark"]) .leaflet-bar a{width:32px!important;height:32px!important;line-height:32px!important;color:#334155!important;background:#fff}
+body:not([data-theme="dark"]) .leaflet-bar a:hover{background:#f1f5f9!important;color:#0f172a!important}
 @media (prefers-reduced-motion:reduce){[id^="view-"]:not(.hidden){animation:none}}
 .menu-item .icon-white{filter:brightness(0) invert(1)}
 .menu-item .icon-txt{font-size:21px;font-weight:700}
