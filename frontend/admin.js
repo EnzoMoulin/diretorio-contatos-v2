@@ -453,7 +453,7 @@ function renderInicio() {
     (comarcas.length ? '<div class="fc-catalog-counts">' +
       (totalComarcas ? '<span class="fc-pill fc-total-comarcas">' + esc(rotuloQuantidade(totalComarcas, 'Comarca', 'Comarcas')) + '</span>' : '') + '</div>' : '') +
     '<select id="fc-comarca" class="fc-select">' + opcoesComarcas(comarcas, '') + '</select>' +
-    '<div class="fc-section fc-section--comarcas"><div class="fc-section-title"><h3>Comarcas</h3></div><div class="fc-comarcas-grid">' + cardsComarcas + '</div></div>' +
+    '<div class="fc-section fc-section--comarcas"><div class="fc-comarcas-grid">' + cardsComarcas + '</div></div>' +
     '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">↑ Voltar ao topo</button></div>';
   $('fc-comarca').onchange = (e) => { if (e.target.value) abrirComarca(e.target.value); };
   c.querySelectorAll('[data-comarca]').forEach(el => {
