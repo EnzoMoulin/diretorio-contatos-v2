@@ -205,6 +205,16 @@
     } else renderForuns();
     destacarContato(item.contato.id);
   }
+  function realcarBusca(termo, texto){
+    var base = esc(texto), b = esc(String(termo || "").trim());
+    if(!b) return base;
+    var lower = base.toLowerCase(), alvo = b.toLowerCase(), out = "", i = 0, j;
+    while((j = lower.indexOf(alvo, i)) !== -1){
+      out += base.slice(i, j) + "<mark>" + base.slice(j, j + b.length) + "</mark>";
+      i = j + b.length;
+    }
+    return out + base.slice(i);
+  }
   function vincularBuscaGlobal() {
     var campo = $("fc-busca"), caixa = $("fc-busca-resultados");
     if (!campo || !caixa || campo.getAttribute("data-busca-ok")) return;
@@ -216,9 +226,9 @@
       caixa.innerHTML = resultados.map(function (item, i) {
         var c = item.contato;
         return '<button type="button" class="fc-busca-item" data-busca-i="' + i + '">' +
-          "<strong>" + esc(c.descricao || fmtTipoContato(c.tipo)) + "</strong>" +
-          "<small>" + esc(fmtTipoContato(c.tipo) + (c.valor ? " · " + c.valor : "")) + "</small>" +
-          "<small>" + esc(item.caminho) + "</small></button>";
+          "<strong>" + realcarBusca(campo.value, c.descricao || fmtTipoContato(c.tipo)) + "</strong>" +
+          "<small>" + realcarBusca(campo.value, fmtTipoContato(c.tipo) + (c.valor ? " · " + c.valor : "")) + "</small>" +
+          "<small>" + realcarBusca(campo.value, item.caminho) + "</small></button>";
       }).join("");
       caixa.removeAttribute("hidden");
       var botoes = caixa.querySelectorAll("[data-busca-i]");
@@ -1028,4 +1038,19 @@ window.addEventListener("beforeprint", function(){
 window.addEventListener("afterprint", function(){
   var m = document.getElementById("print-meta");
   if(m) m.remove();
+});
+
+document.addEventListener("keydown", function(e){
+  if(e.key !== "Escape") return;
+  var cx = document.getElementById("fc-busca-resultados");
+  if(cx && !cx.hasAttribute("hidden")){ cx.setAttribute("hidden", ""); cx.innerHTML = ""; }
+  var x = document.querySelector(".leaflet-popup-close-button");
+  if(x){ x.click(); }
+  var ae = document.activeElement;
+  if(ae && (ae.id === "fc-busca" || ae.id === "campo-pesquisa")) ae.blur();
+  document.querySelectorAll(".modal").forEach(function(m){
+    if(m.classList.contains("hidden") || m.style.display === "none" || m.offsetParent === null) return;
+    if(m.id === "modal-sem-acesso" && typeof fecharModalSemAcesso === "function") fecharModalSemAcesso();
+    else m.classList.add("hidden");
+  });
 });
