@@ -351,7 +351,8 @@
     if (!id) return;
     if (indiceBusca === null) indiceBusca = construirIndiceBusca();
     for (var i = 0; i < indiceBusca.length; i++) {
-      if (String(indiceBusca[i].contato.id) === String(id)) {
+      // Aceita ?contato=1491 antigo (só número) além do ?contato=C1491 atual.
+      if (String(indiceBusca[i].contato.id) === String(id) || String(indiceBusca[i].contato.id) === "C" + String(id)) {
         irParaResultado(indiceBusca[i]);
         return;
       }
@@ -1254,18 +1255,6 @@
     fetch("/api/hierarquia").then(function (r) { return r.json(); }).then(function (dados) {
       estado.carregando = false;
       estado.dados = dados && dados.comarcas ? dados : { comarcas: [] };
-      (estado.dados.comarcas || []).forEach(function (m) {
-        (m.foruns || []).forEach(function (f) {
-          (f.nos || []).forEach(function (u) {
-            u.id = "U" + u.id;
-            (u.filhos || []).forEach(function (s) { s.id = "S" + s.id; });
-          });
-        });
-        (m.nos || []).forEach(function (u) {
-          u.id = "U" + u.id;
-          (u.filhos || []).forEach(function (s) { s.id = "S" + s.id; });
-        });
-      });
       atualizarMapaDados();
       renderInicio();
       abrirLinkContato();

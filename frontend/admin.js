@@ -426,15 +426,12 @@ function encontrarPai(lista, id, pai) {
 }
 
 /* ---- cobertura por escopo ('all' ou [{nivel, alvo_id}]) ---- */
-// Hierarquia usa U/S antes do id (unidade/setor); o backend fala em inteiros.
-const idNum = v => String(v == null ? '' : v).replace(/^\D+/, '');
 function cobre(nivel, id) {
   if (!logado()) return false;
   if (me.escopo === 'all') return true;
   const g = new Set((me.escopo || []).map(a => a.nivel + ':' + a.alvo_id));
   id = String(id);
-  const num = idNum(id);
-  if (g.has(nivel + ':' + num)) return true;
+  if (g.has(nivel + ':' + id)) return true;
   if (nivel === 'forum') {
     const c = mapForumComarca[id];
     return !!(c && g.has('comarca:' + c));
@@ -447,7 +444,7 @@ function cobre(nivel, id) {
     const u = mapSetorUnidade[id];
     if (!u) return false;
     const f = mapNoForum[u], c = mapNoComarca[u];
-    return g.has('unidade:' + idNum(u)) || (!!f && g.has('forum:' + f)) || (!!c && g.has('comarca:' + c));
+    return g.has('unidade:' + u) || (!!f && g.has('forum:' + f)) || (!!c && g.has('comarca:' + c));
   }
   return false;
 }
@@ -909,7 +906,7 @@ function renderNo() {
   destacarMapaAdmin(m.nome);
   // create-box: só no setor coberto
   if (logado() && tipoTela === 'Setor' && cobre('setor', no.id)) {
-    setorAlvo = Number(idNum(no.id));
+    setorAlvo = no.id;
     $('create-box').classList.remove('hidden');
     $('save-status').textContent = '';
   } else {
@@ -1192,26 +1189,17 @@ function abrirLinkContato() {
   if (!id) return;
   if (indiceBusca === null) indiceBusca = construirIndiceBusca();
   for (const item of indiceBusca) {
-    if (String(item.contato.id) === String(id)) {
+    // Aceita ?contato=1491 antigo (só número) além do ?contato=C1491 atual.
+    if (String(item.contato.id) === String(id) || String(item.contato.id) === 'C' + String(id)) {
       irParaResultado(item);
       return;
     }
   }
 }
-/* ---- ids únicos na hierarquia (U = unidade, S = setor) ---- */
-function normalizarIdsNos(raiz) {
-  const unis = [];
-  (raiz.foruns || []).forEach(f => { (f.nos || []).forEach(u => unis.push(u)); });
-  (raiz.nos || []).forEach(u => unis.push(u));
-  unis.forEach(u => {
-    u.id = 'U' + u.id;
-    (u.filhos || []).forEach(s => { s.id = 'S' + s.id; });
-  });
-}
+/* ---- carga da hierarquia (IDs únicos M/F/U/S/C direto do banco) ---- */
 async function recarregarHierarquia(preservar) {
   const dados = await (await fetch('/api/hierarquia')).json();
   H = dados && dados.comarcas ? dados : { comarcas: [], uteis: [] };
-  (H.comarcas || []).forEach(normalizarIdsNos);
   construirMapas();
   indiceBusca = null;
   fullCache = null;
@@ -1502,7 +1490,7 @@ $('ped-voltar').onclick = () => voltarConsulta();
 
 /* ---- confirmação dinâmica de solicitação por nível (via hierarquia) ---- */
 async function abrirConf(nivel, id, nome) {
-  confPed = { nivel, alvo_id: Number(idNum(id)) };
+  confPed = { nivel, alvo_id: id };
   $('c-status').textContent = '';
   $('c-motivo').value = '';
   let texto = '';
@@ -1546,7 +1534,7 @@ $('p-enviar').onclick = async () => {
                   admin: (!emCadastro && $('p-admin').checked === true),
                   escopos: [...pedSel].map(k => {
                     const i = k.indexOf(':');
-                    return { tipo: k.slice(0, i), id: Number(idNum(k.slice(i + 1))) };
+                    return { tipo: k.slice(0, i), id: k.slice(i + 1) };
                   }) };
   if (!corpo.nome) { $('p-status').textContent = 'Informe seu nome.'; return; }
   if (!emCadastro && !corpo.escopos.length && !corpo.admin) { $('p-status').textContent = 'Selecione ao menos um local na árvore.'; return; }
