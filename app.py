@@ -1494,7 +1494,9 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     init_db()
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", "8000"))
     HTTPServer.allow_reuse_address = True
-    print("Pública: http://localhost:8000  |  Admin: http://localhost:8000/admin"
-          "  (acesso: admin / admin123)")
-    HTTPServer(("127.0.0.1", 8000), Handler).serve_forever()
+    print("Pública: http://%s:%d  |  Admin: http://%s:%d/admin (INTRANET_ONLY=%s)"
+          % (host, port, host, port, "1" if INTRANET_ONLY else "0"))
+    HTTPServer((host, port), Handler).serve_forever()

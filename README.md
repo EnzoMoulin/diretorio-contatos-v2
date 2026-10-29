@@ -97,6 +97,13 @@ via API do sqlite) em `~/Emprego/Backups/planilhas/`, mantendo 4 semanas.
 Sucesso é silencioso; falha chega como alerta. Restaurar o banco é trocar o
 arquivo `contatos.db` pelo da data desejada com o servidor parado.
 
+## Hospedagem (pôr no ar)
+Só stdlib: sem `pip install`. No Render (gratuito): novo Web Service a partir
+do repo, Start Command `INTRANET_ONLY=0 HOST=0.0.0.0 python3 app.py`
+(`render.yaml` já traz isso). `PORT` vem do ambiente. O banco é recriado do
+seed a cada boot limpo (disco efêmero) — dados de demonstração voltam sozinhos;
+o que for criado em produção se perde no restart (ok para demo).
+
 ## Como avaliar este demo (2 minutos)
 1. Abra `/admin` e entre com qualquer conta Google → você entra como visitante.
 2. Peça acesso em **Solicitar acesso** → liberação automática (simulação).
