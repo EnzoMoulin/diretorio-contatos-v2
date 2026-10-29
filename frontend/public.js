@@ -106,11 +106,22 @@
   }
 
   var FAV_KEY = "dc2-favs";
+  function piscarBotao(btn) {
+    if (!btn) return;
+    try {
+      btn.style.background = "#dbeafe";
+      setTimeout(function () { btn.style.background = ""; }, 900);
+    } catch (e) {}
+  }
   function lerFavs() { try { return JSON.parse(localStorage.getItem(FAV_KEY)) || {}; } catch (e) { return {}; } }
   function salvarFavs(f) { try { localStorage.setItem(FAV_KEY, JSON.stringify(f)); } catch (e) {} }
   function chaveFav(o) { return o.id ? "id:" + o.id : "u:" + o.tipo + "|" + o.valor; }
   var SVG_ESTRELA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
   var SVG_BAIXAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  var SVG_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+  function botaoLink(id, nome) {
+    return '<button type="button" class="fc-icon-btn fc-link-btn" data-link-id="' + esc(id) + '" title="Copiar link do contato" aria-label="Copiar link do contato ' + esc(nome) + '">' + SVG_LINK + "</button>";
+  }
   function botaoFav(o, nome) {
     var k = chaveFav(o), on = !!lerFavs()[k];
     return '<button type="button" class="fc-icon-btn fc-fav-btn" data-fav-key="' + esc(k) + '" data-fav-nome="' + esc(nome) + '" data-fav-tipo="' + esc(o.tipo) + '" data-fav-valor="' + esc(o.valor) + '" aria-pressed="' + (on ? "true" : "false") + '" title="Favoritar" aria-label="Favoritar ' + esc(nome) + '">' + SVG_ESTRELA + "</button>";
@@ -138,6 +149,7 @@
       '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(valor) +
       '" data-copy-label="' + esc(tipo) + '" title="Copiar ' + esc(tipo) + '" aria-label="Copiar ' + esc(tipo) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
       botaoFavChave(k, f) +
+    (String(k).indexOf('id:') === 0 ? botaoLink(String(k).slice(3), f.nome || valor) : '') +
       '<button type="button" class="fc-icon-btn fc-vcf-btn" data-vcf-nome="' + esc(f.nome || valor) + '" data-vcf-tipo="' + esc(f.tipo) + '" data-vcf-valor="' + esc(f.valor) + '" title="Baixar contato (.vcf)" aria-label="Baixar contato ' + esc(f.nome || valor) + '">' + SVG_BAIXAR + "</button>" +
       "</div></div></article>";
   }
@@ -169,7 +181,7 @@
     var f = lerFavs();
     var era = !!f[d.key];
     if (era) delete f[d.key];
-    else f[d.key] = { nome: d.nome, tipo: d.tipo, valor: d.valor };
+    else f[d.key] = { key: d.key, nome: d.nome, tipo: d.tipo, valor: d.valor };
     salvarFavs(f);
     sincronizarFavs();
     if (typeof mostrarToast === "function") mostrarToast(era ? "Removido dos favoritos." : "Adicionado aos favoritos.", "success");
@@ -207,6 +219,15 @@
         nome: vb.getAttribute("data-vcf-nome"), tipo: vb.getAttribute("data-vcf-tipo"),
         valor: vb.getAttribute("data-vcf-valor")
       });
+      return;
+    }
+    var lk = t && t.closest ? t.closest(".fc-link-btn") : null;
+    if (lk) {
+      var linkId = lk.getAttribute("data-link-id");
+      if (linkId) {
+        copiarTexto(String(window.location.href).split("?")[0] + "?contato=" + encodeURIComponent(linkId));
+        piscarBotao(lk);
+      }
     }
   });
 
@@ -240,6 +261,21 @@
       .normalize("NFD").replace(/[̀-ͯ]/g, "");
   }
   var indiceBusca = null;
+  var linkContatoProcessado = false;
+  function abrirLinkContato() {
+    if (linkContatoProcessado) return;
+    linkContatoProcessado = true;
+    var id = null;
+    try { id = new URLSearchParams(window.location.search).get("contato"); } catch (e) {}
+    if (!id) return;
+    if (indiceBusca === null) indiceBusca = construirIndiceBusca();
+    for (var i = 0; i < indiceBusca.length; i++) {
+      if (String(indiceBusca[i].contato.id) === String(id)) {
+        irParaResultado(indiceBusca[i]);
+        return;
+      }
+    }
+  }
   function construirIndiceBusca() {
     var indice = [];
     ((estado.dados && estado.dados.comarcas) || []).forEach(function (m) {
@@ -493,7 +529,8 @@
         '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(valor) +
         '" data-copy-label="' + esc(tipo) + '" title="Copiar ' + esc(tipo) + '" aria-label="Copiar ' + esc(tipo) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
         botaoFav({ id: c.id, tipo: c.tipo, valor: c.valor }, String(c.descricao || "").trim() || tipo) +
-        botaoVcf({ tipo: c.tipo, valor: c.valor }, String(c.descricao || "").trim() || tipo) + '</div>';
+        botaoVcf({ tipo: c.tipo, valor: c.valor }, String(c.descricao || "").trim() || tipo) +
+        botaoLink(c.id, String(c.descricao || "").trim() || tipo) + '</div>';
       var descricao = String(c.descricao || "").trim();
       var descricaoHtml = descricao && descricao.toLocaleLowerCase("pt-BR") !== String(tipo).toLocaleLowerCase("pt-BR")
         ? "<h4>" + esc(descricao) + "</h4>" : "";
@@ -1094,6 +1131,7 @@
       estado.dados = dados && dados.comarcas ? dados : { comarcas: [] };
       atualizarMapaDados();
       renderInicio();
+      abrirLinkContato();
     }).catch(function (erro) {
       estado.carregando = false;
       if (host()) {
