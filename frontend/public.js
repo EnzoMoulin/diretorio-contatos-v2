@@ -9,6 +9,17 @@
 
   function $(id) { return document.getElementById(id); }
   function host() { return $("lista"); }
+  // Toda navegação entre telas recomeça do topo do painel.
+  if (!window.__fcRolarNavOk) {
+    window.__fcRolarNavOk = true;
+    document.addEventListener("click", function (e) {
+      var t = e.target && e.target.closest ? e.target.closest("[data-nav],[data-breadcrumb-type],.menu-item,.fc-back") : null;
+      if (!t) return;
+      var h = host();
+      var p = h && h.closest ? h.closest(".fc-panel") : null;
+      if (p) p.scrollTop = 0; else window.scrollTo(0, 0);
+    });
+  }
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (m) {
@@ -105,6 +116,202 @@
     }
   }
 
+  var FAV_KEY = "dc2-favs";
+  function piscarBotao(btn) {
+    if (!btn) return;
+    try {
+      btn.style.background = "#dbeafe";
+      setTimeout(function () { btn.style.background = ""; }, 900);
+    } catch (e) {}
+  }
+  function lerFavs() { try { return JSON.parse(localStorage.getItem(FAV_KEY)) || {}; } catch (e) { return {}; } }
+  function salvarFavs(f) { try { localStorage.setItem(FAV_KEY, JSON.stringify(f)); } catch (e) {} }
+  function chaveFav(o) { return o.id ? "id:" + o.id : "u:" + o.tipo + "|" + o.valor; }
+  var SVG_ESTRELA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+  var SVG_BAIXAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  var SVG_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+  function botaoLink(id, nome) {
+    return '<button type="button" class="fc-icon-btn fc-link-btn" data-link-id="' + esc(id) + '" title="Copiar link do contato" aria-label="Copiar link do contato ' + esc(nome) + '">' + SVG_LINK + "</button>";
+  }
+  function botaoFav(o, nome) {
+    var k = chaveFav(o), on = !!lerFavs()[k];
+    return '<button type="button" class="fc-icon-btn fc-fav-btn" data-fav-key="' + esc(k) + '" data-fav-nome="' + esc(nome) + '" data-fav-tipo="' + esc(o.tipo) + '" data-fav-valor="' + esc(o.valor) + '" aria-pressed="' + (on ? "true" : "false") + '" title="Favoritar" aria-label="Favoritar ' + esc(nome) + '">' + SVG_ESTRELA + "</button>";
+  }
+  function botaoVcf(o, nome) {
+    return '<button type="button" class="fc-icon-btn fc-vcf-btn" data-vcf-nome="' + esc(nome) + '" data-vcf-tipo="' + esc(o.tipo) + '" data-vcf-valor="' + esc(o.valor) + '" title="Baixar contato (.vcf)" aria-label="Baixar contato ' + esc(nome) + '">' + SVG_BAIXAR + "</button>";
+  }
+  function botaoFavChave(k, f) {
+    var on = !!lerFavs()[k];
+    return '<button type="button" class="fc-icon-btn fc-fav-btn" data-fav-key="' + esc(k) + '" data-fav-nome="' + esc(f.nome) + '" data-fav-tipo="' + esc(f.tipo) + '" data-fav-valor="' + esc(f.valor) + '" aria-pressed="' + (on ? "true" : "false") + '" title="Favoritar" aria-label="Favoritar ' + esc(f.nome) + '">' + SVG_ESTRELA + "</button>";
+  }
+  function linhaFavorito(k, f) {
+    var tipo = fmtTipoContato(f.tipo);
+    var valor = fmtValor(f.tipo, f.valor);
+    var href = hrefContato(f.tipo, f.valor);
+    var externo = /^(https?:|mailto:)/.test(href);
+    var valorHtml = href
+      ? '<a class="fc-contato-valor" href="' + esc(href) + '" ' +
+        (externo ? 'target="_blank" rel="noopener noreferrer"' : "") + ">" + esc(valor) + "</a>"
+      : '<span class="fc-contato-valor">' + esc(valor) + "</span>";
+    return '<article class="fc-contato">' +
+      '<div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(tipo) + "</span><h4>" + esc(f.nome || valor) + "</h4></div>" +
+      '<div class="fc-contato-side">' + valorHtml +
+      '<div class="fc-contato-actions">' +
+      '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(valor) +
+      '" data-copy-label="' + esc(tipo) + '" title="Copiar ' + esc(tipo) + '" aria-label="Copiar ' + esc(tipo) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
+      botaoFavChave(k, f) +
+    (String(k).indexOf('id:') === 0 ? botaoLink(String(k).slice(3), f.nome || valor) : '') +
+      '<button type="button" class="fc-icon-btn fc-vcf-btn" data-vcf-nome="' + esc(f.nome || valor) + '" data-vcf-tipo="' + esc(f.tipo) + '" data-vcf-valor="' + esc(f.valor) + '" title="Baixar contato (.vcf)" aria-label="Baixar contato ' + esc(f.nome || valor) + '">' + SVG_BAIXAR + "</button>" +
+      "</div></div></article>";
+  }
+  function renderFavoritos() {
+    var c = host();
+    if (!c) return;
+    marcarMenuV2("favoritos");
+    estado.comarcaId = "";
+    estado.forumId = "";
+    estado.noId = "";
+    var favs = lerFavs();
+    var chaves = Object.keys(favs).sort(function (a, b) {
+      return String(favs[a].nome || "").localeCompare(String(favs[b].nome || ""), "pt-BR");
+    });
+    c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Favoritos</h2>' +
+      '<p class="fc-subtitle">Seus contatos marcados com estrela, neste navegador.</p></div></div>' +
+      (chaves.length
+        ? '<div class="fc-toolbar"><button type="button" class="fc-btn" id="fc-fav-todos" title="Baixar todos em um .vcf">' + SVG_BAIXAR + ' Baixar todos (.vcf)</button>' +
+          '<button type="button" class="fc-btn" id="fc-fav-limpar" title="Remover todos os favoritos">Limpar favoritos</button>' +
+          '<input type="search" id="fc-fav-filtro" class="fc-busca-input" placeholder="Filtrar favoritos..." aria-label="Filtrar favoritos" style="max-width:220px"></div>' +
+          '<div class="fc-contatos">' + chaves.map(function (k) { return linhaFavorito(k, favs[k]); }).join("") + "</div>" +
+          '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-fav" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2-2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
+          '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>'
+        : '<div class="fc-empty">Nenhum favorito ainda. Toque na estrela de um contato para guardar aqui.</div>');
+    var btnPrintFav = document.getElementById("fc-print-fav");
+    if (btnPrintFav) btnPrintFav.onclick = function () {
+      abrirImpressao("Favoritos — PJES", "<ul>" + chaves.map(function (k) { var f = favs[k]; return contatoPrint({ tipo: f.tipo, descricao: f.nome, valor: f.valor }); }).join("") + "</ul>");
+    };
+    var painelFav = host() && host().closest(".fc-panel");
+    var rolaFav = !!(painelFav && painelFav.scrollHeight > painelFav.clientHeight + 4);
+    var topoFav = host() && host().querySelector("[data-scroll-top]");
+    if (topoFav) topoFav.classList.toggle("hidden", !rolaFav);
+    var btnTodos = document.getElementById("fc-fav-todos");
+    if (btnTodos) btnTodos.onclick = function () { baixarVcfTodos(); };
+    var btnLimpar = document.getElementById("fc-fav-limpar");
+    if (btnLimpar) btnLimpar.onclick = function () { limparFavs(this); };
+    var filtroFav = document.getElementById("fc-fav-filtro");
+    if (filtroFav) filtroFav.oninput = function () {
+      var t = filtroFav.value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+      document.querySelectorAll("#lista .fc-contato").forEach(function (a) {
+        var txt = (a.textContent || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+        a.classList.toggle("hidden", t !== "" && txt.indexOf(t) === -1);
+      });
+    };
+    vincularAcoes();
+  }
+  function sincronizarFavs() {
+    var f = lerFavs();
+    document.querySelectorAll("[data-fav-key]").forEach(function (b) {
+      b.setAttribute("aria-pressed", f[b.getAttribute("data-fav-key")] ? "true" : "false");
+    });
+    var n = Object.keys(f).length;
+    var badge = document.getElementById("fav-count");
+    if (badge) { badge.textContent = n; badge.classList.toggle("hidden", n === 0); }
+    var menuFav = document.querySelector('.menu-item[data-view="favoritos"]');
+    if (menuFav && menuFav.classList.contains("active")) renderFavoritos();
+  }
+  function alternarFavorito(d) {
+    var f = lerFavs();
+    var era = !!f[d.key];
+    if (era) delete f[d.key];
+    else f[d.key] = { key: d.key, nome: d.nome, tipo: d.tipo, valor: d.valor };
+    salvarFavs(f);
+    sincronizarFavs();
+    if (typeof mostrarToast === "function") mostrarToast(era ? "Removido dos favoritos." : "Adicionado aos favoritos.", "success");
+  }
+  function baixarVcf(d) {
+    var nome = String(d.nome || "contato").replace(/[\r\n]+/g, " ").trim() || "contato";
+    var valor = String(d.valor || "").replace(/[\r\n]+/g, " ").trim();
+    if (!valor) return;
+    var linhas = ["BEGIN:VCARD", "VERSION:3.0", "FN:" + nome];
+    if (/e-?mail/i.test(d.tipo || "")) linhas.push("EMAIL:" + valor);
+    else linhas.push("TEL;TYPE=WORK,VOICE:" + valor);
+    linhas.push("END:VCARD");
+    var blob = new Blob([linhas.join("\r\n")], { type: "text/vcard" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = nome.replace(/[/\\:*?"<>|]+/g, "").slice(0, 60) + ".vcf";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    if (typeof mostrarToast === "function") mostrarToast("Contato baixado.", "success");
+  }
+  function baixarVcfTodos() {
+    var f = lerFavs();
+    var chaves = Object.keys(f).sort(function (a, b) {
+      return String(f[a].nome || "").localeCompare(String(f[b].nome || ""), "pt-BR");
+    });
+    if (!chaves.length) {
+      if (typeof mostrarToast === "function") mostrarToast("Nada para baixar.", "warning");
+      return;
+    }
+    var blocos = chaves.map(function (k) {
+      var d = f[k];
+      var nome = String(d.nome || "contato").replace(/[\r\n]+/g, " ").trim() || "contato";
+      var valor = String(d.valor || "").replace(/[\r\n]+/g, " ").trim();
+      var linhas = ["BEGIN:VCARD", "VERSION:3.0", "FN:" + nome];
+      if (/e-?mail/i.test(d.tipo || "")) linhas.push("EMAIL:" + valor);
+      else linhas.push("TEL;TYPE=WORK,VOICE:" + valor);
+      linhas.push("END:VCARD");
+      return linhas.join("\r\n");
+    });
+    var blob = new Blob([blocos.join("\r\n")], { type: "text/vcard" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "favoritos.vcf";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    if (typeof mostrarToast === "function") mostrarToast(chaves.length + " contato(s) baixado(s).", "success");
+  }
+  function limparFavs(btn) {
+    if (!btn.getAttribute("data-armado")) {
+      btn.setAttribute("data-armado", "1");
+      btn.textContent = "Confirmar limpeza?";
+      setTimeout(function () { btn.removeAttribute("data-armado"); btn.textContent = "Limpar favoritos"; }, 4000);
+      return;
+    }
+    salvarFavs({});
+    sincronizarFavs();
+    if (typeof mostrarToast === "function") mostrarToast("Favoritos removidos.", "success");
+  }
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    var fb = t && t.closest ? t.closest(".fc-fav-btn") : null;
+    if (fb) {
+      alternarFavorito({
+        key: fb.getAttribute("data-fav-key"), nome: fb.getAttribute("data-fav-nome"),
+        tipo: fb.getAttribute("data-fav-tipo"), valor: fb.getAttribute("data-fav-valor")
+      });
+      return;
+    }
+    var vb = t && t.closest ? t.closest(".fc-vcf-btn") : null;
+    if (vb) {
+      baixarVcf({
+        nome: vb.getAttribute("data-vcf-nome"), tipo: vb.getAttribute("data-vcf-tipo"),
+        valor: vb.getAttribute("data-vcf-valor")
+      });
+      return;
+    }
+    var lk = t && t.closest ? t.closest(".fc-link-btn") : null;
+    if (lk) {
+      var linkId = lk.getAttribute("data-link-id");
+      if (linkId) {
+        var linkUrl = String(window.location.href).split("?")[0] + "?contato=" + encodeURIComponent(linkId);
+        if (navigator.share) { navigator.share({ title: "Contato — Diretório PJES", url: linkUrl }).catch(function () {}); piscarBotao(lk); }
+        else { copiarTexto(linkUrl); piscarBotao(lk); }
+      }
+    }
+  });
+
   function todosNos(lista, saida) {
     saida = saida || [];
     (lista || []).forEach(function (no) { saida.push(no); todosNos(no.filhos || [], saida); });
@@ -135,6 +342,22 @@
       .normalize("NFD").replace(/[̀-ͯ]/g, "");
   }
   var indiceBusca = null;
+  var linkContatoProcessado = false;
+  function abrirLinkContato() {
+    if (linkContatoProcessado) return;
+    linkContatoProcessado = true;
+    var id = null;
+    try { id = new URLSearchParams(window.location.search).get("contato"); } catch (e) {}
+    if (!id) return;
+    if (indiceBusca === null) indiceBusca = construirIndiceBusca();
+    for (var i = 0; i < indiceBusca.length; i++) {
+      // Aceita ?contato=1491 antigo (só número) além do ?contato=C1491 atual.
+      if (String(indiceBusca[i].contato.id) === String(id) || String(indiceBusca[i].contato.id) === "C" + String(id)) {
+        irParaResultado(indiceBusca[i]);
+        return;
+      }
+    }
+  }
   function construirIndiceBusca() {
     var indice = [];
     ((estado.dados && estado.dados.comarcas) || []).forEach(function (m) {
@@ -324,7 +547,7 @@
         itens.push({ tipo: "NO", id: item.id, nome: item.nome });
       });
     }
-    return '<nav class="***" aria-label="Caminho da estrutura">' + itens.map(function (item, indice) {
+    return '<nav class="fc-breadcrumb" aria-label="Caminho da estrutura">' + itens.map(function (item, indice) {
       var ultimo = indice === itens.length - 1;
       var conteudo = ultimo
         ? '<span class="fc-breadcrumb-current" aria-current="page">' + esc(item.nome) + "</span>"
@@ -386,7 +609,10 @@
         : '<span class="fc-contato-valor">' + esc(valor) + "</span>";
       var acoes = '<div class="fc-contato-actions">' +
         '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(valor) +
-        '" data-copy-label="' + esc(tipo) + '" title="Copiar ' + esc(tipo) + '" aria-label="Copiar ' + esc(tipo) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>';
+        '" data-copy-label="' + esc(tipo) + '" title="Copiar ' + esc(tipo) + '" aria-label="Copiar ' + esc(tipo) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
+        botaoFav({ id: c.id, tipo: c.tipo, valor: c.valor }, String(c.descricao || "").trim() || tipo) +
+        botaoVcf({ tipo: c.tipo, valor: c.valor }, String(c.descricao || "").trim() || tipo) +
+        botaoLink(c.id, String(c.descricao || "").trim() || tipo) + '</div>';
       var descricao = String(c.descricao || "").trim();
       var descricaoHtml = descricao && descricao.toLocaleLowerCase("pt-BR") !== String(tipo).toLocaleLowerCase("pt-BR")
         ? "<h4>" + esc(descricao) + "</h4>" : "";
@@ -406,14 +632,56 @@
       '<div class="fc-card-head"><div><h4>Contatos Gerais</h4></div>' +
       '<div class="fc-meta">' + badgeQuantidade(lista.length, "Contato", "Contatos") +
       (comPrint ? '<button type="button" class="fc-icon-btn" data-gerais-print title="Imprimir / Salvar PDF dos Contatos Gerais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>' : "") +
-      '<span class="fc-toggle" aria-hidden="true">\u25be</span></div></div></div>' +
+      '<span class="fc-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 12 15 18 9"/></svg></span></div></div></div>' +
       '<div data-gerais-body hidden>' + (lista.length ? contatosCards(lista) : '<div class="fc-empty">Sem contatos gerais.</div>') + "</div></div>";
   }
 
+  function exportarCsvVisivel() {
+    var host = document.getElementById("lista") || document;
+    var linhas = [["Nome", "Tipo", "Valor"]];
+    host.querySelectorAll(".fc-contato").forEach(function (a) {
+      var t = a.querySelector(".fc-contato-tipo");
+      var n = a.querySelector("h4");
+      var v = a.querySelector(".fc-contato-valor");
+      linhas.push([(n ? n.textContent : "").trim(), (t ? t.textContent : "").trim(), (v ? v.textContent : "").trim()]);
+    });
+    if (linhas.length < 2) {
+      if (typeof mostrarToast === "function") mostrarToast("Nada para exportar.", "warning");
+      return;
+    }
+    var csv = "﻿" + linhas.map(function (r) {
+      return r.map(function (x) { return '"' + String(x).replace(/"/g, '""') + '"'; }).join(";");
+    }).join("\r\n");
+    var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "contatos.csv";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    if (typeof mostrarToast === "function") mostrarToast("CSV exportado.", "success");
+  }
   function vincularAcoes() {
     vincularCopias();
+    document.querySelectorAll(".fc-print-footer").forEach(function (ft) {
+      if (ft.querySelector("[data-csv]")) return;
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "fc-btn";
+      b.setAttribute("data-csv", "");
+      b.title = "Exportar contatos visíveis (CSV)";
+      b.setAttribute("aria-label", "Exportar contatos visíveis em CSV");
+      b.innerHTML = SVG_BAIXAR + " Exportar CSV";
+      b.onclick = function () { exportarCsvVisivel(); };
+      var topo = ft.querySelector("[data-scroll-top]");
+      if (topo) ft.insertBefore(b, topo);
+      else ft.appendChild(b);
+    });
     var cards = document.querySelectorAll("[data-gerais-toggle]");
     for (var g = 0; g < cards.length; g++) {
+      var corpo0 = cards[g].nextElementSibling;
+      var pr0 = cards[g].querySelector("[data-gerais-print]");
+      if (pr0 && corpo0) pr0.classList.toggle("hidden", corpo0.hasAttribute("hidden"));
       cards[g].onclick = (function (card) {
         return function (e) {
           if (e && e.target && e.target.closest && e.target.closest("[data-gerais-print]")) return;
@@ -423,6 +691,8 @@
           if (abrir) body.removeAttribute("hidden");
           else body.setAttribute("hidden", "");
           card.classList.toggle("aberto", abrir);
+          var pr = card.querySelector("[data-gerais-print]");
+          if (pr) pr.classList.toggle("hidden", !abrir);
         };
       })(cards[g]);
     }
@@ -469,7 +739,7 @@
 
   function barraNavegacaoInferior(rotuloVoltar, semLinha) {
     return '<div class="fc-bottom-nav' + (semLinha ? " fc-bottom-nav--colado" : "") + '"><button type="button" class="fc-btn" id="fc-back-bottom">← ' + esc(rotuloVoltar || "Voltar") + '</button>' +
-      '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">↑ Voltar ao topo</button></div>';
+      '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
   }
 
   function renderInicio() {
@@ -497,7 +767,7 @@
         (totalComarcas ? '<span class="fc-pill fc-total-comarcas">' + esc(rotuloQuantidade(totalComarcas, "Comarca", "Comarcas")) + "</span>" : "") + "</div>" : "") +
       '<select id="fc-comarca" class="fc-select">' + opcoesComarcas(comarcas.filter(function (m) { return !ehOrgao(m); }), "") + "</select>" +
       '<div class="fc-section fc-section--comarcas"><div class="fc-comarcas-grid">' + cardsComarcas + "</div></div>" +
-      '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">↑ Voltar ao topo</button></div>';
+      '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
     var seletor = document.getElementById("fc-comarca");
     if (seletor) seletor.onchange = function () { if (seletor.value) abrirComarca(seletor.value); };
     var cards = document.querySelectorAll("[data-comarca]");
@@ -579,7 +849,7 @@
       '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço do TJES:</strong> ' + linkEndereco(m.endereco) +
       (m.cep ? " • CEP " + esc(m.cep) : "") + "</div></div>" +
       cardContatosGerais(m.contatos || [], true) +
-      '<div class="fc-section"><div class="fc-section-title"><h3>Unidades e Setores</h3></div>' +
+      '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
       ((m.nos || []).length ? (m.nos || []).map(cardNo).join("") : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
       "</div>" + barraNavegacaoInferior("Comarcas", true);
     document.getElementById("fc-back-home").onclick = renderInicio;
@@ -629,10 +899,12 @@
         return '<article class="fc-contato"><div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(fmtTipoContato(u.tipo)) + "</span><h4>" + esc(u.nome || u.valor) + "</h4></div>" +
           '<div class="fc-contato-side">' + valorHtml +
           '<div class="fc-contato-actions"><button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(u.valor) +
-          '" data-copy-label="' + esc(fmtTipoContato(u.tipo)) + '" title="Copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>' +
+          '" data-copy-label="' + esc(fmtTipoContato(u.tipo)) + '" title="Copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
+          botaoFav({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) +
+          botaoVcf({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) + '</div>' +
           "</div></article>";
       }).join("") + "</div>" : '<div class="fc-empty">Nenhum telefone útil cadastrado.</div>') +
-      '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">↑ Voltar ao topo</button>' +
+      '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button>' +
       '<button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button></div>';
     document.getElementById("fc-print-uteis").onclick = function () {
       abrirImpressao("Telefones Úteis — PJES", "<ul>" + uteis.map(function (u) { return contatoPrint({ tipo: u.tipo, descricao: u.nome, valor: u.valor }); }).join("") + "</ul>");
@@ -668,7 +940,7 @@
       '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço do Fórum:</strong> ' + linkEndereco(f.endereco) +
       (f.cep ? " • CEP " + esc(f.cep) : "") + "</div></div>" +
       cardContatosGerais(f.contatos || [], true) +
-      '<div class="fc-section"><div class="fc-section-title"><h3>Unidades e Setores</h3></div>' +
+      '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
       ((f.nos || []).length ? (f.nos || []).map(cardNo).join("") : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
       "</div>" + barraNavegacaoInferior("Fóruns", true);
     document.getElementById("fc-back-comarca").onclick = renderForuns;
@@ -985,6 +1257,7 @@
       estado.dados = dados && dados.comarcas ? dados : { comarcas: [] };
       atualizarMapaDados();
       renderInicio();
+      abrirLinkContato();
     }).catch(function (erro) {
       estado.carregando = false;
       if (host()) {
@@ -1007,6 +1280,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     aplicarTema();
     vincularBuscaGlobal();
+    try { sincronizarFavs(); } catch (e) {}
     var tg = $("toggle-dark-mode");
     if (tg) tg.onchange = function (e) {
       localStorage.setItem("contatos-theme", e.target.checked ? "dark" : "light");
@@ -1025,6 +1299,7 @@
           if (v === "consulta") { renderInicio(); }
           else if (v === "tjes") { abrirTJES(); }
           else if (v === "uteis") { renderUteis(); }
+          else if (v === "favoritos") { renderFavoritos(); }
           else { $("view-consulta").classList.add("hidden"); $("view-" + v).classList.remove("hidden"); }
         };
       })(itens[i]);
@@ -1071,3 +1346,45 @@ document.addEventListener("keydown", function(e){
     else m.classList.add("hidden");
   });
 });
+
+(function(){
+  var BP = 900;
+  function movel(){ return window.matchMedia && window.matchMedia("(max-width:" + BP + "px)").matches; }
+  document.querySelectorAll(".fc-page-head").forEach(function(h){
+    if (h.querySelector(".hamburger")) return;
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "hamburger";
+    b.textContent = "☰";
+    b.setAttribute("aria-label", "Abrir menu de navegação");
+    b.setAttribute("aria-expanded", "false");
+    b.addEventListener("click", function(){ definir(!document.body.classList.contains("nav-open")); });
+    h.insertBefore(b, h.firstChild);
+  });
+  var bd = document.createElement("button");
+  bd.type = "button";
+  bd.className = "nav-backdrop";
+  bd.setAttribute("aria-label", "Fechar menu lateral");
+  bd.setAttribute("tabindex", "-1");
+  bd.addEventListener("click", function(){ definir(false); });
+  document.body.appendChild(bd);
+  function botoes(){
+    return Array.prototype.slice.call(document.querySelectorAll(".fc-page-head .hamburger"));
+  }
+  function definir(aberto){
+    var ativo = Boolean(aberto && movel());
+    document.body.classList.toggle("nav-open", ativo);
+    botoes().forEach(function(b){
+      b.setAttribute("aria-expanded", ativo ? "true" : "false");
+      b.setAttribute("aria-label", ativo ? "Fechar menu de navegação" : "Abrir menu de navegação");
+      b.textContent = ativo ? "✕" : "☰";
+    });
+  }
+  document.querySelectorAll(".sidebar .menu-item").forEach(function(m){
+    m.addEventListener("click", function(){ definir(false); });
+  });
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape" && document.body.classList.contains("nav-open")) definir(false);
+  });
+  if (window.matchMedia) window.matchMedia("(max-width:" + BP + "px)").addEventListener("change", function(){ definir(false); });
+})();

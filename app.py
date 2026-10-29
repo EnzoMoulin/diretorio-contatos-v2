@@ -138,22 +138,22 @@ def _ip_rede_local(ip):
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS comarcas (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE,
+    id TEXT PRIMARY KEY, nome TEXT NOT NULL UNIQUE,
     ordem_num REAL, ordem_idx INTEGER NOT NULL DEFAULT 0,
     codigo_ibge TEXT NOT NULL DEFAULT '', tipo TEXT NOT NULL DEFAULT '',
     endereco TEXT NOT NULL DEFAULT '', cep TEXT NOT NULL DEFAULT '',
     email TEXT NOT NULL DEFAULT '', observacao TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS foruns (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    comarca_id INTEGER NOT NULL REFERENCES comarcas(id),
+    id TEXT PRIMARY KEY,
+    comarca_id TEXT NOT NULL REFERENCES comarcas(id),
     nome TEXT NOT NULL, endereco TEXT NOT NULL DEFAULT '',
     cep TEXT NOT NULL DEFAULT '', ordem_num REAL,
     ordem_idx INTEGER NOT NULL DEFAULT 0,
     email TEXT NOT NULL DEFAULT '', observacao TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS unidades (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    forum_id INTEGER REFERENCES foruns(id),
-    comarca_id INTEGER REFERENCES comarcas(id),
+    id TEXT PRIMARY KEY,
+    forum_id TEXT REFERENCES foruns(id),
+    comarca_id TEXT REFERENCES comarcas(id),
     nome TEXT NOT NULL, tipo TEXT NOT NULL DEFAULT 'UNIDADE',
     endereco TEXT NOT NULL DEFAULT '', cep TEXT NOT NULL DEFAULT '',
     observacao TEXT NOT NULL DEFAULT '',
@@ -161,8 +161,8 @@ CREATE TABLE IF NOT EXISTS unidades (
     ordem_num REAL, ordem_idx INTEGER NOT NULL DEFAULT 0,
     virtual INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS setores (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    unidade_id INTEGER NOT NULL REFERENCES unidades(id),
+    id TEXT PRIMARY KEY,
+    unidade_id TEXT NOT NULL REFERENCES unidades(id),
     nome TEXT NOT NULL, tipo TEXT NOT NULL DEFAULT 'SETOR',
     endereco TEXT NOT NULL DEFAULT '', cep TEXT NOT NULL DEFAULT '',
     observacao TEXT NOT NULL DEFAULT '',
@@ -170,8 +170,8 @@ CREATE TABLE IF NOT EXISTS setores (
     ordem_num REAL, ordem_idx INTEGER NOT NULL DEFAULT 0,
     virtual INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS contatos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    setor_id INTEGER NOT NULL REFERENCES setores(id),
+    id TEXT PRIMARY KEY,
+    setor_id TEXT NOT NULL REFERENCES setores(id),
     nome TEXT NOT NULL, cargo TEXT NOT NULL DEFAULT '',
     telefone TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '',
     descricao TEXT NOT NULL DEFAULT '',
@@ -184,7 +184,7 @@ CREATE TABLE IF NOT EXISTS uteis (
     valor TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS historico (
     id INTEGER PRIMARY KEY AUTOINCREMENT, acao TEXT NOT NULL,
-    contato_id INTEGER, detalhe TEXT NOT NULL DEFAULT '',
+    contato_id TEXT, detalhe TEXT NOT NULL DEFAULT '',
     data TEXT NOT NULL DEFAULT (datetime('now')));
 CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT, usuario TEXT NOT NULL UNIQUE,
@@ -199,15 +199,15 @@ CREATE TABLE IF NOT EXISTS notificacoes (
 CREATE TABLE IF NOT EXISTS acessos (
     usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
     nivel TEXT NOT NULL, -- 'comarca' | 'forum' | 'unidade' | 'setor'
-    alvo_id INTEGER NOT NULL,
+    alvo_id TEXT NOT NULL,
     PRIMARY KEY (usuario_id, nivel, alvo_id));
 CREATE TABLE IF NOT EXISTS pedidos (
     id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL,
     email TEXT NOT NULL, usuario_desejado TEXT NOT NULL,
     motivo TEXT NOT NULL DEFAULT '',
-    comarca_id INTEGER REFERENCES comarcas(id),
+    comarca_id TEXT REFERENCES comarcas(id),
     nivel TEXT NOT NULL DEFAULT 'comarca', -- nível pedido
-    alvo_id INTEGER,                          -- id no nível pedido
+    alvo_id TEXT,                          -- id no nível pedido
     status TEXT NOT NULL DEFAULT 'pendente',
     criado_em TEXT NOT NULL DEFAULT (datetime('now')));
 """
@@ -292,6 +292,26 @@ def get_db():
     con.row_factory = sqlite3.Row
     return con
 
+
+_CONT = {}
+
+def novo_id(con, tabela, prefixo):
+    """Próximo id global (prefixo + sequência), ex.: U12, S3, C1491."""
+    if (tabela, prefixo) not in _CONT:
+        mx = 0
+        try:
+            linhas = con.execute("SELECT id FROM %s" % tabela).fetchall()
+        except Exception:
+            linhas = []
+        for (v,) in linhas:
+            s = str(v)
+            if s.startswith(prefixo):
+                s = s[len(prefixo):]
+            if s.isdigit():
+                mx = max(mx, int(s))
+        _CONT[(tabela, prefixo)] = mx
+    _CONT[(tabela, prefixo)] += 1
+    return "%s%d" % (prefixo, _CONT[(tabela, prefixo)])
 
 def _carregar_seed_legado(con, seed):
     """Formato antigo (seed_pjes.json): sem suporte no esquema atual."""
@@ -397,23 +417,27 @@ def _carregar_seed_json(con):
         return _carregar_seed_legado(con, seed)
     coms = {}
     for i, c in enumerate(seed.get("comarcas", [])):
-        coms[c["id"]] = con.execute(
-            "INSERT INTO comarcas (nome, ordem_num, ordem_idx, codigo_ibge,"
+        nid = novo_id(con, "comarcas", "M")
+        con.execute(
+            "INSERT INTO comarcas (id, nome, ordem_num, ordem_idx, codigo_ibge,"
             " tipo, endereco, cep, email, observacao)"
-            " VALUES (?,?,?,?,?,?,?,?,?)",
-            (c["nome"], c.get("ordem"), i, c.get("ibge", ""),
+            " VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (nid, c["nome"], c.get("ordem"), i, c.get("ibge", ""),
              c.get("tipo", ""), c.get("end", ""), c.get("cep", ""),
-             c.get("email", ""), c.get("obs", ""))).lastrowid
+             c.get("email", ""), c.get("obs", "")))
+        coms[c["id"]] = nid
     fors = {}
     for i, f in enumerate(seed.get("foruns", [])):
         if f["comarca_id"] not in coms:
             continue
-        fors[f["id"]] = con.execute(
-            "INSERT INTO foruns (comarca_id, nome, endereco, cep, ordem_num,"
-            " ordem_idx, email, observacao) VALUES (?,?,?,?,?,?,?,?)",
-            (coms[f["comarca_id"]], f["nome"], f.get("end", ""),
+        nid = novo_id(con, "foruns", "F")
+        con.execute(
+            "INSERT INTO foruns (id, comarca_id, nome, endereco, cep, ordem_num,"
+            " ordem_idx, email, observacao) VALUES (?,?,?,?,?,?,?,?,?)",
+            (nid, coms[f["comarca_id"]], f["nome"], f.get("end", ""),
              f.get("cep", ""), f.get("ordem"), i, f.get("email", ""),
-             f.get("obs", ""))).lastrowid
+             f.get("obs", "")))
+        fors[f["id"]] = nid
     node_db, node_kind, node_row = {}, {}, {}
     for i, no in enumerate(seed.get("nos", [])):
         if not no.get("ativo", True):
@@ -424,13 +448,14 @@ def _carregar_seed_json(con):
             continue
         if no["pai"]:
             continue  # filhos na segunda passada
-        uid = con.execute(
-            "INSERT INTO unidades (forum_id, comarca_id, nome, tipo,"
+        uid = novo_id(con, "unidades", "U")
+        con.execute(
+            "INSERT INTO unidades (id, forum_id, comarca_id, nome, tipo,"
             " endereco, cep, observacao, selecionavel, ordem_num, ordem_idx)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (fdb, mdb, no["nome"], no.get("tipo", "UNIDADE") or "UNIDADE",
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (uid, fdb, mdb, no["nome"], no.get("tipo", "UNIDADE") or "UNIDADE",
              no.get("end", ""), no.get("cep", ""), no.get("obs", ""),
-             1 if no.get("sel") else 0, no.get("ordem"), i)).lastrowid
+             1 if no.get("sel") else 0, no.get("ordem"), i))
         node_db[no["id"]] = uid
         node_kind[no["id"]] = "u"
         node_row[no["id"]] = no
@@ -449,13 +474,14 @@ def _carregar_seed_json(con):
             n = pn
         if p is None:
             continue
-        sid = con.execute(
-            "INSERT INTO setores (unidade_id, nome, tipo, endereco, cep,"
+        sid = novo_id(con, "setores", "S")
+        con.execute(
+            "INSERT INTO setores (id, unidade_id, nome, tipo, endereco, cep,"
             " observacao, selecionavel, ordem_num, ordem_idx)"
-            " VALUES (?,?,?,?,?,?,?,?,?)",
-            (node_db[p], no["nome"], no.get("tipo", "SETOR") or "SETOR",
+            " VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (sid, node_db[p], no["nome"], no.get("tipo", "SETOR") or "SETOR",
              no.get("end", ""), no.get("cep", ""), no.get("obs", ""),
-             1 if no.get("sel") else 0, no.get("ordem"), i)).lastrowid
+             1 if no.get("sel") else 0, no.get("ordem"), i))
         node_db[no["id"]] = sid
         node_kind[no["id"]] = "s"
         node_row[no["id"]] = no
@@ -464,18 +490,22 @@ def _carregar_seed_json(con):
     def _auto_unidade(fdb, mdb):
         key = ("f", fdb) if fdb else ("m", mdb)
         if key not in auto_u:
-            auto_u[key] = con.execute(
-                "INSERT INTO unidades (forum_id, comarca_id, nome,"
-                " ordem_num, virtual) VALUES (?,?,?,NULL,1)",
-                (fdb, mdb, "Atendimento geral")).lastrowid
+            nid = novo_id(con, "unidades", "U")
+            con.execute(
+                "INSERT INTO unidades (id, forum_id, comarca_id, nome,"
+                " ordem_num, virtual) VALUES (?,?,?,?,NULL,1)",
+                (nid, fdb, mdb, "Atendimento geral"))
+            auto_u[key] = nid
         return auto_u[key]
 
     def _auto_setor(udb):
         if udb not in auto_s:
-            auto_s[udb] = con.execute(
-                "INSERT INTO setores (unidade_id, nome, ordem_num, virtual)"
-                " VALUES (?,?,NULL,1)",
-                (udb, "Contatos Gerais")).lastrowid
+            nid = novo_id(con, "setores", "S")
+            con.execute(
+                "INSERT INTO setores (id, unidade_id, nome, ordem_num, virtual)"
+                " VALUES (?,?,?,NULL,1)",
+                (nid, udb, "Contatos Gerais"))
+            auto_s[udb] = nid
         return auto_s[udb]
 
     import re as _re
@@ -503,10 +533,10 @@ def _carregar_seed_json(con):
         valor = ct.get("valor", "")
         nome = ct.get("desc", "") or valor
         con.execute(
-            "INSERT INTO contatos (setor_id, nome, cargo, telefone, email,"
+            "INSERT INTO contatos (id, setor_id, nome, cargo, telefone, email,"
             " descricao, observacao, ordem_num, ordem_idx)"
-            " VALUES (?,?,?,?,?,?,?,?,?)",
-            (sid, nome, str(ct.get("tipo", "")),
+            " VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (novo_id(con, "contatos", "C"), sid, nome, str(ct.get("tipo", "")),
              valor if col == "telefone" else "",
              valor if col == "email" else "", ct.get("desc", ""),
              ct.get("obs", ""), ct.get("ordem"), i))
@@ -668,26 +698,32 @@ def init_db():
         coms, fors, uns, sets = {}, {}, {}, {}
         for com, fr, un, st, nome, cargo, tel, mail in SEED:
             if com not in coms:
-                coms[com] = con.execute(
-                    "INSERT INTO comarcas (nome) VALUES (?)", (com,)).lastrowid
+                nid = novo_id(con, "comarcas", "M")
+                con.execute("INSERT INTO comarcas (id, nome) VALUES (?,?)",
+                            (nid, com))
+                coms[com] = nid
             key_f = (com, fr)
             if key_f not in fors:
-                fors[key_f] = con.execute(
-                    "INSERT INTO foruns (comarca_id, nome) VALUES (?,?)",
-                    (coms[com], fr)).lastrowid
+                nid = novo_id(con, "foruns", "F")
+                con.execute("INSERT INTO foruns (id, comarca_id, nome) VALUES (?,?,?)",
+                            (nid, coms[com], fr))
+                fors[key_f] = nid
             key_u = (com, fr, un)
             if key_u not in uns:
-                uns[key_u] = con.execute(
-                    "INSERT INTO unidades (forum_id, nome) VALUES (?,?)",
-                    (fors[key_f], un)).lastrowid
+                nid = novo_id(con, "unidades", "U")
+                con.execute("INSERT INTO unidades (id, forum_id, nome) VALUES (?,?,?)",
+                            (nid, fors[key_f], un))
+                uns[key_u] = nid
             key_s = (com, fr, un, st)
             if key_s not in sets:
-                sets[key_s] = con.execute(
-                    "INSERT INTO setores (unidade_id, nome) VALUES (?,?)",
-                    (uns[key_u], st)).lastrowid
+                nid = novo_id(con, "setores", "S")
+                con.execute("INSERT INTO setores (id, unidade_id, nome) VALUES (?,?,?)",
+                            (nid, uns[key_u], st))
+                sets[key_s] = nid
             con.execute(
-                "INSERT INTO contatos (setor_id, nome, cargo, telefone, email)"
-                " VALUES (?,?,?,?,?)", (sets[key_s], nome, cargo, tel, mail))
+                "INSERT INTO contatos (id, setor_id, nome, cargo, telefone, email)"
+                " VALUES (?,?,?,?,?,?)",
+                (novo_id(con, "contatos", "C"), sets[key_s], nome, cargo, tel, mail))
     if n == 0:
         con.execute(
             "INSERT INTO usuarios (usuario, senha_sha256, aprovado, admin, email)"
@@ -1196,7 +1232,7 @@ class Handler(BaseHTTPRequestHandler):
                     if nv not in NIVEIS:
                         continue
                     try:
-                        aid = int(e.get("id") or e.get("alvo_id") or 0) or None
+                        aid = str(e.get("id") or e.get("alvo_id") or "").strip() or None
                     except (TypeError, ValueError):
                         aid = None
                     if aid and (nv, aid) not in itens:
@@ -1213,7 +1249,7 @@ class Handler(BaseHTTPRequestHandler):
                 if nivel not in NIVEIS:
                     nivel = "comarca"
                 try:
-                    alvo = int(data.get("alvo_id") or data.get("comarca_id") or 0) or None
+                    alvo = str(data.get("alvo_id") or data.get("comarca_id") or "").strip() or None
                 except (TypeError, ValueError):
                     alvo = None
                 itens = [(nivel, alvo)]
@@ -1375,26 +1411,26 @@ class Handler(BaseHTTPRequestHandler):
             if not data.get("nome") or not data.get("setor_id"):
                 return self._json({"erro": "'nome' e 'setor_id' são obrigatórios"}, 400)
             con = get_db()
-            try:
-                sid = int(data.get("setor_id") or 0)
-            except (TypeError, ValueError):
+            sid = str(data.get("setor_id") or "").strip()
+            if not sid:
                 con.close()
                 return self._json({"erro": "setor inválido"}, 400)
             if not self._cobre(con, uid, "setor", sid):
                 con.close()
                 return self._json({"erro": "sem acesso a este local"}, 403)
-            cur = con.execute(
-                "INSERT INTO contatos (setor_id, nome, cargo, telefone, email)"
-                " VALUES (?,?,?,?,?)",
-                (data.get("setor_id"), data.get("nome"), data.get("cargo", ""),
+            nid = novo_id(con, "contatos", "C")
+            con.execute(
+                "INSERT INTO contatos (id, setor_id, nome, cargo, telefone, email)"
+                " VALUES (?,?,?,?,?,?)",
+                (nid, data.get("setor_id"), data.get("nome"), data.get("cargo", ""),
                  data.get("telefone", ""), data.get("email", "")))
-            log(con, "criar", cur.lastrowid, f"criado: {data.get('nome')}")
+            log(con, "criar", nid, f"criado: {data.get('nome')}")
             for aid in admin_ids(con):
                 notify(con, aid, "contato",
                        f"Contato criado: {data.get('nome')}")
             con.commit()
             row = con.execute(
-                "SELECT * FROM contatos WHERE id=?", (cur.lastrowid,)).fetchone()
+                "SELECT * FROM contatos WHERE id=?", (nid,)).fetchone()
             con.close()
             return self._json(dict(row), 201)
         return self.send_error(404)
@@ -1406,7 +1442,9 @@ class Handler(BaseHTTPRequestHandler):
             if not uid:
                 return self._json({"erro": "não autenticado"}, 403)
             try:
-                cid = int(parts[3])
+                cid = urllib.parse.unquote(parts[3]).strip()
+                if not cid:
+                    raise ValueError()
             except ValueError:
                 return self._json({"erro": "id inválido"}, 400)
             con = get_db()
