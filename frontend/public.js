@@ -168,7 +168,8 @@
       '<p class="fc-subtitle">Seus contatos marcados com estrela, neste navegador.</p></div></div>' +
       (chaves.length
         ? '<div class="fc-toolbar"><button type="button" class="fc-btn" id="fc-fav-todos" title="Baixar todos em um .vcf">' + SVG_BAIXAR + ' Baixar todos (.vcf)</button>' +
-          '<button type="button" class="fc-btn" id="fc-fav-limpar" title="Remover todos os favoritos">Limpar favoritos</button></div>' +
+          '<button type="button" class="fc-btn" id="fc-fav-limpar" title="Remover todos os favoritos">Limpar favoritos</button>' +
+          '<input type="search" id="fc-fav-filtro" class="fc-busca-input" placeholder="Filtrar favoritos..." aria-label="Filtrar favoritos" style="max-width:220px"></div>' +
           '<div class="fc-contatos">' + chaves.map(function (k) { return linhaFavorito(k, favs[k]); }).join("") + "</div>"
         : '<div class="fc-empty">Nenhum favorito ainda. Toque na estrela de um contato para guardar aqui.</div>');
       '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-fav" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
@@ -180,6 +181,14 @@
     if (btnTodos) btnTodos.onclick = function () { baixarVcfTodos(); };
     var btnLimpar = document.getElementById("fc-fav-limpar");
     if (btnLimpar) btnLimpar.onclick = function () { limparFavs(this); };
+    var filtroFav = document.getElementById("fc-fav-filtro");
+    if (filtroFav) filtroFav.oninput = function () {
+      var t = filtroFav.value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+      document.querySelectorAll("#lista .fc-contato").forEach(function (a) {
+        var txt = (a.textContent || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+        a.classList.toggle("hidden", t !== "" && txt.indexOf(t) === -1);
+      });
+    };
     vincularAcoes();
   }
   function sincronizarFavs() {
