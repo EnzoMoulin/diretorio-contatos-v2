@@ -86,6 +86,9 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
   .print-meta{display:block;font-size:12px;color:#64748b;margin-bottom:12px;border-bottom:1px solid #cbd5e1;padding-bottom:8px}
 }
 .print-meta{display:none}
+.skip-link{position:fixed;top:10px;left:10px;z-index:12000;transform:translateY(-160%);padding:10px 14px;border-radius:10px;background:#0f172a;color:#fff;font-size:13px;font-weight:800;text-decoration:none;box-shadow:0 10px 25px -8px rgba(15,23,42,.12);transition:transform .18s ease}
+.skip-link:focus{transform:translateY(0)}
+#conteudo:focus{outline:none}
 @media (prefers-reduced-motion:no-preference){
 .fc-panel .fc-card,.fc-comarcas-grid .fc-card,.fc-municipios-grid .fc-card{animation:fc-entra .3s ease backwards}
 .fc-panel .fc-card:nth-child(2),.fc-comarcas-grid .fc-card:nth-child(2),.fc-municipios-grid .fc-card:nth-child(2){animation-delay:.03s}
