@@ -209,6 +209,9 @@ function sincronizarFavs() {
   document.querySelectorAll('[data-fav-key]').forEach(b => {
     b.setAttribute('aria-pressed', f[b.getAttribute('data-fav-key')] ? 'true' : 'false');
   });
+  const n = Object.keys(f).length;
+  const badge = document.getElementById('fav-count');
+  if (badge) { badge.textContent = n; badge.classList.toggle('hidden', n === 0); }
   const menuFav = document.querySelector('.menu-item[data-view="favoritos"]');
   if (menuFav && menuFav.classList.contains('active')) renderFavoritos();
 }
@@ -1516,6 +1519,7 @@ $('toggle-dark-mode').onchange = (e) => {
   aplicarTema();
 };
 aplicarTema();
+try { sincronizarFavs(); } catch (e) {}
 
 /* ---- notificações ---- */
 async function notifBadge() {

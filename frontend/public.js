@@ -179,6 +179,9 @@
     document.querySelectorAll("[data-fav-key]").forEach(function (b) {
       b.setAttribute("aria-pressed", f[b.getAttribute("data-fav-key")] ? "true" : "false");
     });
+    var n = Object.keys(f).length;
+    var badge = document.getElementById("fav-count");
+    if (badge) { badge.textContent = n; badge.classList.toggle("hidden", n === 0); }
     var menuFav = document.querySelector('.menu-item[data-view="favoritos"]');
     if (menuFav && menuFav.classList.contains("active")) renderFavoritos();
   }
@@ -1196,6 +1199,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     aplicarTema();
     vincularBuscaGlobal();
+    try { sincronizarFavs(); } catch (e) {}
     var tg = $("toggle-dark-mode");
     if (tg) tg.onchange = function (e) {
       localStorage.setItem("contatos-theme", e.target.checked ? "dark" : "light");
