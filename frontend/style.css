@@ -355,6 +355,19 @@ body[data-theme="dark"] .fc-bottom-nav{background:#1e293b;border-color:#334155}
 #print-area{display:none}
 #consulta-mapa{width:100%;min-height:0;display:flex;flex-direction:column;padding:8px;overflow:hidden;background:#fff;border:1px solid #cbd5e1;border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,.11)}
 @media(max-width:900px){#consulta-mapa{min-height:340px}}
+.hamburger{display:none;width:40px;height:40px;flex:0 0 40px;align-items:center;justify-content:center;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;font-size:19px;cursor:pointer}
+.nav-backdrop{position:fixed;inset:0;z-index:2900;border:0;padding:0;background:rgba(2,6,23,.56);opacity:0;pointer-events:none;transition:opacity .18s ease}
+body.nav-open .nav-backdrop{opacity:1;pointer-events:auto}
+@media (max-width:900px){
+.fc-page-head{flex-wrap:wrap}
+.fc-page-head .fc-title{font-size:16px}
+.hamburger{display:inline-flex}
+.sidebar{position:fixed!important;top:0;left:0;bottom:0;z-index:3000;width:min(290px,86vw)!important;min-width:min(290px,86vw)!important;transform:translateX(-104%);visibility:hidden;transition:transform .2s ease,visibility 0s linear .25s}
+body.nav-open .sidebar{transform:translateX(0);visibility:visible;transition:transform .2s ease}
+.main-content{padding:14px}
+#consulta-mapa{height:auto;min-height:340px}
+#map{min-height:300px}
+}
 #map{width:100%;flex:1 1 auto;min-height:0;border-radius:12px;overflow:hidden;background:#e2e8f0;border:1px solid #cbd5e1}
 .fc-access{margin-top:10px;border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:7px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 /* ================= original: config ================= */

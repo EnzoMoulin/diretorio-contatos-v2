@@ -1438,3 +1438,45 @@ document.addEventListener("keydown", function(e){
     else m.classList.add("hidden");
   });
 });
+
+(function(){
+  var BP = 900;
+  function movel(){ return window.matchMedia && window.matchMedia("(max-width:" + BP + "px)").matches; }
+  document.querySelectorAll(".fc-page-head").forEach(function(h){
+    if (h.querySelector(".hamburger")) return;
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "hamburger";
+    b.textContent = "☰";
+    b.setAttribute("aria-label", "Abrir menu de navegação");
+    b.setAttribute("aria-expanded", "false");
+    b.addEventListener("click", function(){ definir(!document.body.classList.contains("nav-open")); });
+    h.insertBefore(b, h.firstChild);
+  });
+  var bd = document.createElement("button");
+  bd.type = "button";
+  bd.className = "nav-backdrop";
+  bd.setAttribute("aria-label", "Fechar menu lateral");
+  bd.setAttribute("tabindex", "-1");
+  bd.addEventListener("click", function(){ definir(false); });
+  document.body.appendChild(bd);
+  function botoes(){
+    return Array.prototype.slice.call(document.querySelectorAll(".fc-page-head .hamburger"));
+  }
+  function definir(aberto){
+    var ativo = Boolean(aberto && movel());
+    document.body.classList.toggle("nav-open", ativo);
+    botoes().forEach(function(b){
+      b.setAttribute("aria-expanded", ativo ? "true" : "false");
+      b.setAttribute("aria-label", ativo ? "Fechar menu de navegação" : "Abrir menu de navegação");
+      b.textContent = ativo ? "✕" : "☰";
+    });
+  }
+  document.querySelectorAll(".sidebar .menu-item").forEach(function(m){
+    m.addEventListener("click", function(){ definir(false); });
+  });
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape" && document.body.classList.contains("nav-open")) definir(false);
+  });
+  if (window.matchMedia) window.matchMedia("(max-width:" + BP + "px)").addEventListener("change", function(){ definir(false); });
+})();
