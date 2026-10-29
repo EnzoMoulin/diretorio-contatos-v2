@@ -163,6 +163,7 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 /* ================= original: cards de navegação ================= */
 .fc-card{border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-top:10px;background:#fff;transition:.15s}
 .fc-card[data-nav]{cursor:pointer}
+.fc-card--toggle{cursor:pointer}
 .fc-card[data-nav]:hover{box-shadow:0 8px 22px rgba(15,23,42,.08);transform:translateY(-1px)}
 .fc-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .fc-card h4{margin:0 0 6px;font-size:15px;color:#0f172a}
