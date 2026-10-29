@@ -191,17 +191,24 @@ function renderFavoritos() {
   const c = host();
   if (!c) return;
   const favs = lerFavs();
-  const chaves = Object.keys(favs);
+  const chaves = Object.keys(favs).sort((a, b) =>
+    String(favs[a].nome || '').localeCompare(String(favs[b].nome || ''), 'pt-BR'));
   c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Favoritos</h2>' +
     '<p class="fc-subtitle">Seus contatos marcados com estrela, neste navegador.</p></div></div>' +
     (chaves.length
-      ? '<div class="fc-contatos">' + chaves.map(k => linhaFavorito(k, favs[k])).join('') + '</div>'
-      : '<div class="fc-empty">Nenhum favorito ainda. Toque na estrela de um contato para guardar aqui.</div>') +
+      ? '<div class="fc-toolbar"><button type="button" class="fc-btn" id="fc-fav-todos" title="Baixar todos em um .vcf">' + SVG_BAIXAR + ' Baixar todos (.vcf)</button>' +
+        '<button type="button" class="fc-btn" id="fc-fav-limpar" title="Remover todos os favoritos">Limpar favoritos</button></div>' +
+        '<div class="fc-contatos">' + chaves.map(k => linhaFavorito(k, favs[k])).join('') + '</div>'
+      : '<div class="fc-empty">Nenhum favorito ainda. Toque na estrela de um contato para guardar aqui.</div>');
     '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-fav" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
     '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">↑ Voltar ao topo</button></div>';
   document.getElementById('fc-print-fav').onclick = () => {
     abrirImpressao('Favoritos — PJES', '<ul>' + chaves.map(k => { const f = favs[k]; return contatoPrint({ tipo: f.tipo, descricao: f.nome, valor: f.valor }); }).join('') + '</ul>');
   };
+  const btnTodos = document.getElementById('fc-fav-todos');
+  if (btnTodos) btnTodos.onclick = () => baixarVcfTodos();
+  const btnLimpar = document.getElementById('fc-fav-limpar');
+  if (btnLimpar) btnLimpar.onclick = function () { limparFavs(this); };
   vincularAcoes();
 }
 function sincronizarFavs() {
@@ -240,6 +247,44 @@ function baixarVcf(d) {
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   if (typeof mostrarToast === 'function') mostrarToast('Contato baixado.', 'success');
+}
+function baixarVcfTodos() {
+  const f = lerFavs();
+  const chaves = Object.keys(f).sort((a, b) =>
+    String(f[a].nome || '').localeCompare(String(f[b].nome || ''), 'pt-BR'));
+  if (!chaves.length) {
+    if (typeof mostrarToast === 'function') mostrarToast('Nada para baixar.', 'warning');
+    return;
+  }
+  const blocos = chaves.map(k => {
+    const d = f[k];
+    const nome = String(d.nome || 'contato').replace(/[\r\n]+/g, ' ').trim() || 'contato';
+    const valor = String(d.valor || '').replace(/[\r\n]+/g, ' ').trim();
+    const linhas = ['BEGIN:VCARD', 'VERSION:3.0', 'FN:' + nome];
+    if (/e-?mail/i.test(d.tipo || '')) linhas.push('EMAIL:' + valor);
+    else linhas.push('TEL;TYPE=WORK,VOICE:' + valor);
+    linhas.push('END:VCARD');
+    return linhas.join('\r\n');
+  });
+  const blob = new Blob([blocos.join('\r\n')], { type: 'text/vcard' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'favoritos.vcf';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  if (typeof mostrarToast === 'function') mostrarToast(chaves.length + ' contato(s) baixado(s).', 'success');
+}
+function limparFavs(btn) {
+  if (!btn.getAttribute('data-armado')) {
+    btn.setAttribute('data-armado', '1');
+    btn.textContent = 'Confirmar limpeza?';
+    setTimeout(() => { btn.removeAttribute('data-armado'); btn.textContent = 'Limpar favoritos'; }, 4000);
+    return;
+  }
+  salvarFavs({});
+  sincronizarFavs();
+  if (typeof mostrarToast === 'function') mostrarToast('Favoritos removidos.', 'success');
 }
 document.addEventListener('click', (e) => {
   const t = e.target;
