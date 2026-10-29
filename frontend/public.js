@@ -105,6 +105,111 @@
     }
   }
 
+  var FAV_KEY = "dc2-favs";
+  function lerFavs() { try { return JSON.parse(localStorage.getItem(FAV_KEY)) || {}; } catch (e) { return {}; } }
+  function salvarFavs(f) { try { localStorage.setItem(FAV_KEY, JSON.stringify(f)); } catch (e) {} }
+  function chaveFav(o) { return o.id ? "id:" + o.id : "u:" + o.tipo + "|" + o.valor; }
+  var SVG_ESTRELA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+  var SVG_BAIXAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  function botaoFav(o, nome) {
+    var k = chaveFav(o), on = !!lerFavs()[k];
+    return '<button type="button" class="fc-icon-btn fc-fav-btn" data-fav-key="' + esc(k) + '" data-fav-nome="' + esc(nome) + '" data-fav-tipo="' + esc(o.tipo) + '" data-fav-valor="' + esc(o.valor) + '" aria-pressed="' + (on ? "true" : "false") + '" title="Favoritar" aria-label="Favoritar ' + esc(nome) + '">' + SVG_ESTRELA + "</button>";
+  }
+  function botaoVcf(o, nome) {
+    return '<button type="button" class="fc-icon-btn fc-vcf-btn" data-vcf-nome="' + esc(nome) + '" data-vcf-tipo="' + esc(o.tipo) + '" data-vcf-valor="' + esc(o.valor) + '" title="Baixar contato (.vcf)" aria-label="Baixar contato ' + esc(nome) + '">' + SVG_BAIXAR + "</button>";
+  }
+  function botaoFavChave(k, f) {
+    var on = !!lerFavs()[k];
+    return '<button type="button" class="fc-icon-btn fc-fav-btn" data-fav-key="' + esc(k) + '" data-fav-nome="' + esc(f.nome) + '" data-fav-tipo="' + esc(f.tipo) + '" data-fav-valor="' + esc(f.valor) + '" aria-pressed="' + (on ? "true" : "false") + '" title="Favoritar" aria-label="Favoritar ' + esc(f.nome) + '">' + SVG_ESTRELA + "</button>";
+  }
+  function linhaFavorito(k, f) {
+    var tipo = fmtTipoContato(f.tipo);
+    var valor = fmtValor(f.tipo, f.valor);
+    var href = hrefContato(f.tipo, f.valor);
+    var externo = /^(https?:|mailto:)/.test(href);
+    var valorHtml = href
+      ? '<a class="fc-contato-valor" href="' + esc(href) + '" ' +
+        (externo ? 'target="_blank" rel="noopener noreferrer"' : "") + ">" + esc(valor) + "</a>"
+      : '<span class="fc-contato-valor">' + esc(valor) + "</span>";
+    return '<article class="fc-contato">' +
+      '<div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(tipo) + "</span><h4>" + esc(f.nome || valor) + "</h4></div>" +
+      '<div class="fc-contato-side">' + valorHtml +
+      '<div class="fc-contato-actions">' +
+      '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(valor) +
+      '" data-copy-label="' + esc(tipo) + '" title="Copiar ' + esc(tipo) + '" aria-label="Copiar ' + esc(tipo) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
+      botaoFavChave(k, f) +
+      '<button type="button" class="fc-icon-btn fc-vcf-btn" data-vcf-nome="' + esc(f.nome || valor) + '" data-vcf-tipo="' + esc(f.tipo) + '" data-vcf-valor="' + esc(f.valor) + '" title="Baixar contato (.vcf)" aria-label="Baixar contato ' + esc(f.nome || valor) + '">' + SVG_BAIXAR + "</button>" +
+      "</div></div></article>";
+  }
+  function renderFavoritos() {
+    var c = host();
+    if (!c) return;
+    marcarMenuV2("favoritos");
+    estado.comarcaId = "";
+    estado.forumId = "";
+    estado.noId = "";
+    var favs = lerFavs();
+    var chaves = Object.keys(favs);
+    c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Favoritos</h2>' +
+      '<p class="fc-subtitle">Seus contatos marcados com estrela, neste navegador.</p></div></div>' +
+      (chaves.length
+        ? '<div class="fc-contatos">' + chaves.map(function (k) { return linhaFavorito(k, favs[k]); }).join("") + "</div>"
+        : '<div class="fc-empty">Nenhum favorito ainda. Toque na estrela de um contato para guardar aqui.</div>');
+    vincularCopias();
+  }
+  function sincronizarFavs() {
+    var f = lerFavs();
+    document.querySelectorAll("[data-fav-key]").forEach(function (b) {
+      b.setAttribute("aria-pressed", f[b.getAttribute("data-fav-key")] ? "true" : "false");
+    });
+    var menuFav = document.querySelector('.menu-item[data-view="favoritos"]');
+    if (menuFav && menuFav.classList.contains("active")) renderFavoritos();
+  }
+  function alternarFavorito(d) {
+    var f = lerFavs();
+    var era = !!f[d.key];
+    if (era) delete f[d.key];
+    else f[d.key] = { nome: d.nome, tipo: d.tipo, valor: d.valor };
+    salvarFavs(f);
+    sincronizarFavs();
+    if (typeof mostrarToast === "function") mostrarToast(era ? "Removido dos favoritos." : "Adicionado aos favoritos.", "success");
+  }
+  function baixarVcf(d) {
+    var nome = String(d.nome || "contato").replace(/[\r\n]+/g, " ").trim() || "contato";
+    var valor = String(d.valor || "").replace(/[\r\n]+/g, " ").trim();
+    if (!valor) return;
+    var linhas = ["BEGIN:VCARD", "VERSION:3.0", "FN:" + nome];
+    if (/e-?mail/i.test(d.tipo || "")) linhas.push("EMAIL:" + valor);
+    else linhas.push("TEL;TYPE=WORK,VOICE:" + valor);
+    linhas.push("END:VCARD");
+    var blob = new Blob([linhas.join("\r\n")], { type: "text/vcard" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = nome.replace(/[/\\:*?"<>|]+/g, "").slice(0, 60) + ".vcf";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    if (typeof mostrarToast === "function") mostrarToast("Contato baixado.", "success");
+  }
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    var fb = t && t.closest ? t.closest(".fc-fav-btn") : null;
+    if (fb) {
+      alternarFavorito({
+        key: fb.getAttribute("data-fav-key"), nome: fb.getAttribute("data-fav-nome"),
+        tipo: fb.getAttribute("data-fav-tipo"), valor: fb.getAttribute("data-fav-valor")
+      });
+      return;
+    }
+    var vb = t && t.closest ? t.closest(".fc-vcf-btn") : null;
+    if (vb) {
+      baixarVcf({
+        nome: vb.getAttribute("data-vcf-nome"), tipo: vb.getAttribute("data-vcf-tipo"),
+        valor: vb.getAttribute("data-vcf-valor")
+      });
+    }
+  });
+
   function todosNos(lista, saida) {
     saida = saida || [];
     (lista || []).forEach(function (no) { saida.push(no); todosNos(no.filhos || [], saida); });
@@ -386,7 +491,9 @@
         : '<span class="fc-contato-valor">' + esc(valor) + "</span>";
       var acoes = '<div class="fc-contato-actions">' +
         '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(valor) +
-        '" data-copy-label="' + esc(tipo) + '" title="Copiar ' + esc(tipo) + '" aria-label="Copiar ' + esc(tipo) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>';
+        '" data-copy-label="' + esc(tipo) + '" title="Copiar ' + esc(tipo) + '" aria-label="Copiar ' + esc(tipo) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
+        botaoFav({ id: c.id, tipo: c.tipo, valor: c.valor }, String(c.descricao || "").trim() || tipo) +
+        botaoVcf({ tipo: c.tipo, valor: c.valor }, String(c.descricao || "").trim() || tipo) + '</div>';
       var descricao = String(c.descricao || "").trim();
       var descricaoHtml = descricao && descricao.toLocaleLowerCase("pt-BR") !== String(tipo).toLocaleLowerCase("pt-BR")
         ? "<h4>" + esc(descricao) + "</h4>" : "";
@@ -629,7 +736,9 @@
         return '<article class="fc-contato"><div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(fmtTipoContato(u.tipo)) + "</span><h4>" + esc(u.nome || u.valor) + "</h4></div>" +
           '<div class="fc-contato-side">' + valorHtml +
           '<div class="fc-contato-actions"><button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(u.valor) +
-          '" data-copy-label="' + esc(fmtTipoContato(u.tipo)) + '" title="Copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>' +
+          '" data-copy-label="' + esc(fmtTipoContato(u.tipo)) + '" title="Copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
+          botaoFav({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) +
+          botaoVcf({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) + '</div>' +
           "</div></article>";
       }).join("") + "</div>" : '<div class="fc-empty">Nenhum telefone útil cadastrado.</div>') +
       '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">↑ Voltar ao topo</button>' +
@@ -1025,6 +1134,7 @@
           if (v === "consulta") { renderInicio(); }
           else if (v === "tjes") { abrirTJES(); }
           else if (v === "uteis") { renderUteis(); }
+          else if (v === "favoritos") { renderFavoritos(); }
           else { $("view-consulta").classList.add("hidden"); $("view-" + v).classList.remove("hidden"); }
         };
       })(itens[i]);

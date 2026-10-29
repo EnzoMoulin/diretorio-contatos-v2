@@ -42,6 +42,7 @@ document.querySelectorAll('.menu-item[data-view]').forEach(btn => {
     if (v === 'consulta') { mostrarConsulta(); renderInicio(); }
     else if (v === 'tjes') { mostrarConsulta(); abrirTJES(); }
     else if (v === 'uteis') { mostrarConsulta(); renderUteis(); }
+    else if (v === 'favoritos') { renderFavoritos(); }
     else {
       VIEWS.forEach(x => $('view-' + x).classList.add('hidden'));
       $('view-' + v).classList.remove('hidden');
@@ -135,6 +136,109 @@ function vincularCopias() {
     };
   });
 }
+
+const FAV_KEY = 'dc2-favs';
+function lerFavs() { try { return JSON.parse(localStorage.getItem(FAV_KEY)) || {}; } catch (e) { return {}; } }
+function salvarFavs(f) { try { localStorage.setItem(FAV_KEY, JSON.stringify(f)); } catch (e) {} }
+function chaveFav(o) { return o.id ? 'id:' + o.id : 'u:' + o.tipo + '|' + o.valor; }
+const SVG_ESTRELA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+const SVG_BAIXAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+function botaoFav(o, nome) {
+  const k = chaveFav(o), on = !!lerFavs()[k];
+  return '<button type="button" class="fc-icon-btn fc-fav-btn" data-fav-key="' + esc(k) + '" data-fav-nome="' + esc(nome) + '" data-fav-tipo="' + esc(o.tipo) + '" data-fav-valor="' + esc(o.valor) + '" aria-pressed="' + (on ? 'true' : 'false') + '" title="Favoritar" aria-label="Favoritar ' + esc(nome) + '">' + SVG_ESTRELA + '</button>';
+}
+function botaoVcf(o, nome) {
+  return '<button type="button" class="fc-icon-btn fc-vcf-btn" data-vcf-nome="' + esc(nome) + '" data-vcf-tipo="' + esc(o.tipo) + '" data-vcf-valor="' + esc(o.valor) + '" title="Baixar contato (.vcf)" aria-label="Baixar contato ' + esc(nome) + '">' + SVG_BAIXAR + '</button>';
+}
+function botaoFavChave(k, f) {
+  const on = !!lerFavs()[k];
+  return '<button type="button" class="fc-icon-btn fc-fav-btn" data-fav-key="' + esc(k) + '" data-fav-nome="' + esc(f.nome) + '" data-fav-tipo="' + esc(f.tipo) + '" data-fav-valor="' + esc(f.valor) + '" aria-pressed="' + (on ? 'true' : 'false') + '" title="Favoritar" aria-label="Favoritar ' + esc(f.nome) + '">' + SVG_ESTRELA + '</button>';
+}
+function linhaFavorito(k, f) {
+  const tipo = fmtTipoContato(f.tipo);
+  const valor = fmtValor(f.tipo, f.valor);
+  const href = hrefContato(f.tipo, f.valor);
+  const externo = /^(https?:|mailto:)/.test(href);
+  const valorHtml = href
+    ? '<a class="fc-contato-valor" href="' + esc(href) + '" ' +
+      (externo ? 'target="_blank" rel="noopener noreferrer"' : '') + '>' + esc(valor) + '</a>'
+    : '<span class="fc-contato-valor">' + esc(valor) + '</span>';
+  return '<article class="fc-contato">' +
+    '<div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(tipo) + '</span><h4>' + esc(f.nome || valor) + '</h4></div>' +
+    '<div class="fc-contato-side">' + valorHtml +
+    '<div class="fc-contato-actions">' +
+    '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(valor) +
+    '" data-copy-label="' + esc(tipo) + '" title="Copiar ' + esc(tipo) + '" aria-label="Copiar ' + esc(tipo) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
+    botaoFavChave(k, f) +
+    '<button type="button" class="fc-icon-btn fc-vcf-btn" data-vcf-nome="' + esc(f.nome || valor) + '" data-vcf-tipo="' + esc(f.tipo) + '" data-vcf-valor="' + esc(f.valor) + '" title="Baixar contato (.vcf)" aria-label="Baixar contato ' + esc(f.nome || valor) + '">' + SVG_BAIXAR + '</button>' +
+    '</div></div></article>';
+}
+function renderFavoritos() {
+  mostrarConsulta();
+  marcarMenu('favoritos');
+  const c = host();
+  if (!c) return;
+  const favs = lerFavs();
+  const chaves = Object.keys(favs);
+  c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Favoritos</h2>' +
+    '<p class="fc-subtitle">Seus contatos marcados com estrela, neste navegador.</p></div></div>' +
+    (chaves.length
+      ? '<div class="fc-contatos">' + chaves.map(k => linhaFavorito(k, favs[k])).join('') + '</div>'
+      : '<div class="fc-empty">Nenhum favorito ainda. Toque na estrela de um contato para guardar aqui.</div>');
+  vincularCopias();
+}
+function sincronizarFavs() {
+  const f = lerFavs();
+  document.querySelectorAll('[data-fav-key]').forEach(b => {
+    b.setAttribute('aria-pressed', f[b.getAttribute('data-fav-key')] ? 'true' : 'false');
+  });
+  const menuFav = document.querySelector('.menu-item[data-view="favoritos"]');
+  if (menuFav && menuFav.classList.contains('active')) renderFavoritos();
+}
+function alternarFavorito(d) {
+  const f = lerFavs();
+  const era = !!f[d.key];
+  if (era) delete f[d.key];
+  else f[d.key] = { nome: d.nome, tipo: d.tipo, valor: d.valor };
+  salvarFavs(f);
+  sincronizarFavs();
+  if (typeof mostrarToast === 'function') mostrarToast(era ? 'Removido dos favoritos.' : 'Adicionado aos favoritos.', 'success');
+}
+function baixarVcf(d) {
+  const nome = String(d.nome || 'contato').replace(/[\r\n]+/g, ' ').trim() || 'contato';
+  const valor = String(d.valor || '').replace(/[\r\n]+/g, ' ').trim();
+  if (!valor) return;
+  const linhas = ['BEGIN:VCARD', 'VERSION:3.0', 'FN:' + nome];
+  if (/e-?mail/i.test(d.tipo || '')) linhas.push('EMAIL:' + valor);
+  else linhas.push('TEL;TYPE=WORK,VOICE:' + valor);
+  linhas.push('END:VCARD');
+  const blob = new Blob([linhas.join('\r\n')], { type: 'text/vcard' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nome.replace(/[/\\:*?"<>|]+/g, '').slice(0, 60) + '.vcf';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  if (typeof mostrarToast === 'function') mostrarToast('Contato baixado.', 'success');
+}
+document.addEventListener('click', (e) => {
+  const t = e.target;
+  const fb = t && t.closest ? t.closest('.fc-fav-btn') : null;
+  if (fb) {
+    alternarFavorito({
+      key: fb.getAttribute('data-fav-key'), nome: fb.getAttribute('data-fav-nome'),
+      tipo: fb.getAttribute('data-fav-tipo'), valor: fb.getAttribute('data-fav-valor')
+    });
+    return;
+  }
+  const vb = t && t.closest ? t.closest('.fc-vcf-btn') : null;
+  if (vb) {
+    baixarVcf({
+      nome: vb.getAttribute('data-vcf-nome'), tipo: vb.getAttribute('data-vcf-tipo'),
+      valor: vb.getAttribute('data-vcf-valor')
+    });
+  }
+});
 
 /* ---- hierarquia ---- */
 function todosNos(lista, saida) {
@@ -322,7 +426,9 @@ function contatosCards(contatos, ctxOk) {
       : '<span class="fc-contato-valor">' + esc(valor) + '</span>';
     let acoes = '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(valor) +
       '" data-copy-label="' + esc(tipo) + '" title="Copiar ' + esc(tipo) + '" aria-label="Copiar ' +
-      esc(tipo) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>';
+      esc(tipo) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
+      botaoFav({ id: c.id, tipo: c.tipo, valor: c.valor }, String(c.descricao || '').trim() || tipo) +
+      botaoVcf({ tipo: c.tipo, valor: c.valor }, String(c.descricao || '').trim() || tipo);
     if (ctxOk) {
       acoes += '<button type="button" class="fc-icon-btn" data-edit="' + esc(c.id) +
         '" title="Editar contato">✏️ Editar</button>' +

@@ -299,6 +299,7 @@ body[data-theme="dark"] .fc-page-head{border-color:#334155}
 .fc-busca-item:last-child{border-bottom:0}
 .fc-busca-item:hover{background:#f1f5f9}
 .fc-busca-item.ativo{background:#eff6ff;outline:2px solid #2563eb;outline-offset:-2px}
+.fc-fav-btn[aria-pressed="true"] svg{fill:#f59e0b;stroke:#f59e0b}
 .fc-busca-item strong{display:block;font-size:13.5px;color:#0f172a}
 .fc-busca-item small{display:block;font-size:11.5px;color:#64748b;margin-top:2px}
 .fc-contato--achado{animation:fc-achado 2.2s ease}
