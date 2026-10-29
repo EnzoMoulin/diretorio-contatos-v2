@@ -170,13 +170,18 @@
         ? '<div class="fc-toolbar"><button type="button" class="fc-btn" id="fc-fav-todos" title="Baixar todos em um .vcf">' + SVG_BAIXAR + ' Baixar todos (.vcf)</button>' +
           '<button type="button" class="fc-btn" id="fc-fav-limpar" title="Remover todos os favoritos">Limpar favoritos</button>' +
           '<input type="search" id="fc-fav-filtro" class="fc-busca-input" placeholder="Filtrar favoritos..." aria-label="Filtrar favoritos" style="max-width:220px"></div>' +
-          '<div class="fc-contatos">' + chaves.map(function (k) { return linhaFavorito(k, favs[k]); }).join("") + "</div>"
+          '<div class="fc-contatos">' + chaves.map(function (k) { return linhaFavorito(k, favs[k]); }).join("") + "</div>" +
+          '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-fav" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2-2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
+          '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>'
         : '<div class="fc-empty">Nenhum favorito ainda. Toque na estrela de um contato para guardar aqui.</div>');
-      '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-fav" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
-      '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">↑ Voltar ao topo</button></div>';
-    document.getElementById("fc-print-fav").onclick = function () {
+    var btnPrintFav = document.getElementById("fc-print-fav");
+    if (btnPrintFav) btnPrintFav.onclick = function () {
       abrirImpressao("Favoritos — PJES", "<ul>" + chaves.map(function (k) { var f = favs[k]; return contatoPrint({ tipo: f.tipo, descricao: f.nome, valor: f.valor }); }).join("") + "</ul>");
     };
+    var painelFav = host() && host().closest(".fc-panel");
+    var rolaFav = !!(painelFav && painelFav.scrollHeight > painelFav.clientHeight + 4);
+    var topoFav = host() && host().querySelector("[data-scroll-top]");
+    if (topoFav) topoFav.classList.toggle("hidden", !rolaFav);
     var btnTodos = document.getElementById("fc-fav-todos");
     if (btnTodos) btnTodos.onclick = function () { baixarVcfTodos(); };
     var btnLimpar = document.getElementById("fc-fav-limpar");
@@ -715,7 +720,7 @@
 
   function barraNavegacaoInferior(rotuloVoltar, semLinha) {
     return '<div class="fc-bottom-nav' + (semLinha ? " fc-bottom-nav--colado" : "") + '"><button type="button" class="fc-btn" id="fc-back-bottom">← ' + esc(rotuloVoltar || "Voltar") + '</button>' +
-      '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">↑ Voltar ao topo</button></div>';
+      '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
   }
 
   function renderInicio() {
@@ -743,7 +748,7 @@
         (totalComarcas ? '<span class="fc-pill fc-total-comarcas">' + esc(rotuloQuantidade(totalComarcas, "Comarca", "Comarcas")) + "</span>" : "") + "</div>" : "") +
       '<select id="fc-comarca" class="fc-select">' + opcoesComarcas(comarcas.filter(function (m) { return !ehOrgao(m); }), "") + "</select>" +
       '<div class="fc-section fc-section--comarcas"><div class="fc-comarcas-grid">' + cardsComarcas + "</div></div>" +
-      '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">↑ Voltar ao topo</button></div>';
+      '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
     var seletor = document.getElementById("fc-comarca");
     if (seletor) seletor.onchange = function () { if (seletor.value) abrirComarca(seletor.value); };
     var cards = document.querySelectorAll("[data-comarca]");
@@ -880,7 +885,7 @@
           botaoVcf({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) + '</div>' +
           "</div></article>";
       }).join("") + "</div>" : '<div class="fc-empty">Nenhum telefone útil cadastrado.</div>') +
-      '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">↑ Voltar ao topo</button>' +
+      '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button>' +
       '<button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button></div>';
     document.getElementById("fc-print-uteis").onclick = function () {
       abrirImpressao("Telefones Úteis — PJES", "<ul>" + uteis.map(function (u) { return contatoPrint({ tipo: u.tipo, descricao: u.nome, valor: u.valor }); }).join("") + "</ul>");
