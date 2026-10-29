@@ -165,6 +165,11 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 .fc-card[data-nav]{cursor:pointer}
 .fc-card--toggle{cursor:pointer}
 .fc-card[data-nav]:hover{box-shadow:0 8px 22px rgba(15,23,42,.08);transform:translateY(-1px)}
+.fc-card--toggle .fc-card-head{align-items:center}
+.fc-card--toggle .fc-meta{margin-top:0;align-items:center}
+.fc-toggle{display:inline-flex;align-items:center;color:#475569}
+.fc-toggle svg{width:16px;height:16px;transition:transform .15s ease}
+.fc-card--toggle.aberto .fc-toggle svg{transform:rotate(180deg)}
 .fc-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .fc-card h4{margin:0 0 6px;font-size:15px;color:#0f172a}
 .fc-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}

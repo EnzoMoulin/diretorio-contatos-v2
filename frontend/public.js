@@ -620,7 +620,7 @@
       '<div class="fc-card-head"><div><h4>Contatos Gerais</h4></div>' +
       '<div class="fc-meta">' + badgeQuantidade(lista.length, "Contato", "Contatos") +
       (comPrint ? '<button type="button" class="fc-icon-btn" data-gerais-print title="Imprimir / Salvar PDF dos Contatos Gerais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>' : "") +
-      '<span class="fc-toggle" aria-hidden="true">\u25be</span></div></div></div>' +
+      '<span class="fc-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 12 15 18 9"/></svg></span></div></div></div>' +
       '<div data-gerais-body hidden>' + (lista.length ? contatosCards(lista) : '<div class="fc-empty">Sem contatos gerais.</div>') + "</div></div>";
   }
 
@@ -667,6 +667,9 @@
     });
     var cards = document.querySelectorAll("[data-gerais-toggle]");
     for (var g = 0; g < cards.length; g++) {
+      var corpo0 = cards[g].nextElementSibling;
+      var pr0 = cards[g].querySelector("[data-gerais-print]");
+      if (pr0 && corpo0) pr0.classList.toggle("hidden", corpo0.hasAttribute("hidden"));
       cards[g].onclick = (function (card) {
         return function (e) {
           if (e && e.target && e.target.closest && e.target.closest("[data-gerais-print]")) return;
@@ -676,6 +679,8 @@
           if (abrir) body.removeAttribute("hidden");
           else body.setAttribute("hidden", "");
           card.classList.toggle("aberto", abrir);
+          var pr = card.querySelector("[data-gerais-print]");
+          if (pr) pr.classList.toggle("hidden", !abrir);
         };
       })(cards[g]);
     }

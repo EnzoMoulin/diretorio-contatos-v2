@@ -543,7 +543,7 @@ function cardContatosGerais(contatos, comPrint, ctxOk) {
     '<div class="fc-card-head"><div><h4>Contatos Gerais</h4></div>' +
     '<div class="fc-meta">' + badgeQuantidade(lista.length, 'Contato', 'Contatos') +
     (comPrint ? '<button type="button" class="fc-icon-btn" data-gerais-print title="Imprimir / Salvar PDF dos Contatos Gerais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>' : '') +
-    '<span class="fc-toggle" aria-hidden="true">▾</span></div></div></div>' +
+    '<span class="fc-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 12 15 18 9"/></svg></span></div></div></div>' +
     '<div data-gerais-body hidden>' + (lista.length ? contatosCards(lista, ctxOk) : '<div class="fc-empty">Sem contatos gerais.</div>') + '</div></div>';
 }
 function cardNo(no) {
@@ -595,6 +595,9 @@ function vincularAcoes() {
       else ft.appendChild(b);
   });
   document.querySelectorAll('[data-gerais-toggle]').forEach(card => {
+    const corpo0 = card.nextElementSibling;
+    const pr0 = card.querySelector('[data-gerais-print]');
+    if (pr0 && corpo0) pr0.classList.toggle('hidden', corpo0.hasAttribute('hidden'));
     if (card.dataset.tgOk) return;
     card.dataset.tgOk = '1';
     card.onclick = (e) => {
@@ -605,6 +608,8 @@ function vincularAcoes() {
       if (abrir) body.removeAttribute('hidden');
       else body.setAttribute('hidden', '');
       card.classList.toggle('aberto', abrir);
+      const pr = card.querySelector('[data-gerais-print]');
+      if (pr) pr.classList.toggle('hidden', !abrir);
     };
   });
   document.querySelectorAll('[data-scroll-top]').forEach(btn => {
