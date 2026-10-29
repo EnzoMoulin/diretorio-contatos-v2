@@ -786,12 +786,12 @@ function vincularBuscaGlobal() {
   const campo = $('fc-busca'), caixa = $('fc-busca-resultados');
   if (!campo || !caixa || campo.getAttribute('data-busca-ok')) return;
   campo.setAttribute('data-busca-ok', '1');
-  function fechar() { caixa.setAttribute('hidden', ''); caixa.innerHTML = ''; }
+  function fechar() { caixa.setAttribute('hidden', ''); caixa.innerHTML = ''; campo.setAttribute('aria-expanded', 'false'); campo.removeAttribute('aria-activedescendant'); }
   let indiceAtivo = -1;
   function pintarAtivo() {
     caixa.querySelectorAll('[data-busca-i]').forEach((btn, i) => {
-      if (i === indiceAtivo) { btn.classList.add('ativo'); btn.scrollIntoView({ block: 'nearest' }); }
-      else btn.classList.remove('ativo');
+      if (i === indiceAtivo) { btn.classList.add('ativo'); btn.setAttribute('aria-selected', 'true'); btn.scrollIntoView({ block: 'nearest' }); campo.setAttribute('aria-activedescendant', btn.id); }
+      else { btn.classList.remove('ativo'); btn.setAttribute('aria-selected', 'false'); }
     });
   }
   campo.addEventListener('input', () => {
@@ -800,12 +800,13 @@ function vincularBuscaGlobal() {
     if (!resultados.length) { fechar(); return; }
     caixa.innerHTML = resultados.map((item, i) => {
       const c = item.contato;
-      return '<button type="button" class="fc-busca-item" data-busca-i="' + i + '">' +
+      return '<button type="button" class="fc-busca-item" data-busca-i="' + i + '" role="option" id="fc-busca-opcao-' + i + '" aria-selected="false">' +
         '<strong>' + realcarBusca(campo.value, c.descricao || fmtTipoContato(c.tipo)) + '</strong>' +
         '<small>' + realcarBusca(campo.value, fmtTipoContato(c.tipo) + (c.valor ? ' · ' + c.valor : '')) + '</small>' +
         '<small>' + realcarBusca(campo.value, item.caminho) + '</small></button>';
     }).join('');
     caixa.removeAttribute('hidden');
+    campo.setAttribute('aria-expanded', 'true');
     caixa.querySelectorAll('[data-busca-i]').forEach(btn => {
       const item = resultados[+btn.getAttribute('data-busca-i')];
       btn.onclick = () => { fechar(); campo.value = ''; irParaResultado(item); };

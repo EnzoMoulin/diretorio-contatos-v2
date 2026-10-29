@@ -41,8 +41,8 @@
         </section>
         <div class="consulta-direita">
           <div class="fc-busca">
-            <input id="fc-busca" class="fc-busca-input" type="search" title="Buscar (atalho: /)" placeholder="Buscar contato, setor, unidade…" autocomplete="off">
-            <div id="fc-busca-resultados" class="fc-busca-resultados" hidden></div>
+            <input id="fc-busca" class="fc-busca-input" type="search" title="Buscar (atalho: /)" placeholder="Buscar contato, setor, unidade…" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="fc-busca-resultados">
+            <div id="fc-busca-resultados" class="fc-busca-resultados" role="listbox" aria-label="Resultados da busca" hidden></div>
           </div>
         <div class="fc-panel">
           <div id="lista"><div class="fc-empty">Carregando contatos...</div></div>
