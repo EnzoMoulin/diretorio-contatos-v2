@@ -554,8 +554,45 @@
       '<div data-gerais-body hidden>' + (lista.length ? contatosCards(lista) : '<div class="fc-empty">Sem contatos gerais.</div>') + "</div></div>";
   }
 
+  function exportarCsvVisivel() {
+    var host = document.getElementById("lista") || document;
+    var linhas = [["Nome", "Tipo", "Valor"]];
+    host.querySelectorAll(".fc-contato").forEach(function (a) {
+      var t = a.querySelector(".fc-contato-tipo");
+      var n = a.querySelector("h4");
+      var v = a.querySelector(".fc-contato-valor");
+      linhas.push([(n ? n.textContent : "").trim(), (t ? t.textContent : "").trim(), (v ? v.textContent : "").trim()]);
+    });
+    if (linhas.length < 2) {
+      if (typeof mostrarToast === "function") mostrarToast("Nada para exportar.", "warning");
+      return;
+    }
+    var csv = "﻿" + linhas.map(function (r) {
+      return r.map(function (x) { return '"' + String(x).replace(/"/g, '""') + '"'; }).join(";");
+    }).join("\r\n");
+    var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "contatos.csv";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    if (typeof mostrarToast === "function") mostrarToast("CSV exportado.", "success");
+  }
   function vincularAcoes() {
     vincularCopias();
+    document.querySelectorAll(".fc-print-footer").forEach(function (ft) {
+      if (ft.querySelector("[data-csv]")) return;
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "fc-btn";
+      b.setAttribute("data-csv", "");
+      b.title = "Exportar contatos visíveis (CSV)";
+      b.setAttribute("aria-label", "Exportar contatos visíveis em CSV");
+      b.innerHTML = SVG_BAIXAR + " Exportar CSV";
+      b.onclick = function () { exportarCsvVisivel(); };
+      ft.appendChild(b);
+    });
     var cards = document.querySelectorAll("[data-gerais-toggle]");
     for (var g = 0; g < cards.length; g++) {
       cards[g].onclick = (function (card) {

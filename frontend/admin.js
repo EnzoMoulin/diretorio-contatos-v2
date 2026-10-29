@@ -487,8 +487,43 @@ function cardNo(no) {
     badgeQuantidade(qtdSetores(no.filhos || []), 'Setor', 'Setores') +
     badgeQuantidade(no.qtdContatos, 'Contato', 'Contatos') + solBtn(nivel, no.id) + '</div></div>';
 }
+function exportarCsvVisivel() {
+  const host = document.getElementById("lista") || document;
+  const linhas = [["Nome", "Tipo", "Valor"]];
+  host.querySelectorAll(".fc-contato").forEach(a => {
+    const t = a.querySelector(".fc-contato-tipo");
+    const n = a.querySelector("h4");
+    const v = a.querySelector(".fc-contato-valor");
+    linhas.push([(n ? n.textContent : "").trim(), (t ? t.textContent : "").trim(), (v ? v.textContent : "").trim()]);
+  });
+  if (linhas.length < 2) {
+    if (typeof mostrarToast === "function") mostrarToast("Nada para exportar.", "warning");
+    return;
+  }
+  const csv = "﻿" + linhas.map(r => r.map(x => '"' + String(x).replace(/"/g, '""') + '"').join(";")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "contatos.csv";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  if (typeof mostrarToast === "function") mostrarToast("CSV exportado.", "success");
+}
 function vincularAcoes() {
   vincularCopias();
+  document.querySelectorAll(".fc-print-footer").forEach(ft => {
+    if (ft.querySelector("[data-csv]")) return;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "fc-btn";
+    b.setAttribute("data-csv", "");
+    b.title = "Exportar contatos visíveis (CSV)";
+    b.setAttribute("aria-label", "Exportar contatos visíveis em CSV");
+    b.innerHTML = SVG_BAIXAR + " Exportar CSV";
+    b.onclick = () => exportarCsvVisivel();
+    ft.appendChild(b);
+  });
   document.querySelectorAll('[data-gerais-toggle]').forEach(card => {
     if (card.dataset.tgOk) return;
     card.dataset.tgOk = '1';
