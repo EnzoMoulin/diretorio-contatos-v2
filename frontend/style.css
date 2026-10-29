@@ -239,6 +239,7 @@ body:not([data-theme="dark"]) .leaflet-bar{border:1px solid #cbd5e1!important;bo
 body:not([data-theme="dark"]) .leaflet-bar a{width:32px!important;height:32px!important;line-height:32px!important;color:#334155!important;background:#fff}
 body:not([data-theme="dark"]) .leaflet-bar a:hover{background:#f1f5f9!important;color:#0f172a!important}
 @media (prefers-reduced-motion:reduce){[id^="view-"]:not(.hidden){animation:none}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 .menu-item .icon-white{filter:brightness(0) invert(1)}
 .menu-item .icon-txt{font-size:21px;font-weight:700}
 button:focus-visible,a:focus-visible,.menu-item:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
