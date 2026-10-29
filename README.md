@@ -139,8 +139,18 @@ Mesma arquitetura, implementação validada no ecossistema Workspace
 [EnzoMoulin/diretorio-contatos](https://github.com/EnzoMoulin/diretorio-contatos).
 
 ## Screenshots
-_Vídeo/screenshots entram aqui após primeira execução (só tela + legendas, sem voz/webcam)._
-- `screenshots/` — reservado
+![Consulta no desktop](docs/img/desktop.png)
+![Consulta no celular, com menu gaveta](docs/img/mobile.png)
+
+## Experiência de uso (detalhes)
+- **Favoritos** (aba na sidebar + estrela em cada contato, com contador): salvos no navegador, em ordem A–Z, com filtro próprio, impressão, exportação CSV, download de todos em um `.vcf` e limpeza com confirmação
+- **Baixar contato (.vcf)**: cada contato gera o cartão para importar na agenda do celular
+- **Link direto**: cada contato tem URL `?contato=id` que abre direto nele com destaque; no celular abre o menu de compartilhar do sistema
+- **Exportar CSV**: botão junto ao imprimir baixa Nome;Tipo;Valor do que está na tela (com BOM para o Excel)
+- **Busca de verdade**: `/` foca o campo, setas navegam, Enter abre, Esc fecha; termo grifado nos resultados e semântica de combobox para leitor de tela; opção ativa anunciada
+- **Mobile de verdade**: até 900px a sidebar vira gaveta (hambúrguer por vista, fecha no Esc e ao trocar de aba) e o mapa ganha altura mínima — validado em render headless 390px
+- **Acessibilidade medida**: pares de cor auditados no WCAG AA (4.5+), anel de foco visível, skip-link para o conteúdo, `reduced-motion` respeitado em tudo, favicon e `theme-color`
+- **Impressão limpa**: cabeçalho com data/hora de geração; fixos da tela (skip-link, avisos) não saem no papel
 
 ## Estrutura
 ```
