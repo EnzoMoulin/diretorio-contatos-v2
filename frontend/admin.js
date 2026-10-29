@@ -580,8 +580,10 @@ function exportarCsvVisivel() {
 }
 function vincularAcoes() {
   vincularCopias();
-  document.querySelectorAll(".fc-print-footer").forEach(ft => {
-    if (ft.querySelector("[data-csv]")) return;
+  document.querySelectorAll('.fc-print-footer').forEach(ft => {
+    if (ft.querySelector('[data-csv]')) return;
+    const painel = ft.closest ? ft.closest('.fc-panel') : null;
+    if (!(painel || document).querySelector('.fc-contato')) return;
     const b = document.createElement("button");
     b.type = "button";
     b.className = "fc-btn";

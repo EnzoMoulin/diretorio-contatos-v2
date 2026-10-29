@@ -665,6 +665,8 @@
     vincularCopias();
     document.querySelectorAll(".fc-print-footer").forEach(function (ft) {
       if (ft.querySelector("[data-csv]")) return;
+      var painel = ft.closest ? ft.closest(".fc-panel") : null;
+      if (!(painel || document).querySelector(".fc-contato")) return;
       var b = document.createElement("button");
       b.type = "button";
       b.className = "fc-btn";
