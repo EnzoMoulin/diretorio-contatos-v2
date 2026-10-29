@@ -5,7 +5,7 @@ html,body{margin:0;padding:0;width:100%;height:100vh;overflow:hidden;
 .app-container{display:flex;width:100%;height:100vh;overflow:hidden}
 
 /* ---- sidebar (identidade do app original) ---- */
-.sidebar{width:260px;min-width:260px;height:100vh;flex-shrink:0;overflow-y:auto;
+.sidebar{width:260px;min-width:260px;height:100vh;height:100dvh;flex-shrink:0;overflow:hidden;
   background:#1e293b;color:#fff;display:flex;flex-direction:column}
 .sidebar-header{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.1)}
 .sidebar-header h2{margin:0;font-size:28px}
@@ -211,14 +211,14 @@ body[data-theme="dark"] footer{color:#64748b}
 body[data-theme="dark"] code{background:#0f172a}
 /* ================= original: sidebar ================= */
 :root{--bg-panel:#fff;--text-secondary:#64748b}
-.sidebar-header{display:flex;flex-direction:row;align-items:center;gap:10px;padding:22px 18px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar-header{display:flex;flex-direction:row;align-items:center;gap:10px;padding:22px 18px 18px;flex:none;border-bottom:1px solid rgba(255,255,255,.08)}
 .sidebar-logo{height:56px;width:56px;flex:0 0 auto}
 .sidebar-brand-copy{min-width:0;margin-left:0}
 .sidebar-brand-copy strong{display:block;font-size:20px;font-weight:800;color:#fff;line-height:1.1}
 .sidebar-header .sidebar-brand-copy span{font-size:12px;color:#94a3b8}
 .sidebar-header h2{font-size:20px}
 .sidebar-header span{display:block;margin-top:3px;font-size:12px;line-height:1.35;color:#cbd5e1;opacity:.86}
-.sidebar-menu{padding:14px 12px}
+.sidebar-menu{padding:14px 12px;min-height:0;overflow-y:auto}
 .menu-item{min-height:43px;padding:10px 11px;margin-bottom:4px;border:1px solid transparent;border-radius:10px;color:#dbe4f0;font-size:15px;font-weight:650;line-height:1.25;display:flex;align-items:center;gap:10px;width:100%;background:transparent;cursor:pointer;text-align:left}
 .menu-item .icon{width:30px;min-width:30px;height:30px;display:grid;place-items:center;border-radius:8px;background:rgba(255,255,255,.055);font-size:17px}
 .menu-item .icon svg{width:16px;height:16px;flex:none}
@@ -257,7 +257,7 @@ html{scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent}
 .menu-item:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.08);color:#fff;transform:translateX(2px)}
 .menu-item.active{background:linear-gradient(90deg,rgba(37,99,235,.24),rgba(59,130,246,.1));border-color:rgba(96,165,250,.22);color:#fff;box-shadow:inset 3px 0 0 #60a5fa}
 .menu-item.active .icon{background:rgba(59,130,246,.2)}
-.sidebar-footer{padding:10px 12px;border-top:1px solid rgba(255,255,255,.08);background:rgba(2,6,23,.12)}
+.sidebar-footer{padding:10px 12px;margin-top:auto;flex:none;border-top:1px solid rgba(255,255,255,.08);background:rgba(2,6,23,.12)}
 .sidebar-status-btn{width:100%;min-height:38px;display:flex;align-items:center;justify-content:center;gap:8px;padding:7px 10px;border:1px solid rgba(255,255,255,.12);border-radius:10px;cursor:pointer;font-size:12px;font-weight:800;background:transparent;color:#dbe4f0}
 .sidebar-footer .sidebar-status-btn{margin-top:8px}
 .sidebar-status-btn:hover{filter:brightness(.985);transform:translateY(-1px)}
