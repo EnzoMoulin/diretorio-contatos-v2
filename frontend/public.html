@@ -3,28 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f172a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Crect width='42' height='42' rx='10' fill='%231d4ed8'/%3E%3Ctext x='21' y='29' text-anchor='middle' font-family='Arial' font-size='18' font-weight='800' fill='white'%3EPJ%3C/text%3E%3C/svg%3E">
 <title>Diretório de Contatos — Consulta Pública</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css?v=35">
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+<link rel="stylesheet" href="style.css?v=37">
 </head>
 <body>
 <div class="app-container">
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo principal</a>
   <aside class="sidebar sidebar-public">
     <div class="sidebar-header">
       <svg class="sidebar-logo" viewBox="0 0 42 42" aria-label="PJES"><defs><linearGradient id="li-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563eb"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs><rect width="42" height="42" rx="10" fill="url(#li-g)"/><text x="21" y="28" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="800" fill="#fff">PJ</text></svg>
       <div class="sidebar-brand-copy"><strong>PJES</strong><span>Tribunal de Justiça do<br>Estado do Espírito Santo</span></div>
     </div>
     <nav class="sidebar-menu" aria-label="Navegação principal">
-      <button class="menu-item active" data-view="consulta"><span class="icon icon-white">📞</span><span>Comarcas</span></button>
-      <button class="menu-item" data-view="tjes"><span class="icon icon-txt">🏛</span><span>TJES</span></button>
-      <button class="menu-item" data-view="uteis"><span class="icon icon-white">☎</span><span>Telefones Úteis</span></button>
-      <button class="menu-item" data-view="config"><span class="icon icon-txt">⚙</span><span>Configurações</span></button>
+      <button class="menu-item active" data-view="consulta"><span class="icon icon-white"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span><span>Comarcas</span></button>
+      <button class="menu-item" data-view="tjes"><span class="icon icon-txt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg></span><span>TJES</span></button>
+      <button class="menu-item" data-view="uteis"><span class="icon icon-white"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span><span>Telefones Úteis</span></button>
+      <button class="menu-item" data-view="config"><span class="icon icon-txt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Configurações</span></button>
     </nav>
     <div class="sidebar-footer">
       <div class="sidebar-user">Consulta Pública</div>
     </div>
   </aside>
-  <main class="main-content">
+  <main class="main-content" id="conteudo" tabindex="-1">
     <section id="view-consulta">
       <div class="fc-page-head">
         <div>
@@ -39,8 +44,8 @@
         </section>
         <div class="consulta-direita">
           <div class="fc-busca">
-            <input id="fc-busca" class="fc-busca-input" type="search" placeholder="Buscar contato, setor, unidade…" autocomplete="off">
-            <div id="fc-busca-resultados" class="fc-busca-resultados" hidden></div>
+            <input id="fc-busca" class="fc-busca-input" type="search" title="Buscar (atalho: /)" placeholder="Buscar contato, setor, unidade…" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="fc-busca-resultados">
+            <div id="fc-busca-resultados" class="fc-busca-resultados" role="listbox" aria-label="Resultados da busca" hidden></div>
           </div>
         <div class="fc-panel">
           <div id="lista"><div class="fc-empty">Carregando contatos...</div></div>
@@ -160,6 +165,6 @@
   </main>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="public.js?v=27"></script>
+<script src="public.js?v=30"></script>
 </body>
 </html>

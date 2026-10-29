@@ -64,7 +64,7 @@
     return '<span class="fc-address-inline"><a class="fc-endereco" href="https://www.google.com/maps/search/?api=1&query=' +
       encodeURIComponent(texto) + '" target="_blank" rel="noopener noreferrer">📍 ' + esc(texto) + "</a>" +
       '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(texto) +
-      '" data-copy-label="Endereço" title="Copiar endereço" aria-label="Copiar endereço">⧉</button></span>';
+      '" data-copy-label="Endereço" title="Copiar endereço" aria-label="Copiar endereço"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></span>';
   }
 
   function copiarTexto(texto) {
@@ -205,34 +205,61 @@
     } else renderForuns();
     destacarContato(item.contato.id);
   }
+  function realcarBusca(termo, texto){
+    var base = esc(texto), b = esc(String(termo || "").trim());
+    if(!b) return base;
+    var lower = base.toLowerCase(), alvo = b.toLowerCase(), out = "", i = 0, j;
+    while((j = lower.indexOf(alvo, i)) !== -1){
+      out += base.slice(i, j) + "<mark>" + base.slice(j, j + b.length) + "</mark>";
+      i = j + b.length;
+    }
+    return out + base.slice(i);
+  }
   function vincularBuscaGlobal() {
     var campo = $("fc-busca"), caixa = $("fc-busca-resultados");
     if (!campo || !caixa || campo.getAttribute("data-busca-ok")) return;
     campo.setAttribute("data-busca-ok", "1");
-    function fechar() { caixa.setAttribute("hidden", ""); caixa.innerHTML = ""; }
+    function fechar() { caixa.setAttribute("hidden", ""); caixa.innerHTML = ""; campo.setAttribute("aria-expanded", "false"); campo.removeAttribute("aria-activedescendant"); }
+    var indiceAtivo = -1;
+    function pintarAtivo() {
+      Array.prototype.forEach.call(caixa.querySelectorAll("[data-busca-i]"), function (btn, i) {
+        if (i === indiceAtivo) { btn.classList.add("ativo"); btn.setAttribute("aria-selected", "true"); btn.scrollIntoView({ block: "nearest" }); campo.setAttribute("aria-activedescendant", btn.id); }
+        else { btn.classList.remove("ativo"); btn.setAttribute("aria-selected", "false"); }
+      });
+    }
     campo.addEventListener("input", function () {
+      indiceAtivo = -1;
       var resultados = buscarContatos(campo.value);
       if (!resultados.length) { fechar(); return; }
       caixa.innerHTML = resultados.map(function (item, i) {
         var c = item.contato;
-        return '<button type="button" class="fc-busca-item" data-busca-i="' + i + '">' +
-          "<strong>" + esc(c.descricao || fmtTipoContato(c.tipo)) + "</strong>" +
-          "<small>" + esc(fmtTipoContato(c.tipo) + (c.valor ? " · " + c.valor : "")) + "</small>" +
-          "<small>" + esc(item.caminho) + "</small></button>";
+        return '<button type="button" class="fc-busca-item" data-busca-i="' + i + '" role="option" id="fc-busca-opcao-' + i + '" aria-selected="false">' +
+          "<strong>" + realcarBusca(campo.value, c.descricao || fmtTipoContato(c.tipo)) + "</strong>" +
+          "<small>" + realcarBusca(campo.value, fmtTipoContato(c.tipo) + (c.valor ? " · " + c.valor : "")) + "</small>" +
+          "<small>" + realcarBusca(campo.value, item.caminho) + "</small></button>";
       }).join("");
       caixa.removeAttribute("hidden");
+      campo.setAttribute("aria-expanded", "true");
       var botoes = caixa.querySelectorAll("[data-busca-i]");
       for (var i = 0; i < botoes.length; i++) {
-        (function (btn, item) {
+        (function (btn, item, idx) {
           btn.onclick = function () { fechar(); campo.value = ""; irParaResultado(item); };
-        })(botoes[i], resultados[+botoes[i].getAttribute("data-busca-i")]);
+          btn.onmouseenter = function () { indiceAtivo = idx; pintarAtivo(); };
+        })(botoes[i], resultados[+botoes[i].getAttribute("data-busca-i")], i);
       }
     });
     campo.addEventListener("keydown", function (e) {
       if (e.key === "Escape") { fechar(); campo.blur(); }
+      else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        var r = buscarContatos(campo.value);
+        if (!r.length) return;
+        e.preventDefault();
+        indiceAtivo = e.key === "ArrowDown" ? (indiceAtivo + 1) % r.length : (indiceAtivo - 1 + r.length) % r.length;
+        pintarAtivo();
+      }
       else if (e.key === "Enter") {
         var r = buscarContatos(campo.value);
-        if (r.length) { fechar(); campo.value = ""; irParaResultado(r[0]); }
+        if (r.length) { var alvo = indiceAtivo >= 0 ? r[indiceAtivo] : r[0]; fechar(); campo.value = ""; irParaResultado(alvo); }
       }
     });
     document.addEventListener("click", function (e) {
@@ -332,7 +359,8 @@
 
   function opcoesComarcas(comarcas, selecionado) {
     return '<option value="">Selecione a Comarca</option>' + (comarcas || []).filter(function (m) { return !ehOrgao(m); }).map(function (m) {
-      return '<option value="' + esc(m.id) + '"' + (String(m.id) === String(selecionado) ? " selected" : "") + ">" + esc(m.nome) + "</option>";
+      var n = m.qtdContatos || 0;
+      return '<option value="' + esc(m.id) + '"' + (String(m.id) === String(selecionado) ? " selected" : "") + ">" + esc(m.nome) + " (" + n + (n === 1 ? " contato)" : " contatos)") + "</option>";
     }).join("");
   }
 
@@ -342,7 +370,7 @@
     var id = tipo === "FORUM" ? "fc-print-forum" : (tipo === "COMARCA" ? "fc-print-comarca" : "fc-print-unit");
     return '<div class="fc-print-footer">' +
       '<button type="button" class="fc-btn" id="' + id + '" title="Imprimir / Salvar PDF dos contatos ' +
-      artigo + " " + rotulo + '">🖨 Imprimir / Salvar PDF</button></div>';
+      artigo + " " + rotulo + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button></div>';
   }
 
   function contatosCards(contatos) {
@@ -358,7 +386,7 @@
         : '<span class="fc-contato-valor">' + esc(valor) + "</span>";
       var acoes = '<div class="fc-contato-actions">' +
         '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(valor) +
-        '" data-copy-label="' + esc(tipo) + '" title="Copiar ' + esc(tipo) + '" aria-label="Copiar ' + esc(tipo) + '">⧉</button></div>';
+        '" data-copy-label="' + esc(tipo) + '" title="Copiar ' + esc(tipo) + '" aria-label="Copiar ' + esc(tipo) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>';
       var descricao = String(c.descricao || "").trim();
       var descricaoHtml = descricao && descricao.toLocaleLowerCase("pt-BR") !== String(tipo).toLocaleLowerCase("pt-BR")
         ? "<h4>" + esc(descricao) + "</h4>" : "";
@@ -377,7 +405,7 @@
     return '<div class="fc-section"><div class="fc-card fc-card--toggle" data-gerais-toggle title="Expandir/recolher contatos gerais">' +
       '<div class="fc-card-head"><div><h4>Contatos Gerais</h4></div>' +
       '<div class="fc-meta">' + badgeQuantidade(lista.length, "Contato", "Contatos") +
-      (comPrint ? '<button type="button" class="fc-icon-btn" data-gerais-print title="Imprimir / Salvar PDF dos Contatos Gerais">🖨</button>' : "") +
+      (comPrint ? '<button type="button" class="fc-icon-btn" data-gerais-print title="Imprimir / Salvar PDF dos Contatos Gerais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>' : "") +
       '<span class="fc-toggle" aria-hidden="true">\u25be</span></div></div></div>' +
       '<div data-gerais-body hidden>' + (lista.length ? contatosCards(lista) : '<div class="fc-empty">Sem contatos gerais.</div>') + "</div></div>";
   }
@@ -435,7 +463,7 @@
     return '<div class="fc-print-footer fc-actions-row">' +
       '<button type="button" class="fc-btn" id="fc-back-bottom">\u2190 ' + esc(rotuloVoltar || "Voltar") + "</button>" +
       '<button type="button" class="fc-btn" id="fc-print-unit" title="Imprimir / Salvar PDF dos contatos ' +
-      artigo + " " + rotulo + '">🖨 Imprimir / Salvar PDF</button>' +
+      artigo + " " + rotulo + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
       '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">\u2191 Voltar ao topo</button></div>';
   }
 
@@ -468,7 +496,7 @@
       (comarcas.length ? '<div class="fc-catalog-counts">' +
         (totalComarcas ? '<span class="fc-pill fc-total-comarcas">' + esc(rotuloQuantidade(totalComarcas, "Comarca", "Comarcas")) + "</span>" : "") + "</div>" : "") +
       '<select id="fc-comarca" class="fc-select">' + opcoesComarcas(comarcas.filter(function (m) { return !ehOrgao(m); }), "") + "</select>" +
-      '<div class="fc-section fc-section--comarcas"><div class="fc-section-title"><h3>Comarcas</h3></div><div class="fc-comarcas-grid">' + cardsComarcas + "</div></div>" +
+      '<div class="fc-section fc-section--comarcas"><div class="fc-comarcas-grid">' + cardsComarcas + "</div></div>" +
       '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">↑ Voltar ao topo</button></div>';
     var seletor = document.getElementById("fc-comarca");
     if (seletor) seletor.onchange = function () { if (seletor.value) abrirComarca(seletor.value); };
@@ -601,11 +629,11 @@
         return '<article class="fc-contato"><div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(fmtTipoContato(u.tipo)) + "</span><h4>" + esc(u.nome || u.valor) + "</h4></div>" +
           '<div class="fc-contato-side">' + valorHtml +
           '<div class="fc-contato-actions"><button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(u.valor) +
-          '" data-copy-label="' + esc(fmtTipoContato(u.tipo)) + '" title="Copiar">⧉</button></div>' +
+          '" data-copy-label="' + esc(fmtTipoContato(u.tipo)) + '" title="Copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>' +
           "</div></article>";
       }).join("") + "</div>" : '<div class="fc-empty">Nenhum telefone útil cadastrado.</div>') +
       '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">↑ Voltar ao topo</button>' +
-      '<button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF">🖨 Imprimir / Salvar PDF</button></div>';
+      '<button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button></div>';
     document.getElementById("fc-print-uteis").onclick = function () {
       abrirImpressao("Telefones Úteis — PJES", "<ul>" + uteis.map(function (u) { return contatoPrint({ tipo: u.tipo, descricao: u.nome, valor: u.valor }); }).join("") + "</ul>");
     };
@@ -951,7 +979,7 @@
   function recarregar(mostrarCarregando) {
     if (estado.carregando) return;
     estado.carregando = true;
-    if (mostrarCarregando && host()) host().innerHTML = '<div class="fc-empty">Carregando contatos...</div>';
+    if (mostrarCarregando && host()) host().innerHTML = '<div aria-hidden="true"><div class="fc-skel-card"><div class="fc-skel-line w60"></div><div class="fc-skel-line w80"></div><div class="fc-skel-line w40"></div></div><div class="fc-skel-card"><div class="fc-skel-line w80"></div><div class="fc-skel-line w40"></div><div class="fc-skel-line w60"></div></div><div class="fc-skel-card"><div class="fc-skel-line w40"></div><div class="fc-skel-line w60"></div><div class="fc-skel-line w80"></div></div></div>';
     fetch("/api/hierarquia").then(function (r) { return r.json(); }).then(function (dados) {
       estado.carregando = false;
       estado.dados = dados && dados.comarcas ? dados : { comarcas: [] };
@@ -1008,3 +1036,38 @@
   window.recarregarNavegacaoForum = function () { recarregar(false); };
   window.setLoc = function (id) { abrirComarca(String(id)); };
 })();
+
+document.addEventListener("keydown", function(e){
+  if(e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+  var t = e.target;
+  if(t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+  var ids = ["fc-busca", "campo-pesquisa"];
+  for(var i = 0; i < ids.length; i++){
+    var b = document.getElementById(ids[i]);
+    if(b && b.offsetParent !== null){ e.preventDefault(); b.focus(); return; }
+  }
+});
+window.addEventListener("beforeprint", function(){
+  var m = document.getElementById("print-meta");
+  if(!m){ m = document.createElement("div"); m.id = "print-meta"; m.className = "print-meta"; document.body.prepend(m); }
+  m.textContent = "Diretório Institucional de Contatos – PJES · Gerado em " + new Date().toLocaleString("pt-BR");
+});
+window.addEventListener("afterprint", function(){
+  var m = document.getElementById("print-meta");
+  if(m) m.remove();
+});
+
+document.addEventListener("keydown", function(e){
+  if(e.key !== "Escape") return;
+  var cx = document.getElementById("fc-busca-resultados");
+  if(cx && !cx.hasAttribute("hidden")){ cx.setAttribute("hidden", ""); cx.innerHTML = ""; }
+  var x = document.querySelector(".leaflet-popup-close-button");
+  if(x){ x.click(); }
+  var ae = document.activeElement;
+  if(ae && (ae.id === "fc-busca" || ae.id === "campo-pesquisa")) ae.blur();
+  document.querySelectorAll(".modal").forEach(function(m){
+    if(m.classList.contains("hidden") || m.style.display === "none" || m.offsetParent === null) return;
+    if(m.id === "modal-sem-acesso" && typeof fecharModalSemAcesso === "function") fecharModalSemAcesso();
+    else m.classList.add("hidden");
+  });
+});
