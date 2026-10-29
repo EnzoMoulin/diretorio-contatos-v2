@@ -661,7 +661,9 @@
       b.setAttribute("aria-label", "Exportar contatos visíveis em CSV");
       b.innerHTML = SVG_BAIXAR + " Exportar CSV";
       b.onclick = function () { exportarCsvVisivel(); };
-      ft.appendChild(b);
+      var topo = ft.querySelector("[data-scroll-top]");
+      if (topo) ft.insertBefore(b, topo);
+      else ft.appendChild(b);
     });
     var cards = document.querySelectorAll("[data-gerais-toggle]");
     for (var g = 0; g < cards.length; g++) {
