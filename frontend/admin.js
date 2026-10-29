@@ -196,8 +196,13 @@ function renderFavoritos() {
     '<p class="fc-subtitle">Seus contatos marcados com estrela, neste navegador.</p></div></div>' +
     (chaves.length
       ? '<div class="fc-contatos">' + chaves.map(k => linhaFavorito(k, favs[k])).join('') + '</div>'
-      : '<div class="fc-empty">Nenhum favorito ainda. Toque na estrela de um contato para guardar aqui.</div>');
-  vincularCopias();
+      : '<div class="fc-empty">Nenhum favorito ainda. Toque na estrela de um contato para guardar aqui.</div>') +
+    '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-fav" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
+    '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo">↑ Voltar ao topo</button></div>';
+  document.getElementById('fc-print-fav').onclick = () => {
+    abrirImpressao('Favoritos — PJES', '<ul>' + chaves.map(k => { const f = favs[k]; return contatoPrint({ tipo: f.tipo, descricao: f.nome, valor: f.valor }); }).join('') + '</ul>');
+  };
+  vincularAcoes();
 }
 function sincronizarFavs() {
   const f = lerFavs();
