@@ -906,8 +906,8 @@
           botaoVcf({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) + '</div>' +
           "</div></article>";
       }).join("") + "</div>" : '<div class="fc-empty">Nenhum telefone útil cadastrado.</div>') +
-      '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button>' +
-      '<button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button></div>';
+      '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
+      '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
     document.getElementById("fc-print-uteis").onclick = function () {
       abrirImpressao("Telefones Úteis — PJES", "<ul>" + uteis.map(function (u) { return contatoPrint({ tipo: u.tipo, descricao: u.nome, valor: u.valor }); }).join("") + "</ul>");
     };
