@@ -87,6 +87,7 @@ python3 app.py
 # pública: http://localhost:8000
 # admin:   http://localhost:8000/admin   (login com Google; primeiro vira admin)
 bash teste_rapido.sh   # verifica o fluxo completo, incl. escopo por local
+python3 -m unittest tests.test_regras -v   # regras de negócio (IDs, pedido, herança)
 ```
 
 ## Como avaliar este demo (2 minutos)

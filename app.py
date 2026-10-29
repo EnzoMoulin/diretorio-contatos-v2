@@ -1147,6 +1147,7 @@ class Handler(BaseHTTPRequestHandler):
                 me = dict(row)
                 esc = self._escopo(con, uid)
                 me["escopo"] = "all" if esc == "all" else (esc or [])
+                me["email_ok"] = bool(os.environ.get("SMTP_HOST", ""))
                 return self._json(me)
             if u.path == "/api/pedidos":
                 if not self._uid():

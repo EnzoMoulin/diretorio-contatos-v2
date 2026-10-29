@@ -1305,6 +1305,8 @@ async function refresh() {
       (me.escopo === 'all' ? ' · admin (todos os locais).' : ` · ${me.escopo.length} acesso(s).`);
   }
   else $('conf-logado').classList.add('hidden');
+  $('conf-email').textContent = !me ? 'Entre para ver o estado'
+    : (me.email_ok ? 'Configurado (envia de verdade)' : 'Só no sistema (sem SMTP)');
   await recarregarHierarquia(true);
   initMapa('map', 'map-msg', locsMapa(), nome => {
     const com = H.comarcas.find(x => !ehOrgao(x) && norm(x.nome) === norm(nome));
