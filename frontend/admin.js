@@ -426,12 +426,15 @@ function encontrarPai(lista, id, pai) {
 }
 
 /* ---- cobertura por escopo ('all' ou [{nivel, alvo_id}]) ---- */
+// Hierarquia usa U/S antes do id (unidade/setor); o backend fala em inteiros.
+const idNum = v => String(v == null ? '' : v).replace(/^\D+/, '');
 function cobre(nivel, id) {
   if (!logado()) return false;
   if (me.escopo === 'all') return true;
   const g = new Set((me.escopo || []).map(a => a.nivel + ':' + a.alvo_id));
   id = String(id);
-  if (g.has(nivel + ':' + id)) return true;
+  const num = idNum(id);
+  if (g.has(nivel + ':' + num)) return true;
   if (nivel === 'forum') {
     const c = mapForumComarca[id];
     return !!(c && g.has('comarca:' + c));
@@ -444,7 +447,7 @@ function cobre(nivel, id) {
     const u = mapSetorUnidade[id];
     if (!u) return false;
     const f = mapNoForum[u], c = mapNoComarca[u];
-    return g.has('unidade:' + u) || (!!f && g.has('forum:' + f)) || (!!c && g.has('comarca:' + c));
+    return g.has('unidade:' + idNum(u)) || (!!f && g.has('forum:' + f)) || (!!c && g.has('comarca:' + c));
   }
   return false;
 }
@@ -765,7 +768,7 @@ function renderOrgao() {
     '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço do TJES:</strong> ' + linkEndereco(m.endereco) +
     (m.cep ? ' • CEP ' + esc(m.cep) : '') + '</div></div>' +
     cardContatosGerais(m.contatos || [], true, ctxOk) +
-    '<div class="fc-section"><div class="fc-section-title"><h3>Unidades e Setores</h3></div>' +
+    '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
     ((m.nos || []).length ? (m.nos || []).map(cardNo).join('') : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
     '</div>' + barraNavegacaoInferior('Comarcas', true);
   $('fc-back-home').onclick = renderInicio;
@@ -835,7 +838,7 @@ function renderForum() {
     '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço do Fórum:</strong> ' + linkEndereco(f.endereco) +
     (f.cep ? ' • CEP ' + esc(f.cep) : '') + '</div></div>' +
     cardContatosGerais(f.contatos || [], true, ctxOk) +
-    '<div class="fc-section"><div class="fc-section-title"><h3>Unidades e Setores</h3></div>' +
+    '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
     ((f.nos || []).length ? (f.nos || []).map(cardNo).join('') : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
     '</div>' + barraNavegacaoInferior('Fóruns', true);
   $('fc-back-comarca').onclick = renderForuns;
@@ -895,7 +898,7 @@ function renderNo() {
   destacarMapaAdmin(m.nome);
   // create-box: só no setor coberto
   if (logado() && tipoTela === 'Setor' && cobre('setor', no.id)) {
-    setorAlvo = Number(no.id);
+    setorAlvo = Number(idNum(no.id));
     $('create-box').classList.remove('hidden');
     $('save-status').textContent = '';
   } else {
@@ -1184,9 +1187,20 @@ function abrirLinkContato() {
     }
   }
 }
+/* ---- ids únicos na hierarquia (U = unidade, S = setor) ---- */
+function normalizarIdsNos(raiz) {
+  const unis = [];
+  (raiz.foruns || []).forEach(f => { (f.nos || []).forEach(u => unis.push(u)); });
+  (raiz.nos || []).forEach(u => unis.push(u));
+  unis.forEach(u => {
+    u.id = 'U' + u.id;
+    (u.filhos || []).forEach(s => { s.id = 'S' + s.id; });
+  });
+}
 async function recarregarHierarquia(preservar) {
   const dados = await (await fetch('/api/hierarquia')).json();
   H = dados && dados.comarcas ? dados : { comarcas: [], uteis: [] };
+  (H.comarcas || []).forEach(normalizarIdsNos);
   construirMapas();
   indiceBusca = null;
   fullCache = null;
@@ -1477,7 +1491,7 @@ $('ped-voltar').onclick = () => voltarConsulta();
 
 /* ---- confirmação dinâmica de solicitação por nível (via hierarquia) ---- */
 async function abrirConf(nivel, id, nome) {
-  confPed = { nivel, alvo_id: Number(id) };
+  confPed = { nivel, alvo_id: Number(idNum(id)) };
   $('c-status').textContent = '';
   $('c-motivo').value = '';
   let texto = '';
@@ -1521,7 +1535,7 @@ $('p-enviar').onclick = async () => {
                   admin: (!emCadastro && $('p-admin').checked === true),
                   escopos: [...pedSel].map(k => {
                     const i = k.indexOf(':');
-                    return { tipo: k.slice(0, i), id: Number(k.slice(i + 1)) };
+                    return { tipo: k.slice(0, i), id: Number(idNum(k.slice(i + 1))) };
                   }) };
   if (!corpo.nome) { $('p-status').textContent = 'Informe seu nome.'; return; }
   if (!emCadastro && !corpo.escopos.length && !corpo.admin) { $('p-status').textContent = 'Selecione ao menos um local na árvore.'; return; }

@@ -837,7 +837,7 @@
       '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço do TJES:</strong> ' + linkEndereco(m.endereco) +
       (m.cep ? " • CEP " + esc(m.cep) : "") + "</div></div>" +
       cardContatosGerais(m.contatos || [], true) +
-      '<div class="fc-section"><div class="fc-section-title"><h3>Unidades e Setores</h3></div>' +
+      '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
       ((m.nos || []).length ? (m.nos || []).map(cardNo).join("") : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
       "</div>" + barraNavegacaoInferior("Comarcas", true);
     document.getElementById("fc-back-home").onclick = renderInicio;
@@ -928,7 +928,7 @@
       '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço do Fórum:</strong> ' + linkEndereco(f.endereco) +
       (f.cep ? " • CEP " + esc(f.cep) : "") + "</div></div>" +
       cardContatosGerais(f.contatos || [], true) +
-      '<div class="fc-section"><div class="fc-section-title"><h3>Unidades e Setores</h3></div>' +
+      '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
       ((f.nos || []).length ? (f.nos || []).map(cardNo).join("") : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
       "</div>" + barraNavegacaoInferior("Fóruns", true);
     document.getElementById("fc-back-comarca").onclick = renderForuns;
@@ -1243,6 +1243,18 @@
     fetch("/api/hierarquia").then(function (r) { return r.json(); }).then(function (dados) {
       estado.carregando = false;
       estado.dados = dados && dados.comarcas ? dados : { comarcas: [] };
+      (estado.dados.comarcas || []).forEach(function (m) {
+        (m.foruns || []).forEach(function (f) {
+          (f.nos || []).forEach(function (u) {
+            u.id = "U" + u.id;
+            (u.filhos || []).forEach(function (s) { s.id = "S" + s.id; });
+          });
+        });
+        (m.nos || []).forEach(function (u) {
+          u.id = "U" + u.id;
+          (u.filhos || []).forEach(function (s) { s.id = "S" + s.id; });
+        });
+      });
       atualizarMapaDados();
       renderInicio();
       abrirLinkContato();
