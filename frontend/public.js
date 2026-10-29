@@ -220,7 +220,15 @@
     if (!campo || !caixa || campo.getAttribute("data-busca-ok")) return;
     campo.setAttribute("data-busca-ok", "1");
     function fechar() { caixa.setAttribute("hidden", ""); caixa.innerHTML = ""; }
+    var indiceAtivo = -1;
+    function pintarAtivo() {
+      Array.prototype.forEach.call(caixa.querySelectorAll("[data-busca-i]"), function (btn, i) {
+        if (i === indiceAtivo) { btn.classList.add("ativo"); btn.scrollIntoView({ block: "nearest" }); }
+        else btn.classList.remove("ativo");
+      });
+    }
     campo.addEventListener("input", function () {
+      indiceAtivo = -1;
       var resultados = buscarContatos(campo.value);
       if (!resultados.length) { fechar(); return; }
       caixa.innerHTML = resultados.map(function (item, i) {
@@ -233,16 +241,24 @@
       caixa.removeAttribute("hidden");
       var botoes = caixa.querySelectorAll("[data-busca-i]");
       for (var i = 0; i < botoes.length; i++) {
-        (function (btn, item) {
+        (function (btn, item, idx) {
           btn.onclick = function () { fechar(); campo.value = ""; irParaResultado(item); };
-        })(botoes[i], resultados[+botoes[i].getAttribute("data-busca-i")]);
+          btn.onmouseenter = function () { indiceAtivo = idx; pintarAtivo(); };
+        })(botoes[i], resultados[+botoes[i].getAttribute("data-busca-i")], i);
       }
     });
     campo.addEventListener("keydown", function (e) {
       if (e.key === "Escape") { fechar(); campo.blur(); }
+      else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        var r = buscarContatos(campo.value);
+        if (!r.length) return;
+        e.preventDefault();
+        indiceAtivo = e.key === "ArrowDown" ? (indiceAtivo + 1) % r.length : (indiceAtivo - 1 + r.length) % r.length;
+        pintarAtivo();
+      }
       else if (e.key === "Enter") {
         var r = buscarContatos(campo.value);
-        if (r.length) { fechar(); campo.value = ""; irParaResultado(r[0]); }
+        if (r.length) { var alvo = indiceAtivo >= 0 ? r[indiceAtivo] : r[0]; fechar(); campo.value = ""; irParaResultado(alvo); }
       }
     });
     document.addEventListener("click", function (e) {

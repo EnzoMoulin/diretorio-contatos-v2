@@ -787,7 +787,15 @@ function vincularBuscaGlobal() {
   if (!campo || !caixa || campo.getAttribute('data-busca-ok')) return;
   campo.setAttribute('data-busca-ok', '1');
   function fechar() { caixa.setAttribute('hidden', ''); caixa.innerHTML = ''; }
+  let indiceAtivo = -1;
+  function pintarAtivo() {
+    caixa.querySelectorAll('[data-busca-i]').forEach((btn, i) => {
+      if (i === indiceAtivo) { btn.classList.add('ativo'); btn.scrollIntoView({ block: 'nearest' }); }
+      else btn.classList.remove('ativo');
+    });
+  }
   campo.addEventListener('input', () => {
+    indiceAtivo = -1;
     const resultados = buscarContatos(campo.value);
     if (!resultados.length) { fechar(); return; }
     caixa.innerHTML = resultados.map((item, i) => {
@@ -801,13 +809,21 @@ function vincularBuscaGlobal() {
     caixa.querySelectorAll('[data-busca-i]').forEach(btn => {
       const item = resultados[+btn.getAttribute('data-busca-i')];
       btn.onclick = () => { fechar(); campo.value = ''; irParaResultado(item); };
+      btn.onmouseenter = () => { indiceAtivo = resultados.indexOf(item); pintarAtivo(); };
     });
   });
   campo.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { fechar(); campo.blur(); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      const r = buscarContatos(campo.value);
+      if (!r.length) return;
+      e.preventDefault();
+      indiceAtivo = e.key === 'ArrowDown' ? (indiceAtivo + 1) % r.length : (indiceAtivo - 1 + r.length) % r.length;
+      pintarAtivo();
+    }
     else if (e.key === 'Enter') {
       const r = buscarContatos(campo.value);
-      if (r.length) { fechar(); campo.value = ''; irParaResultado(r[0]); }
+      if (r.length) { const alvo = indiceAtivo >= 0 ? r[indiceAtivo] : r[0]; fechar(); campo.value = ''; irParaResultado(alvo); }
     }
   });
   document.addEventListener('click', (e) => {
