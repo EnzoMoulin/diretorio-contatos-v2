@@ -672,6 +672,17 @@ function locsMapa() {
 
 /* ---- telas ---- */
 function host() { return $('lista'); }
+// Toda navegação entre telas recomeça do topo do painel.
+if (!window.__fcRolarNavOk) {
+  window.__fcRolarNavOk = true;
+  document.addEventListener('click', (e) => {
+    const t = e.target && e.target.closest ? e.target.closest('[data-nav],[data-breadcrumb-type],.menu-item,.fc-back') : null;
+    if (!t) return;
+    const h = host();
+    const p = h && h.closest ? h.closest('.fc-panel') : null;
+    if (p) p.scrollTop = 0; else window.scrollTo(0, 0);
+  });
+}
 function renderInicio() {
   const c = host();
   if (!c) return;

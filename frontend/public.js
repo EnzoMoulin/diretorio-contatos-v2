@@ -9,6 +9,17 @@
 
   function $(id) { return document.getElementById(id); }
   function host() { return $("lista"); }
+  // Toda navegação entre telas recomeça do topo do painel.
+  if (!window.__fcRolarNavOk) {
+    window.__fcRolarNavOk = true;
+    document.addEventListener("click", function (e) {
+      var t = e.target && e.target.closest ? e.target.closest("[data-nav],[data-breadcrumb-type],.menu-item,.fc-back") : null;
+      if (!t) return;
+      var h = host();
+      var p = h && h.closest ? h.closest(".fc-panel") : null;
+      if (p) p.scrollTop = 0; else window.scrollTo(0, 0);
+    });
+  }
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (m) {
