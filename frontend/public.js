@@ -280,8 +280,9 @@
     if (lk) {
       var linkId = lk.getAttribute("data-link-id");
       if (linkId) {
-        copiarTexto(String(window.location.href).split("?")[0] + "?contato=" + encodeURIComponent(linkId));
-        piscarBotao(lk);
+        var linkUrl = String(window.location.href).split("?")[0] + "?contato=" + encodeURIComponent(linkId);
+        if (navigator.share) { navigator.share({ title: "Contato — Diretório PJES", url: linkUrl }).catch(function () {}); piscarBotao(lk); }
+        else { copiarTexto(linkUrl); piscarBotao(lk); }
       }
     }
   });
