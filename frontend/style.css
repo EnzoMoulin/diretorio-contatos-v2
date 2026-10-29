@@ -1,4 +1,6 @@
 *{box-sizing:border-box}
+button,input,select,textarea{font:inherit}
+button{touch-action:manipulation}
 html,body{margin:0;padding:0;width:100%;height:100vh;overflow:hidden;
   font-family:Arial,Helvetica,sans-serif;background:#eef1f5;color:#1f2937}
 .hidden{display:none!important}
@@ -167,6 +169,10 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 .fc-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .fc-pill{font-size:11px;background:#f1f5f9;color:#334155;border-radius:999px;padding:4px 8px}
 .fc-back{border:0;background:transparent;color:#1d4ed8;font-weight:700;padding:0;margin:0 0 12px;cursor:pointer}
+.fc-address-inline{display:inline-flex;align-items:center;gap:6px;max-width:100%;vertical-align:middle}
+.fc-endereco{display:inline-block;color:#1d4ed8;font-size:13px;line-height:1.45;text-decoration:none;overflow-wrap:anywhere}
+.fc-endereco:hover{text-decoration:underline}
+.fc-muted{color:#64748b;font-size:13px}
 .fc-breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:0 0 10px;color:#64748b;font-size:13px;line-height:1.5}
 .fc-breadcrumb button{appearance:none;border:0;background:transparent;padding:0;color:#1d4ed8;font:inherit;font-weight:700;cursor:pointer}
 .fc-breadcrumb button:hover{text-decoration:underline}
@@ -192,6 +198,7 @@ body[data-theme="dark"] .fc-contato{background:#0f172a;border-color:#334155}
 body[data-theme="dark"] .fc-contato-tipo{color:#94a3b8}
 body[data-theme="dark"] .fc-icon-btn{background:#1e293b;border-color:#475569;color:#e2e8f0}
 body[data-theme="dark"] .fc-back{color:#93c5fd}
+body[data-theme="dark"] .fc-endereco{color:#93c5fd}
 /* ---- tema escuro ---- */
 body[data-theme="dark"]{background:#0f172a;color:#e2e8f0}
 body[data-theme="dark"] .card{background:#1e293b;color:#e2e8f0}
