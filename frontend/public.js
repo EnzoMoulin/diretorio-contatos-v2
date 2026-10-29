@@ -535,7 +535,7 @@
         itens.push({ tipo: "NO", id: item.id, nome: item.nome });
       });
     }
-    return '<nav class="***" aria-label="Caminho da estrutura">' + itens.map(function (item, indice) {
+    return '<nav class="fc-breadcrumb" aria-label="Caminho da estrutura">' + itens.map(function (item, indice) {
       var ultimo = indice === itens.length - 1;
       var conteudo = ultimo
         ? '<span class="fc-breadcrumb-current" aria-current="page">' + esc(item.nome) + "</span>"

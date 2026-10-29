@@ -173,6 +173,9 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 .fc-endereco{display:inline-block;color:#1d4ed8;font-size:13px;line-height:1.45;text-decoration:none;overflow-wrap:anywhere}
 .fc-endereco:hover{text-decoration:underline}
 .fc-muted{color:#64748b;font-size:13px}
+.fc-address-row{margin-top:10px}
+.fc-inherit{margin-top:10px;padding:10px 12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;color:#475569;font-size:12px}
+.fc-address-row .fc-inherit{margin-top:0}
 .fc-breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:0 0 10px;color:#64748b;font-size:13px;line-height:1.5}
 .fc-breadcrumb button{appearance:none;border:0;background:transparent;padding:0;color:#1d4ed8;font:inherit;font-weight:700;cursor:pointer}
 .fc-breadcrumb button:hover{text-decoration:underline}
@@ -199,6 +202,7 @@ body[data-theme="dark"] .fc-contato-tipo{color:#94a3b8}
 body[data-theme="dark"] .fc-icon-btn{background:#1e293b;border-color:#475569;color:#e2e8f0}
 body[data-theme="dark"] .fc-back{color:#93c5fd}
 body[data-theme="dark"] .fc-endereco{color:#93c5fd}
+body[data-theme="dark"] .fc-inherit{background:#0f172a;border-color:#475569;color:#cbd5e1}
 /* ---- tema escuro ---- */
 body[data-theme="dark"]{background:#0f172a;color:#e2e8f0}
 body[data-theme="dark"] .card{background:#1e293b;color:#e2e8f0}
