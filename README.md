@@ -90,6 +90,13 @@ bash teste_rapido.sh   # verifica o fluxo completo, incl. escopo por local
 python3 -m unittest tests.test_regras -v   # regras de negócio (IDs, pedido, herança)
 ```
 
+## Backup
+Toda segunda às 3h (`~/.hermes/scripts/backup_planilhas.sh`, agendado):
+planilhas pública e privada (`.xlsx`) + banco local (`contatos.db`, cópia íntegra
+via API do sqlite) em `~/Emprego/Backups/planilhas/`, mantendo 4 semanas.
+Sucesso é silencioso; falha chega como alerta. Restaurar o banco é trocar o
+arquivo `contatos.db` pelo da data desejada com o servidor parado.
+
 ## Como avaliar este demo (2 minutos)
 1. Abra `/admin` e entre com qualquer conta Google → você entra como visitante.
 2. Peça acesso em **Solicitar acesso** → liberação automática (simulação).
