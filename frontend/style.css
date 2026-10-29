@@ -80,7 +80,7 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 /* ---- impressão ---- */
 .print-head{margin:6px 0}
 @media print{
-  .fc-back,.fc-search,.fc-select,.fc-toolbar,.fc-access,.fc-print-footer,.fc-copy-btn{display:none!important}
+  .fc-back,.fc-search,.fc-select,.fc-toolbar,.fc-access,.fc-print-footer,.fc-copy-btn,.skip-link{display:none!important}
   .fc-panel{height:auto;overflow:visible;border:0;box-shadow:none}
   .fc-contato,.fc-card{break-inside:avoid}
   .print-meta{display:block;font-size:12px;color:#64748b;margin-bottom:12px;border-bottom:1px solid #cbd5e1;padding-bottom:8px}
