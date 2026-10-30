@@ -454,9 +454,16 @@ function covMark(nivel, id) {
   return cobre(nivel, id) ? ' ✓' : '';
 }
 function solBtn(nivel, id) {
-  if (!logado() || cobre(nivel, id)) return '';
+  if (cobre(nivel, id)) return '';
+  if (!logado()) return '<button type="button" class="fc-access" data-solloc="' + esc(nivel) +
+    '" data-id="' + esc(id) + '">Solicitar este local</button>';
   return '<button type="button" class="fc-access" data-sol="' + esc(nivel) +
     '" data-id="' + esc(id) + '">Solicitar acesso</button>';
+}
+function gestBtn(nivel, id) {
+  if (!logado() || !cobre(nivel, id)) return '';
+  return '<button type="button" class="fc-btn" data-goto="' + esc(nivel) +
+    '" data-id="' + esc(id) + '">Ir para gestão</button>';
 }
 
 /* ---- breadcrumb ---- */
@@ -553,7 +560,7 @@ function cardNo(no) {
     '<div class="fc-card-head"><div><h4>' + esc(no.nome) + covMark(nivel, no.id) + '</h4></div></div>' +
     '<div class="fc-meta"><span class="fc-pill fc-pill-type">' + esc(tipo) + '</span>' +
     badgeQuantidade(qtdSetores(no.filhos || []), 'Setor', 'Setores') +
-    badgeQuantidade(no.qtdContatos, 'Contato', 'Contatos') + solBtn(nivel, no.id) + '</div></div>';
+    badgeQuantidade(no.qtdContatos, 'Contato', 'Contatos') + solBtn(nivel, no.id) + gestBtn(nivel, no.id) + '</div></div>';
 }
 function exportarCsvVisivel() {
   const host = document.getElementById("lista") || document;
@@ -580,8 +587,10 @@ function exportarCsvVisivel() {
 }
 function vincularAcoes() {
   vincularCopias();
-  document.querySelectorAll(".fc-print-footer").forEach(ft => {
-    if (ft.querySelector("[data-csv]")) return;
+  document.querySelectorAll('.fc-print-footer').forEach(ft => {
+    if (ft.querySelector('[data-csv]')) return;
+    const painel = ft.closest ? ft.closest('.fc-panel') : null;
+    if (!(painel || document).querySelector('.fc-contato')) return;
     const b = document.createElement("button");
     b.type = "button";
     b.className = "fc-btn";
@@ -635,6 +644,22 @@ function vincularAcoes() {
       e.stopPropagation();
       const h4 = el.closest('.fc-card') ? el.closest('.fc-card').querySelector('h4') : null;
       abrirConf(el.dataset.sol, el.dataset.id, h4 ? h4.textContent.replace(/ ✓$/, '') : el.dataset.id);
+    };
+  });
+  document.querySelectorAll('#lista [data-solloc]').forEach(el => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      try { sessionStorage.setItem('pedirLocal', el.dataset.solloc + ':' + el.dataset.id); } catch (err) {}
+      location.href = '/oauth/login';
+    };
+  });
+  document.querySelectorAll('#lista [data-goto]').forEach(el => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      const n = el.dataset.goto, id = el.dataset.id;
+      if (n === 'comarca') abrirComarca(id);
+      else if (n === 'forum') abrirForum(id);
+      else abrirNo(id);
     };
   });
   document.querySelectorAll('#lista [data-edit]').forEach(b => {
@@ -696,7 +721,7 @@ function renderInicio() {
       badgeQuantidade(m.qtdForuns, 'Fórum', 'Fóruns') +
       badgeQuantidade(m.qtdUnidades, 'Unidade', 'Unidades') +
       badgeQuantidade(setores, 'Setor', 'Setores') +
-      badgeQuantidade(m.qtdContatos, 'Contato', 'Contatos') + solBtn('comarca', m.id) + '</div></div>';
+      badgeQuantidade(m.qtdContatos, 'Contato', 'Contatos') + solBtn('comarca', m.id) + gestBtn('comarca', m.id) + '</div></div>';
   }).join('');
   c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Contatos do PJES</h2>' +
     '<p class="fc-subtitle fc-subtitle--intro">Consulte a estrutura completa por Comarca, Fórum, Unidade e Setor. Selecione uma Comarca no mapa, no menu suspenso ou na lista abaixo.</p></div></div>' +
@@ -745,7 +770,7 @@ function renderForuns() {
       '<div class="fc-card-head"><div><h4>' + esc(f.nome) + covMark('forum', f.id) + '</h4>' + linkEndereco(f.endereco) + '</div></div>' +
       '<div class="fc-meta">' + badgeQuantidade(f.qtdUnidades, 'Unidade', 'Unidades') +
       badgeQuantidade(qtdSetores(f.nos || []), 'Setor', 'Setores') +
-      badgeQuantidade(f.qtdContatos, 'Contato', 'Contatos') + solBtn('forum', f.id) + '</div></div>'
+      badgeQuantidade(f.qtdContatos, 'Contato', 'Contatos') + solBtn('forum', f.id) + gestBtn('forum', f.id) + '</div></div>'
     ).join('') + '</div>' + barraNavegacaoInferior('Comarcas');
   $('fc-back-home').onclick = renderInicio;
   $('fc-back-bottom').onclick = renderInicio;
@@ -818,8 +843,8 @@ function renderUteis() {
         '" data-copy-label="' + esc(fmtTipoContato(u.tipo)) + '" title="Copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>' +
         '</div></article>';
     }).join('') + '</div>' : '<div class="fc-empty">Nenhum telefone útil cadastrado.</div>') +
-    '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button>' +
-    '<button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button></div>';
+    '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
+    '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
   $('fc-print-uteis').onclick = () => {
     abrirImpressao('Telefones Úteis — PJES', '<ul>' + uteis.map(u =>
       contatoPrint({ tipo: u.tipo, descricao: u.nome, valor: u.valor })).join('') + '</ul>');
@@ -881,7 +906,7 @@ function renderNo() {
     '<div class="fc-head"><div><h2 class="fc-title">' + esc(no.nome) + covMark(nivelNo, no.id) + '</h2>' +
     breadcrumbHtml(m, f, no) + '</div></div>' +
     '<div class="fc-meta"><span class="fc-pill fc-pill-type">' + esc(tipo) + '</span>' +
-    badgeQuantidade(qtdSetores(no.filhos || []), 'Setor', 'Setores') + solBtn(nivelNo, no.id) + '</div>' +
+    badgeQuantidade(qtdSetores(no.filhos || []), 'Setor', 'Setores') + solBtn(nivelNo, no.id) + gestBtn(nivelNo, no.id) + '</div>' +
     '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço:</strong> ' + linkEndereco(no.enderecoExibicao) +
     (no.cepExibicao ? ' • CEP ' + esc(no.cepExibicao) : '') +
     (no.endereco ? '' : ' <span class="fc-muted">(' + (pai ? 'herdado da Unidade' : (ehOrgao(m) ? 'herdado do TJES' : 'herdado do Fórum')) + ')</span>') + '</div></div>' +
@@ -1282,6 +1307,14 @@ async function refresh() {
     sessionStorage.setItem('pedirAposLogin', 'cadastro');
     location.href = '/oauth/login';
   };
+  const semEscopo = dentro && me && !me.admin && me.escopo !== 'all' &&
+    (!Array.isArray(me.escopo) || !me.escopo.length);
+  const av = $('aviso-sem-escopo');
+  if (av) {
+    av.classList.toggle('hidden', !semEscopo);
+    const b = $('aviso-pedir-locais');
+    if (b && !b.dataset.ligado) { b.dataset.ligado = '1'; b.onclick = () => abrirPedidoNovo('locais'); }
+  }
   $('btn-pedir-locais').onclick = () => abrirPedidoNovo('locais');
   const ehAdmin = dentro && (me.admin === 1 || me.escopo === 'all');
   const ehVisitante = dentro && !ehAdmin && !(me.escopo || []).length;
@@ -1305,6 +1338,8 @@ async function refresh() {
       (me.escopo === 'all' ? ' · admin (todos os locais).' : ` · ${me.escopo.length} acesso(s).`);
   }
   else $('conf-logado').classList.add('hidden');
+  $('conf-email').textContent = !me ? 'Entre para ver o estado'
+    : (me.email_ok ? 'Configurado (envia de verdade)' : 'Só no sistema (sem SMTP)');
   await recarregarHierarquia(true);
   initMapa('map', 'map-msg', locsMapa(), nome => {
     const com = H.comarcas.find(x => !ehOrgao(x) && norm(x.nome) === norm(nome));
@@ -1631,18 +1666,39 @@ $('btn-todas-lidas').onclick = async () => {
 };
 
 /* ---- solicitações / registro ---- */
+let pedidosCache = [];
+function pedNormalizar(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");}
+function pedSelecionados(){
+  return [...document.querySelectorAll('#pedidos input[type=checkbox]:checked')].map(c=>c.dataset.id);
+}
+function pedAtualizarLote(){
+  const btn = $('ped-aprovar-lote'); if(!btn) return;
+  const n = pedSelecionados().length;
+  btn.disabled = !n; btn.textContent = n ? `Aprovar selecionados (${n})` : 'Aprovar selecionados';
+}
 async function carregarPedidos() {
   if (!logado()) return;
+  pedLigarBarra();
   const lista = await (await fetch('/api/pedidos', { headers: auth() })).json();
-  const n = Array.isArray(lista) ? lista.length : 0;
+  pedidosCache = Array.isArray(lista) ? lista : [];
+  const n = pedidosCache.length;
   $('ped-count').textContent = n || '';
-  $('pedidos').innerHTML = (Array.isArray(lista) ? lista : []).map(p =>
-    `<li><b>${esc(p.nome)}</b> (${esc(p.email)}) — usuário: <code>${esc(p.usuario_desejado)}</code>` +
+  renderPedidos();
+}
+function renderPedidos(){
+  const termo = pedNormalizar($('ped-filtro') && $('ped-filtro').value);
+  const lista = pedidosCache.filter(p => !termo ||
+    pedNormalizar(p.nome).includes(termo) || pedNormalizar(p.email).includes(termo));
+  $('pedidos').innerHTML = lista.map(p =>
+    `<li><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" data-id="${p.id}" style="width:auto;margin-top:4px">` +
+    `<span><b>${esc(p.nome)}</b> (${esc(p.email)}) — usuário: <code>${esc(p.usuario_desejado)}</code>` +
     (p.nivel === 'admin' && !p.alvo_id ? ` — <b>administrador</b>` :
     (p.alvo_nome ? ` — ${esc({comarca:'comarca',forum:'fórum',unidade:'unidade',setor:'setor'}[p.nivel]||p.nivel)}: <b>${esc(p.alvo_nome)}</b>` : (p.localidade ? ` — local: <b>${esc(p.localidade)}</b>` : ''))) +
     (p.motivo ? ` — ${esc(p.motivo)}` : '') +
-    ` <button class="btn-primary" data-id="${p.id}">aprovar</button></li>`
-  ).join('') || '<li>Nenhuma solicitação pendente.</li>';
+    ` <button class="btn-primary" data-id="${p.id}">aprovar</button></span></label></li>`
+  ).join('') || `<li>${termo ? 'Nenhuma solicitação para este filtro.' : 'Nenhuma solicitação pendente.'}</li>`;
+  if ($('ped-todas')) $('ped-todas').checked = false;
+  pedAtualizarLote();
   document.querySelectorAll('#pedidos button').forEach(b => {
     b.onclick = async () => {
       const r = await fetch('/api/pedidos/' + b.dataset.id + '/aprovar',
@@ -1652,6 +1708,58 @@ async function carregarPedidos() {
       carregarPedidos();
     };
   });
+  document.querySelectorAll('#pedidos input[type=checkbox]').forEach(c => {
+    c.onchange = pedAtualizarLote;
+  });
+}
+function pedPreselecionar(nivel, id) {
+  id = String(id);
+  let alvo = null, comId = null, forumId = null, unidId = null;
+  (H.comarcas || []).forEach(m => {
+    if (nivel === 'comarca' && String(m.id) === id) { alvo = m; comId = m.id; }
+    (m.foruns || []).forEach(f => {
+      if (nivel === 'forum' && String(f.id) === id) { alvo = f; comId = m.id; forumId = f.id; }
+      (f.nos || []).forEach(u => {
+        if (nivel === 'unidade' && String(u.id) === id) { alvo = u; comId = m.id; forumId = f.id; }
+        (u.filhos || []).forEach(s => {
+          if (nivel === 'setor' && String(s.id) === id) { alvo = s; comId = m.id; forumId = f.id; unidId = u.id; }
+        });
+      });
+    });
+  });
+  if (!alvo || !comId) return false;
+  if ($('p-comarca')) $('p-comarca').value = comId;
+  pedSel = new Set([chavePed(nivel, id)]);
+  pedForumAberto = forumId || ''; pedUnidAberta = unidId || '';
+  renderArvore();
+  return true;
+}
+function pedLigarBarra(){
+  const f = $('ped-filtro');
+  if (f && !f.dataset.ligado) { f.dataset.ligado = '1'; f.oninput = renderPedidos; }
+  const t = $('ped-todas');
+  if (t && !t.dataset.ligada) {
+    t.dataset.ligada = '1';
+    t.onchange = () => {
+      document.querySelectorAll('#pedidos input[type=checkbox]').forEach(c => { c.checked = t.checked; });
+      pedAtualizarLote();
+    };
+  }
+  const b = $('ped-aprovar-lote');
+  if (b && !b.dataset.ligado) {
+    b.dataset.ligado = '1';
+    b.onclick = async () => {
+      const ids = pedSelecionados();
+      if (!ids.length || !confirm(`Aprovar ${ids.length} solicitação(ões)?`)) return;
+      let ok = 0, falhas = 0;
+      for (const id of ids) {
+        const r = await fetch('/api/pedidos/' + id + '/aprovar', { method: 'POST', headers: auth() });
+        r.ok ? ok++ : falhas++;
+      }
+      alert(`Lote concluído: ${ok} aprovada(s)` + (falhas ? `, ${falhas} falha(s)` : '') + '.');
+      carregarPedidos();
+    };
+  }
 }
 async function carregarHistorico() {
   if (!logado()) return;
@@ -1668,6 +1776,18 @@ async function carregarHistorico() {
     if (sessionStorage.getItem('pedirAposLogin') && logado()) {
       sessionStorage.removeItem('pedirAposLogin');
       abrirPedidoNovo('cadastro');
+    }
+    const pend = sessionStorage.getItem('pedirLocal');
+    if (pend && logado()) {
+      sessionStorage.removeItem('pedirLocal');
+      const i = pend.indexOf(':');
+      if (i > 0 && me && me.usuario) {
+        const nv = pend.slice(0, i), aid = pend.slice(i + 1);
+        abrirPedidoNovo('locais').then(() => { pedPreselecionar(nv, aid); }).catch(() => {});
+      } else {
+        sessionStorage.setItem('pedirAposLogin', 'cadastro');
+        abrirPedidoNovo('cadastro');
+      }
     }
   } catch (e) {}
 })();

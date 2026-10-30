@@ -46,10 +46,11 @@ import json
 import os
 import secrets
 import sqlite3
+import threading
 import time
 import urllib.parse
 import urllib.request
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 BASE = Path(__file__).parent
@@ -294,24 +295,26 @@ def get_db():
 
 
 _CONT = {}
+_CONT_LOCK = threading.Lock()
 
 def novo_id(con, tabela, prefixo):
     """Próximo id global (prefixo + sequência), ex.: U12, S3, C1491."""
-    if (tabela, prefixo) not in _CONT:
-        mx = 0
-        try:
-            linhas = con.execute("SELECT id FROM %s" % tabela).fetchall()
-        except Exception:
-            linhas = []
-        for (v,) in linhas:
-            s = str(v)
-            if s.startswith(prefixo):
-                s = s[len(prefixo):]
-            if s.isdigit():
-                mx = max(mx, int(s))
-        _CONT[(tabela, prefixo)] = mx
-    _CONT[(tabela, prefixo)] += 1
-    return "%s%d" % (prefixo, _CONT[(tabela, prefixo)])
+    with _CONT_LOCK:
+        if (tabela, prefixo) not in _CONT:
+            mx = 0
+            try:
+                linhas = con.execute("SELECT id FROM %s" % tabela).fetchall()
+            except Exception:
+                linhas = []
+            for (v,) in linhas:
+                s = str(v)
+                if s.startswith(prefixo):
+                    s = s[len(prefixo):]
+                if s.isdigit():
+                    mx = max(mx, int(s))
+            _CONT[(tabela, prefixo)] = mx
+        _CONT[(tabela, prefixo)] += 1
+        return "%s%d" % (prefixo, _CONT[(tabela, prefixo)])
 
 def _carregar_seed_legado(con, seed):
     """Formato antigo (seed_pjes.json): sem suporte no esquema atual."""
@@ -1147,6 +1150,7 @@ class Handler(BaseHTTPRequestHandler):
                 me = dict(row)
                 esc = self._escopo(con, uid)
                 me["escopo"] = "all" if esc == "all" else (esc or [])
+                me["email_ok"] = bool(os.environ.get("SMTP_HOST", ""))
                 return self._json(me)
             if u.path == "/api/pedidos":
                 if not self._uid():
@@ -1493,7 +1497,9 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     init_db()
-    HTTPServer.allow_reuse_address = True
-    print("Pública: http://localhost:8000  |  Admin: http://localhost:8000/admin"
-          "  (acesso: admin / admin123)")
-    HTTPServer(("127.0.0.1", 8000), Handler).serve_forever()
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", "8000"))
+    ThreadingHTTPServer.allow_reuse_address = True
+    print("Pública: http://%s:%d  |  Admin: http://%s:%d/admin (INTRANET_ONLY=%s)"
+          % (host, port, host, port, "1" if INTRANET_ONLY else "0"))
+    ThreadingHTTPServer((host, port), Handler).serve_forever()

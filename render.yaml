@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: diretorio-contatos-v2
+    runtime: python
+    plan: free
+    buildCommand: "echo ok"
+    startCommand: "INTRANET_ONLY=0 HOST=0.0.0.0 python3 app.py"
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.7
