@@ -26,7 +26,7 @@ function esc(s) {
 const auth = () => ({ 'Content-Type': 'application/json', 'X-Admin-Token': token });
 const logado = () => !!me;
 
-const VIEWS = ['consulta', 'dashboard', 'solicitacoes', 'registro', 'config', 'notificacoes', 'pedido'];
+const VIEWS = ['consulta', 'dashboard', 'solicitacoes', 'meus-pedidos', 'usuarios', 'registro', 'config', 'notificacoes', 'pedido'];
 function mostrarConsulta() {
   VIEWS.forEach(v => { const s = $('view-' + v); if (s) s.classList.add('hidden'); });
   $('view-consulta').classList.remove('hidden');
@@ -47,6 +47,8 @@ document.querySelectorAll('.menu-item[data-view]').forEach(btn => {
       VIEWS.forEach(x => $('view-' + x).classList.add('hidden'));
       $('view-' + v).classList.remove('hidden');
       if (v === 'solicitacoes') carregarPedidos();
+      if (v === 'meus-pedidos') carregarMeusPedidos();
+      if (v === 'usuarios') carregarUsuarios();
       if (v === 'registro') carregarHistorico();
       if (v === 'dashboard') carregarDashboard();
       if (v === 'notificacoes') carregarNotificacoes();
@@ -454,9 +456,16 @@ function covMark(nivel, id) {
   return cobre(nivel, id) ? ' ✓' : '';
 }
 function solBtn(nivel, id) {
-  if (!logado() || cobre(nivel, id)) return '';
+  if (cobre(nivel, id)) return '';
+  if (!logado()) return '<button type="button" class="fc-access" data-solloc="' + esc(nivel) +
+    '" data-id="' + esc(id) + '">Solicitar este local</button>';
   return '<button type="button" class="fc-access" data-sol="' + esc(nivel) +
     '" data-id="' + esc(id) + '">Solicitar acesso</button>';
+}
+function gestBtn(nivel, id) {
+  if (!logado() || !cobre(nivel, id)) return '';
+  return '<button type="button" class="fc-btn" data-goto="' + esc(nivel) +
+    '" data-id="' + esc(id) + '">Ir para gestão</button>';
 }
 
 /* ---- breadcrumb ---- */
@@ -553,7 +562,7 @@ function cardNo(no) {
     '<div class="fc-card-head"><div><h4>' + esc(no.nome) + covMark(nivel, no.id) + '</h4></div></div>' +
     '<div class="fc-meta"><span class="fc-pill fc-pill-type">' + esc(tipo) + '</span>' +
     badgeQuantidade(qtdSetores(no.filhos || []), 'Setor', 'Setores') +
-    badgeQuantidade(no.qtdContatos, 'Contato', 'Contatos') + solBtn(nivel, no.id) + '</div></div>';
+    badgeQuantidade(no.qtdContatos, 'Contato', 'Contatos') + solBtn(nivel, no.id) + gestBtn(nivel, no.id) + '</div></div>';
 }
 function exportarCsvVisivel() {
   const host = document.getElementById("lista") || document;
@@ -580,8 +589,10 @@ function exportarCsvVisivel() {
 }
 function vincularAcoes() {
   vincularCopias();
-  document.querySelectorAll(".fc-print-footer").forEach(ft => {
-    if (ft.querySelector("[data-csv]")) return;
+  document.querySelectorAll('.fc-print-footer').forEach(ft => {
+    if (ft.querySelector('[data-csv]')) return;
+    const painel = ft.closest ? ft.closest('.fc-panel') : null;
+    if (!(painel || document).querySelector('.fc-contato')) return;
     const b = document.createElement("button");
     b.type = "button";
     b.className = "fc-btn";
@@ -635,6 +646,22 @@ function vincularAcoes() {
       e.stopPropagation();
       const h4 = el.closest('.fc-card') ? el.closest('.fc-card').querySelector('h4') : null;
       abrirConf(el.dataset.sol, el.dataset.id, h4 ? h4.textContent.replace(/ ✓$/, '') : el.dataset.id);
+    };
+  });
+  document.querySelectorAll('#lista [data-solloc]').forEach(el => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      try { sessionStorage.setItem('pedirLocal', el.dataset.solloc + ':' + el.dataset.id); } catch (err) {}
+      location.href = '/oauth/login';
+    };
+  });
+  document.querySelectorAll('#lista [data-goto]').forEach(el => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      const n = el.dataset.goto, id = el.dataset.id;
+      if (n === 'comarca') abrirComarca(id);
+      else if (n === 'forum') abrirForum(id);
+      else abrirNo(id);
     };
   });
   document.querySelectorAll('#lista [data-edit]').forEach(b => {
@@ -696,7 +723,7 @@ function renderInicio() {
       badgeQuantidade(m.qtdForuns, 'Fórum', 'Fóruns') +
       badgeQuantidade(m.qtdUnidades, 'Unidade', 'Unidades') +
       badgeQuantidade(setores, 'Setor', 'Setores') +
-      badgeQuantidade(m.qtdContatos, 'Contato', 'Contatos') + solBtn('comarca', m.id) + '</div></div>';
+      badgeQuantidade(m.qtdContatos, 'Contato', 'Contatos') + solBtn('comarca', m.id) + gestBtn('comarca', m.id) + '</div></div>';
   }).join('');
   c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Contatos Gerais</h2>' +
     '<p class="fc-subtitle fc-subtitle--intro">Consulte a estrutura completa por Comarca, Fórum, Unidade e Setor. Selecione uma Comarca no mapa, no menu suspenso ou na lista abaixo.</p></div></div>' +
@@ -745,7 +772,7 @@ function renderForuns() {
       '<div class="fc-card-head"><div><h4>' + esc(f.nome) + covMark('forum', f.id) + '</h4>' + linkEndereco(f.endereco) + '</div></div>' +
       '<div class="fc-meta">' + badgeQuantidade(f.qtdUnidades, 'Unidade', 'Unidades') +
       badgeQuantidade(qtdSetores(f.nos || []), 'Setor', 'Setores') +
-      badgeQuantidade(f.qtdContatos, 'Contato', 'Contatos') + solBtn('forum', f.id) + '</div></div>'
+      badgeQuantidade(f.qtdContatos, 'Contato', 'Contatos') + solBtn('forum', f.id) + gestBtn('forum', f.id) + '</div></div>'
     ).join('') + '</div>' + barraNavegacaoInferior('Comarcas');
   $('fc-back-home').onclick = renderInicio;
   $('fc-back-bottom').onclick = renderInicio;
@@ -818,8 +845,8 @@ function renderUteis() {
         '" data-copy-label="' + esc(fmtTipoContato(u.tipo)) + '" title="Copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>' +
         '</div></article>';
     }).join('') + '</div>' : '<div class="fc-empty">Nenhum telefone útil cadastrado.</div>') +
-    '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button>' +
-    '<button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button></div>';
+    '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
+    '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
   $('fc-print-uteis').onclick = () => {
     abrirImpressao('Telefones Úteis — Diretório', '<ul>' + uteis.map(u =>
       contatoPrint({ tipo: u.tipo, descricao: u.nome, valor: u.valor })).join('') + '</ul>');
@@ -881,7 +908,7 @@ function renderNo() {
     '<div class="fc-head"><div><h2 class="fc-title">' + esc(no.nome) + covMark(nivelNo, no.id) + '</h2>' +
     breadcrumbHtml(m, f, no) + '</div></div>' +
     '<div class="fc-meta"><span class="fc-pill fc-pill-type">' + esc(tipo) + '</span>' +
-    badgeQuantidade(qtdSetores(no.filhos || []), 'Setor', 'Setores') + solBtn(nivelNo, no.id) + '</div>' +
+    badgeQuantidade(qtdSetores(no.filhos || []), 'Setor', 'Setores') + solBtn(nivelNo, no.id) + gestBtn(nivelNo, no.id) + '</div>' +
     '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço:</strong> ' + linkEndereco(no.enderecoExibicao) +
     (no.cepExibicao ? ' • CEP ' + esc(no.cepExibicao) : '') +
     (no.endereco ? '' : ' <span class="fc-muted">(' + (pai ? 'herdado da Unidade' : (ehOrgao(m) ? 'herdado do Sede' : 'herdado do Fórum')) + ')</span>') + '</div></div>' +
@@ -1267,6 +1294,9 @@ async function refresh() {
   $('menu-dash').classList.toggle('hidden', !dentro);
   $('menu-notif').classList.toggle('hidden', !dentro);
   $('menu-sol').classList.toggle('hidden', !dentro);
+  $('menu-meus').classList.toggle('hidden', !dentro);
+  $('menu-usu').classList.toggle('hidden', !(dentro && me && me.admin));
+  ligarBackup();
   $('menu-reg').classList.toggle('hidden', !dentro);
   $('who-mail').classList.toggle('hidden', !dentro);
   if (dentro) $('who-mail').innerHTML = ICON_PESSOA + ' ' + esc(me.email || me.usuario);
@@ -1282,6 +1312,14 @@ async function refresh() {
     sessionStorage.setItem('pedirAposLogin', 'cadastro');
     location.href = '/oauth/login';
   };
+  const semEscopo = dentro && me && !me.admin && me.escopo !== 'all' &&
+    (!Array.isArray(me.escopo) || !me.escopo.length);
+  const av = $('aviso-sem-escopo');
+  if (av) {
+    av.classList.toggle('hidden', !semEscopo);
+    const b = $('aviso-pedir-locais');
+    if (b && !b.dataset.ligado) { b.dataset.ligado = '1'; b.onclick = () => abrirPedidoNovo('locais'); }
+  }
   $('btn-pedir-locais').onclick = () => abrirPedidoNovo('locais');
   const ehAdmin = dentro && (me.admin === 1 || me.escopo === 'all');
   const ehVisitante = dentro && !ehAdmin && !(me.escopo || []).length;
@@ -1305,6 +1343,8 @@ async function refresh() {
       (me.escopo === 'all' ? ' · admin (todos os locais).' : ` · ${me.escopo.length} acesso(s).`);
   }
   else $('conf-logado').classList.add('hidden');
+  $('conf-email').textContent = !me ? 'Entre para ver o estado'
+    : (me.email_ok ? 'Configurado (envia de verdade)' : 'Só no sistema (sem SMTP)');
   await recarregarHierarquia(true);
   initMapa('map', 'map-msg', locsMapa(), nome => {
     const com = H.comarcas.find(x => !ehOrgao(x) && norm(x.nome) === norm(nome));
@@ -1444,17 +1484,15 @@ function renderArvore() {
 }
 async function abrirPedidoNovo(modo) {
   if (!logado()) {
-    sessionStorage.setItem('pedirAposLogin', modo === 'locais' ? 'locais' : 'cadastro');
+    sessionStorage.setItem('pedirAposLogin', 'pedido');
     $('modal-login').classList.remove('hidden');
     $('l-status').textContent = 'Entre com sua conta Google para solicitar acesso.';
     return;
   }
-  window._pedModo = (modo === 'locais') ? 'locais' : 'cadastro';
+  window._pedModo = 'pedido';
   mostrarPedido();
   $('p-status').textContent = '';
-  $('ped-hint').textContent = window._pedModo === 'locais'
-    ? 'Escolha mais locais para o seu acesso.'
-    : 'Primeiro acesso: só a identidade. Os locais vêm depois, em Solicitar locais.';
+  $('ped-hint').textContent = 'Identidade + locais num só pedido. Sem marcar nada, vale só o cadastro.';
   if (logado()) {
     $('p-nome').value = '';
     $('p-email').value = me.email || '';
@@ -1467,9 +1505,8 @@ async function abrirPedidoNovo(modo) {
   }
   if (!(H.comarcas || []).length) { try { await recarregarHierarquia(true); } catch (e) {} }
   preencherLocais();
-  $('bloco-locais').classList.toggle('hidden', window._pedModo !== 'locais');
-  $('bloco-admin').classList.toggle('hidden', window._pedModo !== 'locais');
-  if (window._pedModo !== 'locais') { try { $('p-admin').checked = false; } catch (e) {} }
+  $('bloco-locais').classList.remove('hidden');
+  $('bloco-admin').classList.remove('hidden');
 }
 function mostrarPedido() {
   VIEWS.forEach(v => { const s = $('view-' + v); if (s) s.classList.add('hidden'); });
@@ -1526,18 +1563,16 @@ $('c-enviar').onclick = async () => {
     : 'Erro: ' + await r.text();
 };
 $('p-enviar').onclick = async () => {
-  const emCadastro = window._pedModo !== 'locais';
   const corpo = { nome: $('p-nome').value.trim(),
                   email: (logado() ? me.email : $('p-email').value.trim()),
                   usuario: (($('p-user').disabled && logado()) ? me.usuario : $('p-user').value.trim()),
                   motivo: $('p-motivo').value.trim(),
-                  admin: (!emCadastro && $('p-admin').checked === true),
+                  admin: ($('p-admin').checked === true),
                   escopos: [...pedSel].map(k => {
                     const i = k.indexOf(':');
                     return { tipo: k.slice(0, i), id: k.slice(i + 1) };
                   }) };
   if (!corpo.nome) { $('p-status').textContent = 'Informe seu nome.'; return; }
-  if (!emCadastro && !corpo.escopos.length && !corpo.admin) { $('p-status').textContent = 'Selecione ao menos um local na árvore.'; return; }
   const r = await fetch('/api/pedidos', { method: 'POST',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
   const txt = await r.text();
@@ -1573,6 +1608,8 @@ async function carregarDashboard() {
     ['👥 Contatos (total)', totalGeral],
     ['✏️ Contatos editáveis', me.escopo === 'all' ? totalGeral : totalEdit],
     ['⏳ Solicitações pendentes', r.pendentes],
+    ['🔄 Alterações (30d)', (r.saude || {}).alteracoes_30d || 0],
+    ['⚠️ Sem alteração há 6m+', (r.saude || {}).obsoletos_180d || 0],
   ].map(([t, v]) => `<div class="dash-card"><span>${v}</span>${t}</div>`).join('');
   const max = Math.max(1, ...coms.map(c => c.qtdContatos || 0));
   $('dash-mun').innerHTML = coms.map(c => {
@@ -1630,19 +1667,117 @@ $('btn-todas-lidas').onclick = async () => {
   carregarNotificacoes();
 };
 
+/* ---- meus pedidos ---- */
+async function carregarMeusPedidos() {
+  if (!logado()) return;
+  const r = await fetch('/api/meus-pedidos', { headers: auth() });
+  const lista = r.ok ? await r.json() : [];
+  const nomes = { comarca: 'comarca', forum: 'fórum', unidade: 'unidade', setor: 'setor', admin: 'administrador' };
+  $('meus-pedidos').innerHTML = (Array.isArray(lista) ? lista : []).map(p =>
+    `<li><b>${esc(p.status || '')}</b> — ${esc(nomes[p.nivel] || p.nivel || 'cadastro')}` +
+    (p.alvo_nome ? ` <b>${esc(p.alvo_nome)}</b>` : '') +
+    (p.criado_em ? ` <i>${esc(String(p.criado_em).slice(0, 10))}</i>` : '') +
+    (p.status === 'recusado' && p.motivo_recusa ? `<br>Motivo: ${esc(p.motivo_recusa)}` : '') +
+    `</li>`
+  ).join('') || '<li>Você ainda não fez pedidos.</li>';
+}
+/* ---- backup ---- */
+function ligarBackup(){
+  const b = $('btn-backup');
+  if (!b || b.dataset.ligado) return;
+  b.dataset.ligado = '1';
+  b.onclick = async () => {
+    const st = $('backup-status');
+    st.textContent = 'Gerando…';
+    const r = await fetch('/api/backup', { method: 'POST', headers: auth() });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { st.textContent = 'Erro: ' + (j.erro || ''); return; }
+    st.textContent = `Pronto (${j.kb} KB).`;
+    location.href = '/api/backup/' + encodeURIComponent(j.arquivo);
+  };
+}
+/* ---- usuários (revisão de acessos) ---- */
+let usuCache = [];
+function usuNorm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");}
+function fmtUltimoLogin(v){
+  if (!v) return 'nunca';
+  try {
+    const d = new Date(String(v).replace(' ', 'T'));
+    return isNaN(d) ? String(v) : d.toLocaleDateString('pt-BR');
+  } catch (e) { return String(v); }
+}
+async function carregarUsuarios() {
+  if (!logado()) return;
+  usuLigar();
+  const r = await fetch('/api/usuarios', { headers: auth() });
+  if (!r.ok) { $('usuarios').innerHTML = '<li>Sem permissão (só administrador).</li>'; return; }
+  usuCache = await r.json();
+  renderUsuarios();
+}
+function usuLigar(){
+  const f = $('usu-filtro');
+  if (f && !f.dataset.ligado) { f.dataset.ligado = '1'; f.oninput = renderUsuarios; }
+}
+function renderUsuarios(){
+  const termo = usuNorm($('usu-filtro') && $('usu-filtro').value);
+  const lista = usuCache
+    .filter(u => !termo || usuNorm(u.usuario).includes(termo) || usuNorm(u.email).includes(termo) || usuNorm(u.nome).includes(termo))
+    .sort((a, b) => String(a.ultimo_login || '').localeCompare(String(b.ultimo_login || '')));
+  $('usuarios').innerHTML = lista.map(u =>
+    `<li><b>${esc(u.usuario)}</b> (${esc(u.email || '-')})` +
+    (u.admin ? ' — <b>administrador</b>' : ` — ${u.n_acessos || 0} local(is)`) +
+    ` — último acesso: <b>${esc(fmtUltimoLogin(u.ultimo_login))}</b>` +
+    (u.ativo ? '' : ' — <b>DESATIVADO</b>') +
+    (u.admin ? '' : ` <button class="btn-ghost dark" data-usu="${u.id}" data-at="${u.ativo ? 0 : 1}">${u.ativo ? 'desativar' : 'reativar'}</button>`) +
+    `</li>`
+  ).join('') || `<li>${termo ? 'Nenhum usuário para este filtro.' : 'Nenhum usuário.'}</li>`;
+  document.querySelectorAll('#usuarios button[data-usu]').forEach(b => {
+    b.onclick = async () => {
+      const acao = b.dataset.at === '0' ? 'desativar' : 'reativar';
+      if (!confirm(`${acao} ${b.closest('li').querySelector('b').textContent}?`)) return;
+      await fetch('/api/usuarios/' + b.dataset.usu + '/ativo', {
+        method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, auth()),
+        body: JSON.stringify({ ativo: Number(b.dataset.at) })
+      });
+      carregarUsuarios();
+    };
+  });
+}
 /* ---- solicitações / registro ---- */
+let pedidosCache = [];
+function pedNormalizar(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");}
+function pedSelecionados(){
+  return [...document.querySelectorAll('#pedidos input[type=checkbox]:checked')].map(c=>c.dataset.id);
+}
+function pedAtualizarLote(){
+  const btn = $('ped-aprovar-lote'); if(!btn) return;
+  const n = pedSelecionados().length;
+  btn.disabled = !n; btn.textContent = n ? `Aprovar selecionados (${n})` : 'Aprovar selecionados';
+}
 async function carregarPedidos() {
   if (!logado()) return;
+  pedLigarBarra();
   const lista = await (await fetch('/api/pedidos', { headers: auth() })).json();
-  const n = Array.isArray(lista) ? lista.length : 0;
+  pedidosCache = Array.isArray(lista) ? lista : [];
+  const n = pedidosCache.length;
   $('ped-count').textContent = n || '';
-  $('pedidos').innerHTML = (Array.isArray(lista) ? lista : []).map(p =>
-    `<li><b>${esc(p.nome)}</b> (${esc(p.email)}) — usuário: <code>${esc(p.usuario_desejado)}</code>` +
+  renderPedidos();
+}
+function renderPedidos(){
+  const termo = pedNormalizar($('ped-filtro') && $('ped-filtro').value);
+  const lista = pedidosCache.filter(p => !termo ||
+    pedNormalizar(p.nome).includes(termo) || pedNormalizar(p.email).includes(termo));
+  $('pedidos').innerHTML = lista.map(p =>
+    `<li><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" data-id="${p.id}" style="width:auto;margin-top:4px">` +
+    `<span><b>${esc(p.nome)}</b> (${esc(p.email)}) — usuário: <code>${esc(p.usuario_desejado)}</code>` +
     (p.nivel === 'admin' && !p.alvo_id ? ` — <b>administrador</b>` :
     (p.alvo_nome ? ` — ${esc({comarca:'comarca',forum:'fórum',unidade:'unidade',setor:'setor'}[p.nivel]||p.nivel)}: <b>${esc(p.alvo_nome)}</b>` : (p.localidade ? ` — local: <b>${esc(p.localidade)}</b>` : ''))) +
     (p.motivo ? ` — ${esc(p.motivo)}` : '') +
-    ` <button class="btn-primary" data-id="${p.id}">aprovar</button></li>`
-  ).join('') || '<li>Nenhuma solicitação pendente.</li>';
+    ` <button class="btn-primary" data-id="${p.id}">aprovar</button>` +
+    ` <button class="btn-ghost dark" data-rec="${p.id}">recusar</button></span></label></li>`
+  ).join('') || `<li>${termo ? 'Nenhuma solicitação para este filtro.' : 'Nenhuma solicitação pendente.'}</li>`;
+  if ($('ped-todas')) $('ped-todas').checked = false;
+  pedAtualizarLote();
   document.querySelectorAll('#pedidos button').forEach(b => {
     b.onclick = async () => {
       const r = await fetch('/api/pedidos/' + b.dataset.id + '/aprovar',
@@ -1652,6 +1787,90 @@ async function carregarPedidos() {
       carregarPedidos();
     };
   });
+  document.querySelectorAll('#pedidos button[data-rec]').forEach(b => {
+    b.onclick = (e) => {
+      e.stopPropagation();
+      abrirRecusa(b.dataset.rec);
+    };
+  });
+  document.querySelectorAll('#pedidos input[type=checkbox]').forEach(c => {
+    c.onchange = pedAtualizarLote;
+  });
+}
+/* ---- recusa com motivo ---- */
+let recId = null;
+function abrirRecusa(id) {
+  recId = id;
+  $('rec-motivo').value = '';
+  $('rec-status').textContent = '';
+  $('modal-rec').classList.remove('hidden');
+}
+async function enviarRecusa() {
+  const motivo = ($('rec-motivo').value || '').trim();
+  if (!motivo) { $('rec-status').textContent = 'Informe o motivo — ele aparece para o solicitante.'; return; }
+  const r = await fetch('/api/pedidos/' + recId + '/recusar', {
+    method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, auth()),
+    body: JSON.stringify({ motivo })
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { $('rec-status').textContent = 'Erro: ' + (j.erro || ''); return; }
+  $('modal-rec').classList.add('hidden');
+  carregarPedidos();
+}
+function pedPreselecionar(nivel, id) {
+  id = String(id);
+  let alvo = null, comId = null, forumId = null, unidId = null;
+  (H.comarcas || []).forEach(m => {
+    if (nivel === 'comarca' && String(m.id) === id) { alvo = m; comId = m.id; }
+    (m.foruns || []).forEach(f => {
+      if (nivel === 'forum' && String(f.id) === id) { alvo = f; comId = m.id; forumId = f.id; }
+      (f.nos || []).forEach(u => {
+        if (nivel === 'unidade' && String(u.id) === id) { alvo = u; comId = m.id; forumId = f.id; }
+        (u.filhos || []).forEach(s => {
+          if (nivel === 'setor' && String(s.id) === id) { alvo = s; comId = m.id; forumId = f.id; unidId = u.id; }
+        });
+      });
+    });
+  });
+  if (!alvo || !comId) return false;
+  if ($('p-comarca')) $('p-comarca').value = comId;
+  pedSel = new Set([chavePed(nivel, id)]);
+  pedForumAberto = forumId || ''; pedUnidAberta = unidId || '';
+  renderArvore();
+  return true;
+}
+function pedLigarBarra(){
+  const rc = $('rec-cancel');
+  if (rc && !rc.dataset.ligado) {
+    rc.dataset.ligado = '1';
+    rc.onclick = () => $('modal-rec').classList.add('hidden');
+    $('rec-enviar').onclick = enviarRecusa;
+  }
+  const f = $('ped-filtro');
+  if (f && !f.dataset.ligado) { f.dataset.ligado = '1'; f.oninput = renderPedidos; }
+  const t = $('ped-todas');
+  if (t && !t.dataset.ligada) {
+    t.dataset.ligada = '1';
+    t.onchange = () => {
+      document.querySelectorAll('#pedidos input[type=checkbox]').forEach(c => { c.checked = t.checked; });
+      pedAtualizarLote();
+    };
+  }
+  const b = $('ped-aprovar-lote');
+  if (b && !b.dataset.ligado) {
+    b.dataset.ligado = '1';
+    b.onclick = async () => {
+      const ids = pedSelecionados();
+      if (!ids.length || !confirm(`Aprovar ${ids.length} solicitação(ões)?`)) return;
+      let ok = 0, falhas = 0;
+      for (const id of ids) {
+        const r = await fetch('/api/pedidos/' + id + '/aprovar', { method: 'POST', headers: auth() });
+        r.ok ? ok++ : falhas++;
+      }
+      alert(`Lote concluído: ${ok} aprovada(s)` + (falhas ? `, ${falhas} falha(s)` : '') + '.');
+      carregarPedidos();
+    };
+  }
 }
 async function carregarHistorico() {
   if (!logado()) return;
@@ -1668,6 +1887,18 @@ async function carregarHistorico() {
     if (sessionStorage.getItem('pedirAposLogin') && logado()) {
       sessionStorage.removeItem('pedirAposLogin');
       abrirPedidoNovo('cadastro');
+    }
+    const pend = sessionStorage.getItem('pedirLocal');
+    if (pend && logado()) {
+      sessionStorage.removeItem('pedirLocal');
+      const i = pend.indexOf(':');
+      if (i > 0 && me && me.usuario) {
+        const nv = pend.slice(0, i), aid = pend.slice(i + 1);
+        abrirPedidoNovo('locais').then(() => { pedPreselecionar(nv, aid); }).catch(() => {});
+      } else {
+        sessionStorage.setItem('pedirAposLogin', 'cadastro');
+        abrirPedidoNovo('cadastro');
+      }
     }
   } catch (e) {}
 })();

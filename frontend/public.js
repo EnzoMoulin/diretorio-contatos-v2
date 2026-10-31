@@ -450,10 +450,55 @@
         else { btn.classList.remove("ativo"); btn.setAttribute("aria-selected", "false"); }
       });
     }
+    var buscaSrvTimer = null;
+    function buscarServidor(termo, cb) {
+      fetch('/api/busca?q=' + encodeURIComponent(termo) + '&limite=6')
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (lista) { cb(Array.isArray(lista) ? lista : []); })
+        .catch(function () { cb([]); });
+    }
+    function resolverLocal(id, nome) {
+      var todos = [];
+      try { todos = buscarContatos(nome) || []; } catch (e) { todos = []; }
+      for (var i = 0; i < todos.length; i++) {
+        var c = todos[i].contato || {};
+        if (String(c.id) === String(id)) return todos[i];
+      }
+      return todos.length ? todos[0] : null;
+    }
     campo.addEventListener("input", function () {
       indiceAtivo = -1;
+      if (buscaSrvTimer) clearTimeout(buscaSrvTimer);
       var resultados = buscarContatos(campo.value);
-      if (!resultados.length) { fechar(); return; }
+      if (resultados.length) { /* render local abaixo */ }
+      else {
+        var termo = campo.value.trim();
+        if (termo.length >= 2) {
+          buscaSrvTimer = setTimeout(function () {
+            buscarServidor(termo, function (srv) {
+              if (!srv.length || campo.value.trim() !== termo) { fechar(); return; }
+              caixa.innerHTML = srv.map(function (c, i) {
+                var hl = esc(c.nome_hl || c.nome).split("&lt;b&gt;").join("<b>").split("&lt;/b&gt;").join("</b>");
+                return '<button type="button" class="fc-busca-item" data-srv="' + esc(c.id) + '" data-srv-nome="' + esc(c.nome) + '" role="option" id="fc-busca-opcao-' + i + '">' +
+                  '<strong>' + hl + '</strong>' +
+                  '<small>' + esc((c.cargo ? c.cargo + ' · ' : '') + (c.telefone || c.email || '')) + '</small>' +
+                  '<small>Enter para abrir</small></button>';
+              }).join("");
+              caixa.removeAttribute("hidden");
+              campo.setAttribute("aria-expanded", "true");
+              caixa.querySelectorAll("[data-srv]").forEach(function (btn) {
+                btn.onclick = function () {
+                  var alvo = resolverLocal(btn.getAttribute("data-srv"), btn.getAttribute("data-srv-nome"));
+                  fechar(); campo.value = "";
+                  if (alvo) irParaResultado(alvo);
+                };
+              });
+            });
+          }, 220);
+          return;
+        }
+        fechar(); return;
+      }
       caixa.innerHTML = resultados.map(function (item, i) {
         var c = item.contato;
         return '<button type="button" class="fc-busca-item" data-busca-i="' + i + '" role="option" id="fc-busca-opcao-' + i + '" aria-selected="false">' +
@@ -665,6 +710,8 @@
     vincularCopias();
     document.querySelectorAll(".fc-print-footer").forEach(function (ft) {
       if (ft.querySelector("[data-csv]")) return;
+      var painel = ft.closest ? ft.closest(".fc-panel") : null;
+      if (!(painel || document).querySelector(".fc-contato")) return;
       var b = document.createElement("button");
       b.type = "button";
       b.className = "fc-btn";
@@ -904,8 +951,8 @@
           botaoVcf({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) + '</div>' +
           "</div></article>";
       }).join("") + "</div>" : '<div class="fc-empty">Nenhum telefone útil cadastrado.</div>') +
-      '<div class="fc-print-footer"><button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button>' +
-      '<button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button></div>';
+      '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
+      '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
     document.getElementById("fc-print-uteis").onclick = function () {
       abrirImpressao("Telefones Úteis — Diretório", "<ul>" + uteis.map(function (u) { return contatoPrint({ tipo: u.tipo, descricao: u.nome, valor: u.valor }); }).join("") + "</ul>");
     };
