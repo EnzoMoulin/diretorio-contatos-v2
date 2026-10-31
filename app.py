@@ -41,15 +41,17 @@ Endpoints (JSON):
     POST /api/pedidos/<id>/aprovar            cria usuário (token)
 """
 
+import functools
 import hashlib
 import json
 import os
 import secrets
 import sqlite3
+import threading
 import time
 import urllib.parse
 import urllib.request
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 BASE = Path(__file__).parent
@@ -80,6 +82,10 @@ NIVEIS = ("comarca", "forum", "unidade", "setor")
 
 INTRANET_ONLY = os.environ.get("INTRANET_ONLY", "1") == "1"
 
+# Login local (usuário/senha) é porta de desenvolvimento e testes.
+# Produção usa só Google: rode com LOCAL_LOGIN=0.
+LOCAL_LOGIN = os.environ.get("LOCAL_LOGIN", "1") == "1"
+
 GOOGLE_TEST_EMAILS = {
     e.strip().lower()
     for e in os.environ.get("GOOGLE_TEST_EMAILS", "").replace(";", ",").split(",")
@@ -97,7 +103,7 @@ def aprovar_pedido(con, pid, automatico=False):
         "INSERT INTO usuarios (usuario, senha_sha256, aprovado, email)"
         " VALUES (?,?,1,?) ON CONFLICT(usuario) DO UPDATE SET aprovado=1,"
         " email=excluded.email",
-        (ped["usuario_desejado"], "google-oauth:" + secrets.token_hex(16), ped["email"]))
+        (ped["usuario_desejado"], gerar_hash("google-oauth:" + secrets.token_hex(16)), ped["email"]))
     uid_novo = con.execute(
         "SELECT id FROM usuarios WHERE usuario=?",
         (ped["usuario_desejado"],)).fetchone()["id"]
@@ -125,6 +131,26 @@ def aprovar_pedido(con, pid, automatico=False):
                     f"Entre com sua conta Google: http://localhost:8000/admin")
     con.commit()
     return True, {"ok": True, "usuario": ped["usuario_desejado"]}, 200
+
+
+def recusar_pedido(con, pid, motivo):
+    """Recusa um pedido com motivo obrigatório; notifica se o e-mail já é usuário."""
+    motivo = (motivo or "").strip()[:500]
+    if not motivo:
+        return False, {"erro": "informe o motivo da rejeição"}, 400
+    ped = con.execute("SELECT * FROM pedidos WHERE id=?", (pid,)).fetchone()
+    if not ped or ped["status"] != "pendente":
+        return False, {"erro": "pedido não encontrado"}, 404
+    con.execute("UPDATE pedidos SET status='recusado', motivo_recusa=? WHERE id=?", (motivo, pid))
+    log(con, "recusar", None, f"pedido recusado: {ped['usuario_desejado']} — {motivo}")
+    row = con.execute("SELECT id FROM usuarios WHERE lower(email)=?", (str(ped["email"]).lower(),)).fetchone()
+    if row:
+        notify(con, row["id"], "recusada",
+               f"Sua solicitação de acesso não foi aprovada. Motivo: {motivo}")
+    _send_email(ped["email"], "Solicitação de acesso — Diretório de Contatos",
+                f"Olá {ped['nome']},\n\nSua solicitação de acesso não foi aprovada.\nMotivo: {motivo}\n\nSe precisar, fale com o administrador.")
+    con.commit()
+    return True, {"ok": True}, 200
 
 
 def _ip_rede_local(ip):
@@ -260,6 +286,55 @@ def sha(s):
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
 
+def gerar_hash(senha):
+    """PBKDF2-HMAC-SHA256 com salt aleatório. Formato: pbkdf2$iter$salt$hex."""
+    import os as _os
+    salt = _os.urandom(16).hex()
+    dk = hashlib.pbkdf2_hmac("sha256", str(senha or "").encode("utf-8"),
+                             bytes.fromhex(salt), 210_000)
+    return f"pbkdf2$210000${salt}${dk.hex()}"
+
+
+def confere_senha(guardada, senha):
+    """Confere PBKDF2; aceita o legado sha256 puro (para migração)."""
+    g = str(guardada or "")
+    if g.startswith("pbkdf2$"):
+        try:
+            _, it, salt, hexd = g.split("$")
+            dk = hashlib.pbkdf2_hmac("sha256", str(senha or "").encode("utf-8"),
+                                     bytes.fromhex(salt), int(it))
+            return dk.hex() == hexd
+        except Exception:
+            return False
+    return g == sha(senha)
+
+
+def precisa_upgrade_hash(guardada):
+    return not str(guardada or "").startswith("pbkdf2$")
+
+
+@functools.lru_cache(maxsize=1)
+def _hierarquia_montada():
+    con = get_db()
+    try:
+        return json.dumps(build_hierarquia(con), ensure_ascii=False)
+    finally:
+        con.close()
+
+
+def hierarquia_resposta(handler):
+    corpo = _hierarquia_montada().encode("utf-8")
+    handler.send_response(200)
+    handler.send_header("Content-Type", "application/json; charset=utf-8")
+    handler.send_header("Content-Length", str(len(corpo)))
+    handler.end_headers()
+    handler.wfile.write(corpo)
+
+
+def invalidar_hierarquia():
+    _hierarquia_montada.cache_clear()
+
+
 def _send_email(to_addrs, subject, body):
     """E-mail real via SMTP (env SMTP_HOST/PORT/USER/PASS/FROM). Sem SMTP
     configurado, retorna False e o aviso fica só dentro do sistema."""
@@ -294,24 +369,26 @@ def get_db():
 
 
 _CONT = {}
+_CONT_LOCK = threading.Lock()
 
 def novo_id(con, tabela, prefixo):
     """Próximo id global (prefixo + sequência), ex.: U12, S3, C1491."""
-    if (tabela, prefixo) not in _CONT:
-        mx = 0
-        try:
-            linhas = con.execute("SELECT id FROM %s" % tabela).fetchall()
-        except Exception:
-            linhas = []
-        for (v,) in linhas:
-            s = str(v)
-            if s.startswith(prefixo):
-                s = s[len(prefixo):]
-            if s.isdigit():
-                mx = max(mx, int(s))
-        _CONT[(tabela, prefixo)] = mx
-    _CONT[(tabela, prefixo)] += 1
-    return "%s%d" % (prefixo, _CONT[(tabela, prefixo)])
+    with _CONT_LOCK:
+        if (tabela, prefixo) not in _CONT:
+            mx = 0
+            try:
+                linhas = con.execute("SELECT id FROM %s" % tabela).fetchall()
+            except Exception:
+                linhas = []
+            for (v,) in linhas:
+                s = str(v)
+                if s.startswith(prefixo):
+                    s = s[len(prefixo):]
+                if s.isdigit():
+                    mx = max(mx, int(s))
+            _CONT[(tabela, prefixo)] = mx
+        _CONT[(tabela, prefixo)] += 1
+        return "%s%d" % (prefixo, _CONT[(tabela, prefixo)])
 
 def _carregar_seed_legado(con, seed):
     """Formato antigo (seed_legado.json): sem suporte no esquema atual."""
@@ -670,6 +747,32 @@ def build_hierarquia(con):
     return {"comarcas": comarcas, "uteis": uteis}
 
 
+def init_fts(con):
+    """FTS5 sobre contatos (busca + autocomplete). Idempotente."""
+    con.execute("CREATE VIRTUAL TABLE IF NOT EXISTS contatos_fts USING fts5("
+                "nome, cargo, valor, contato_id UNINDEXED, tokenize='unicode61')")
+    con.executescript("""
+        CREATE TRIGGER IF NOT EXISTS trg_ct_fts_ins AFTER INSERT ON contatos BEGIN
+            INSERT INTO contatos_fts (nome, cargo, valor, contato_id)
+            VALUES (NEW.nome, NEW.cargo, NEW.telefone || ' ' || NEW.email, NEW.id);
+        END;
+        CREATE TRIGGER IF NOT EXISTS trg_ct_fts_del AFTER DELETE ON contatos BEGIN
+            DELETE FROM contatos_fts WHERE contato_id=OLD.id;
+        END;
+        CREATE TRIGGER IF NOT EXISTS trg_ct_fts_upd AFTER UPDATE ON contatos BEGIN
+            DELETE FROM contatos_fts WHERE contato_id=OLD.id;
+            INSERT INTO contatos_fts (nome, cargo, valor, contato_id)
+            VALUES (NEW.nome, NEW.cargo, NEW.telefone || ' ' || NEW.email, NEW.id);
+        END;
+    """)
+    n_fts = con.execute("SELECT COUNT(*) FROM contatos_fts").fetchone()[0]
+    n_ct = con.execute("SELECT COUNT(*) FROM contatos").fetchone()[0]
+    if n_ct and not n_fts:
+        con.execute("INSERT INTO contatos_fts (nome, cargo, valor, contato_id)"
+                    " SELECT nome, cargo, telefone || ' ' || email, id FROM contatos")
+        con.commit()
+
+
 def init_db():
     con = get_db()
     tabelas = {r["name"] for r in con.execute(
@@ -691,6 +794,17 @@ def init_db():
             DROP TABLE IF EXISTS acessos; DROP TABLE IF EXISTS notificacoes;
         """)
     con.executescript(SCHEMA)
+    for _tbl, _col, _ddl in [
+        ("pedidos", "motivo_recusa", "ALTER TABLE pedidos ADD COLUMN motivo_recusa TEXT NOT NULL DEFAULT ''"),
+        ("usuarios", "ultimo_login", "ALTER TABLE usuarios ADD COLUMN ultimo_login TEXT NOT NULL DEFAULT ''"),
+        ("usuarios", "ativo", "ALTER TABLE usuarios ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1"),
+    ]:
+        try:
+            nomes = {r[1] for r in con.execute(f"PRAGMA table_info({_tbl})").fetchall()}
+            if _col not in nomes:
+                con.execute(_ddl)
+        except Exception:
+            pass
     n = con.execute("SELECT COUNT(*) AS c FROM contatos").fetchone()["c"]
     if n == 0 and _carregar_seed_json(con):
         pass  # base mascarada completa
@@ -728,10 +842,11 @@ def init_db():
         con.execute(
             "INSERT INTO usuarios (usuario, senha_sha256, aprovado, admin, email)"
             " VALUES (?,?,1,1,?) ON CONFLICT(usuario) DO NOTHING",
-            ("admin", sha("admin123"), "admin@" + DOMINIO_INSTITUCIONAL))
+            ("admin", gerar_hash("admin123"), "admin@" + DOMINIO_INSTITUCIONAL))
         con.execute(
             "INSERT INTO historico (acao, detalhe) VALUES (?,?)",
             ("init", "base inicial criada com dados fictícios"))
+    init_fts(con)
     con.commit()
     con.close()
 
@@ -973,14 +1088,20 @@ class Handler(BaseHTTPRequestHandler):
                     con.execute(
                         "INSERT INTO usuarios (usuario, senha_sha256, aprovado,"
                         " admin, email) VALUES (?,?,?,?)",
-                        (nm, "google-oauth:" + secrets.token_hex(16), 1,
+                        (nm, gerar_hash("google-oauth:" + secrets.token_hex(16)), 1,
                          1 if n_admin == 0 else 0, email))
                     con.commit()
                     row = con.execute(
-                        "SELECT * FROM usuarios WHERE lower(email)=? AND aprovado=1",
+                        "SELECT * FROM usuarios WHERE lower(email)=? AND aprovado=1 AND ativo=1",
                         (email,)).fetchone()
+                if not row:
+                    con.close()
+                    return self._page(403, "Acesso desativado",
+                                      "Sua conta foi desativada pelo administrador.")
                 tok = secrets.token_hex(16)
                 SESSIONS[tok] = row["id"]
+                con.execute("UPDATE usuarios SET ultimo_login=datetime('now') WHERE id=?", (row["id"],))
+                con.commit()
                 con.close()
                 self.send_response(302)
                 self.send_header(
@@ -998,7 +1119,8 @@ class Handler(BaseHTTPRequestHandler):
         con = get_db()
         try:
             if u.path == "/api/hierarquia":
-                return self._json(build_hierarquia(con))
+                hierarquia_resposta(self)
+                return
             if u.path == "/api/comarcas":
                 rows = con.execute(
                     "SELECT c.id, c.nome, COUNT(ct.id) AS total,"
@@ -1112,12 +1234,117 @@ class Handler(BaseHTTPRequestHandler):
                 pend = con.execute(
                     "SELECT COUNT(*) AS c FROM pedidos"
                     " WHERE status='pendente'").fetchone()["c"]
+                alt30 = con.execute(
+                    "SELECT COUNT(*) AS c FROM historico"
+                    " WHERE data >= datetime('now','-30 days')").fetchone()["c"]
+                total_ct = con.execute(
+                    "SELECT COUNT(*) AS c FROM contatos").fetchone()["c"]
+                obsoletos = con.execute(
+                    "SELECT COUNT(*) AS c FROM contatos ct WHERE NOT EXISTS ("
+                    " SELECT 1 FROM historico h WHERE h.contato_id=ct.id"
+                    " AND h.data >= datetime('now','-180 days'))").fetchone()["c"]
                 return self._json({
                     "por_forum": [dict(r) for r in por_for],
                     "por_unidade": [dict(r) for r in por_uni],
                     "por_setor": [dict(r) for r in por_set],
                     "ultimos": [dict(r) for r in ult],
-                    "pendentes": pend})
+                    "pendentes": pend,
+                    "saude": {"alteracoes_30d": alt30, "total_contatos": total_ct,
+                              "obsoletos_180d": obsoletos}})
+            if u.path == "/api/usuarios":
+                uid = self._uid()
+                if not uid:
+                    return self._json({"erro": "não autenticado"}, 403)
+                con = get_db()
+                try:
+                    if not con.execute("SELECT admin FROM usuarios WHERE id=?", (uid,)).fetchone()[0]:
+                        return self._json({"erro": "sem permissão"}, 403)
+                    lista = con.execute(
+                        "SELECT u.id, u.usuario, u.email, u.admin, u.ativo, u.ultimo_login,"
+                        " (SELECT COUNT(*) FROM acessos a WHERE a.usuario_id=u.id) AS n_acessos"
+                        " FROM usuarios u ORDER BY u.usuario").fetchall()
+                    return self._json([dict(r) for r in lista])
+                finally:
+                    con.close()
+            parts = u.path.rstrip("/").split("/")
+            if len(parts) == 4 and parts[1] == "api" and parts[2] == "backup":
+                uid = self._uid()
+                if not uid:
+                    return self._json({"erro": "não autenticado"}, 403)
+                import os as _os2
+                arq = parts[3]
+                if not _os2.path.basename(arq) == arq or ".." in arq or not arq.endswith(".db"):
+                    return self._json({"erro": "arquivo inválido"}, 400)
+                caminho = _os2.path.join("backups", arq)
+                if not _os2.path.isfile(caminho):
+                    return self._json({"erro": "não encontrado"}, 404)
+                con = get_db()
+                try:
+                    if not con.execute("SELECT admin FROM usuarios WHERE id=?", (uid,)).fetchone()[0]:
+                        return self._json({"erro": "sem permissão"}, 403)
+                finally:
+                    con.close()
+                with open(caminho, "rb") as f:
+                    dados = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/x-sqlite3")
+                self.send_header("Content-Disposition", f"attachment; filename={arq}")
+                self.send_header("Content-Length", str(len(dados)))
+                self.end_headers()
+                self.wfile.write(dados)
+                return
+            if u.path == "/api/meus-pedidos":
+                uid = self._uid()
+                if not uid:
+                    return self._json({"erro": "não autenticado"}, 403)
+                con = get_db()
+                try:
+                    row = con.execute("SELECT email FROM usuarios WHERE id=?", (uid,)).fetchone()
+                    if not row:
+                        return self._json({"erro": "não autenticado"}, 403)
+                    lista = con.execute(
+                        "SELECT id, nome, nivel, alvo_id, status, motivo, motivo_recusa,"
+                        " criado_em FROM pedidos WHERE lower(email)=?"
+                        " ORDER BY id DESC",
+                        (str(row["email"]).lower(),)).fetchall()
+                    nomes = {"comarca": "comarcas", "forum": "foruns",
+                             "unidade": "unidades", "setor": "setores"}
+                    saida = []
+                    for r in lista:
+                        d = dict(r)
+                        d["alvo_nome"] = None
+                        if d.get("alvo_id") and d.get("nivel") in nomes:
+                            t = con.execute(
+                                f"SELECT nome FROM {nomes[d['nivel']]} WHERE id=?",
+                                (d["alvo_id"],)).fetchone()
+                            d["alvo_nome"] = t["nome"] if t else None
+                        saida.append(d)
+                    return self._json(saida)
+                finally:
+                    con.close()
+            if u.path == "/api/busca":
+                q = urllib.parse.parse_qs(u.query)
+                termo = (q.get("q") or [""])[0].strip()[:80]
+                try:
+                    lim = max(1, min(20, int((q.get("limite") or ["8"])[0])))
+                except ValueError:
+                    lim = 8
+                if not termo:
+                    return self._json([])
+                toks = [t.replace('"', '""') for t in termo.split() if t]
+                if not toks:
+                    return self._json([])
+                match = " OR ".join(f'"{t}"*' for t in toks)
+                try:
+                    rows = con.execute(
+                        "SELECT c.id, c.nome, c.cargo, c.telefone, c.email,"
+                        " highlight(contatos_fts, 0, '<b>', '</b>') AS nome_hl"
+                        " FROM contatos_fts f JOIN contatos c ON c.id=f.contato_id"
+                        " WHERE contatos_fts MATCH ? ORDER BY rank LIMIT ?",
+                        (match, lim)).fetchall()
+                    return self._json([dict(r) for r in rows])
+                except Exception:
+                    return self._json([])
             if u.path == "/api/notificacoes":
                 uid = self._uid()
                 if not uid:
@@ -1140,13 +1367,14 @@ class Handler(BaseHTTPRequestHandler):
                 if not uid:
                     return self._json({"erro": "não autenticado"}, 403)
                 row = con.execute(
-                    "SELECT id, usuario, email, admin FROM usuarios WHERE id=?",
+                    "SELECT id, usuario, email, admin, ativo FROM usuarios WHERE id=?",
                     (uid,)).fetchone()
-                if not row:
+                if not row or not row["ativo"]:
                     return self._json({"erro": "não autenticado"}, 403)
                 me = dict(row)
                 esc = self._escopo(con, uid)
                 me["escopo"] = "all" if esc == "all" else (esc or [])
+                me["email_ok"] = bool(os.environ.get("SMTP_HOST", ""))
                 return self._json(me)
             if u.path == "/api/pedidos":
                 if not self._uid():
@@ -1185,18 +1413,28 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(b'{"ok": true}')
             return
         if u.path == "/api/login":
+            if not LOCAL_LOGIN:
+                return self._json({"erro": "não encontrado"}, 404)
             data = self._body()
             con = get_db()
             ident = (data.get("usuario") or data.get("email") or "").strip().lower()
             row = con.execute(
-                "SELECT * FROM usuarios WHERE (lower(usuario)=? OR lower(email)=?)"
-                " AND senha_sha256=?",
-                (ident, ident, sha(data.get("senha") or ""))).fetchone()
-            con.close()
-            if row and row["aprovado"]:
+                "SELECT * FROM usuarios WHERE (lower(usuario)=? OR lower(email)=?) AND ativo=1",
+                (ident, ident)).fetchone()
+            if not row or not confere_senha(row["senha_sha256"], data.get("senha") or ""):
+                con.close()
+                return self._json({"erro": "credenciais inválidas ou acesso não aprovado"}, 401)
+            if row["aprovado"] and precisa_upgrade_hash(row["senha_sha256"]):
+                con.execute("UPDATE usuarios SET senha_sha256=? WHERE id=?",
+                            (gerar_hash(data.get("senha")), row["id"]))
+            if row["aprovado"]:
+                con.execute("UPDATE usuarios SET ultimo_login=datetime('now') WHERE id=?", (row["id"],))
+                con.commit()
+                con.close()
                 tok = secrets.token_hex(16)
                 SESSIONS[tok] = row["id"]
                 return self._json({"token": tok})
+            con.close()
             return self._json({"erro": "credenciais inválidas ou acesso não aprovado"}, 401)
         if u.path == "/api/pedidos":
             data = self._body()
@@ -1360,6 +1598,66 @@ class Handler(BaseHTTPRequestHandler):
             finally:
                 con.close()
             return self._json(payload, st)
+        if len(parts) == 5 and parts[1] == "api" and parts[2] == "pedidos" \
+                and parts[4] == "recusar":
+            if not self._uid():
+                return self._json({"erro": "não autenticado"}, 403)
+            try:
+                pid = int(parts[3])
+            except ValueError:
+                return self._json({"erro": "id inválido"}, 400)
+            try:
+                corpo = self._body()
+            except Exception:
+                corpo = {}
+            con = get_db()
+            try:
+                ok, payload, st = recusar_pedido(con, pid, (corpo or {}).get("motivo"))
+            finally:
+                con.close()
+            return self._json(payload, st)
+        if u.path == "/api/backup":
+            uid = self._uid()
+            if not uid:
+                return self._json({"erro": "não autenticado"}, 403)
+            con = get_db()
+            try:
+                if not con.execute("SELECT admin FROM usuarios WHERE id=?", (uid,)).fetchone()[0]:
+                    return self._json({"erro": "sem permissão"}, 403)
+                import datetime as _dt, os as _os
+                _os.makedirs("backups", exist_ok=True)
+                nome = "diretorio-" + _dt.datetime.now().strftime("%Y%m%d-%H%M%S") + ".db"
+                alvo = ("backups/" + nome).replace("'", "''")
+                con.execute(f"VACUUM INTO '{alvo}'")
+                log(con, "backup", None, f"backup gerado: {nome}")
+                con.commit()
+                kb = _os.path.getsize("backups/" + nome) // 1024
+                return self._json({"ok": True, "arquivo": nome, "kb": kb})
+            finally:
+                con.close()
+        if len(parts) == 5 and parts[1] == "api" and parts[2] == "usuarios" \
+                and parts[4] == "ativo":
+            uid = self._uid()
+            if not uid:
+                return self._json({"erro": "não autenticado"}, 403)
+            try:
+                alvo = int(parts[3])
+            except ValueError:
+                return self._json({"erro": "id inválido"}, 400)
+            con = get_db()
+            try:
+                if not con.execute("SELECT admin FROM usuarios WHERE id=?", (uid,)).fetchone()[0]:
+                    return self._json({"erro": "sem permissão"}, 403)
+                if alvo == uid:
+                    return self._json({"erro": "não é possível desativar a própria conta"}, 400)
+                corpo = self._body()
+                ativo = 1 if (corpo or {}).get("ativo") else 0
+                con.execute("UPDATE usuarios SET ativo=? WHERE id=?", (ativo, alvo))
+                log(con, "ativo", None, f"usuário {alvo} -> ativo={ativo}")
+                con.commit()
+                return self._json({"ok": True})
+            finally:
+                con.close()
         if u.path == "/api/notificacoes/lidas":
             uid = self._uid()
             if not uid:
@@ -1385,6 +1683,8 @@ class Handler(BaseHTTPRequestHandler):
             con.close()
             return self._json({"ok": True})
         if u.path == "/api/me/senha":
+            if not LOCAL_LOGIN:
+                return self._json({"erro": "não encontrado"}, 404)
             uid = self._uid()
             if not uid:
                 return self._json({"erro": "não autenticado"}, 403)
@@ -1395,11 +1695,11 @@ class Handler(BaseHTTPRequestHandler):
             con = get_db()
             row = con.execute(
                 "SELECT * FROM usuarios WHERE id=?", (uid,)).fetchone()
-            if not row or row["senha_sha256"] != sha(data.get("atual") or ""):
+            if not row or not confere_senha(row["senha_sha256"], data.get("atual") or ""):
                 con.close()
                 return self._json({"erro": "senha atual incorreta"}, 401)
             con.execute("UPDATE usuarios SET senha_sha256=? WHERE id=?",
-                        (sha(nova), uid))
+                        (gerar_hash(nova), uid))
             con.commit()
             con.close()
             return self._json({"ok": True})
@@ -1429,6 +1729,7 @@ class Handler(BaseHTTPRequestHandler):
                 notify(con, aid, "contato",
                        f"Contato criado: {data.get('nome')}")
             con.commit()
+            invalidar_hierarquia()
             row = con.execute(
                 "SELECT * FROM contatos WHERE id=?", (nid,)).fetchone()
             con.close()
@@ -1471,6 +1772,7 @@ class Handler(BaseHTTPRequestHandler):
                     notify(con, aid, "contato",
                            f"Contato editado: {data.get('nome')}")
                 con.commit()
+                invalidar_hierarquia()
                 row = con.execute(
                     "SELECT * FROM contatos WHERE id=?", (cid,)).fetchone()
                 con.close()
@@ -1481,6 +1783,7 @@ class Handler(BaseHTTPRequestHandler):
                 notify(con, aid, "contato",
                        f"Contato removido: {row['nome']}")
             con.commit()
+            invalidar_hierarquia()
             con.close()
             return self._json({"ok": True})
         return self.send_error(404)
@@ -1493,7 +1796,11 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     init_db()
-    HTTPServer.allow_reuse_address = True
-    print("Pública: http://localhost:8000  |  Admin: http://localhost:8000/admin"
-          "  (acesso: admin / admin123)")
-    HTTPServer(("127.0.0.1", 8000), Handler).serve_forever()
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", "8000"))
+    ThreadingHTTPServer.allow_reuse_address = True
+    print("Pública: http://%s:%d  |  Admin: http://%s:%d/admin (INTRANET_ONLY=%s)"
+          % (host, port, host, port, "1" if INTRANET_ONLY else "0"))
+    if LOCAL_LOGIN:
+        print("AVISO: login local ativo (dev/testes). Produção: LOCAL_LOGIN=0.")
+    ThreadingHTTPServer((host, port), Handler).serve_forever()

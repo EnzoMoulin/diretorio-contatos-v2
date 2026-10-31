@@ -87,7 +87,22 @@ python3 app.py
 # pública: http://localhost:8000
 # admin:   http://localhost:8000/admin   (login com Google; primeiro vira admin)
 bash teste_rapido.sh   # verifica o fluxo completo, incl. escopo por local
+python3 -m unittest tests.test_regras -v   # regras de negócio (IDs, pedido, herança)
 ```
+
+## Backup
+Toda segunda às 3h (`~/.hermes/scripts/backup_planilhas.sh`, agendado):
+planilhas pública e privada (`.xlsx`) + banco local (`contatos.db`, cópia íntegra
+via API do sqlite) em `~/Emprego/Backups/planilhas/`, mantendo 4 semanas.
+Sucesso é silencioso; falha chega como alerta. Restaurar o banco é trocar o
+arquivo `contatos.db` pelo da data desejada com o servidor parado.
+
+## Hospedagem (pôr no ar)
+Só stdlib: sem `pip install`. No Render (gratuito): novo Web Service a partir
+do repo, Start Command `INTRANET_ONLY=0 HOST=0.0.0.0 python3 app.py`
+(`render.yaml` já traz isso). `PORT` vem do ambiente. O banco é recriado do
+seed a cada boot limpo (disco efêmero) — dados de demonstração voltam sozinhos;
+o que for criado em produção se perde no restart (ok para demo).
 
 ## Como avaliar este demo (2 minutos)
 1. Abra `/admin` e entre com qualquer conta Google → você entra como visitante.
@@ -108,6 +123,12 @@ python3 app.py
 O que é enviado: pedido novo → admins (`NOTIFY_EMAILS` + contas admin);
 aprovação → solicitante. Falha de envio nunca quebra o fluxo.
 
+## Login local (só dev/testes)
+O login por usuário/senha (`/api/login`, admin/admin123) existe para testes
+automatizados e demo sem Google. Em produção use só o Google: rode com
+`LOCAL_LOGIN=0` (as rotas somem com 404). As senhas usam PBKDF2-HMAC-SHA256
+com salt; hashes sha256 legados são convertidos no primeiro login.
+
 ## Endpoints
 | Método | Rota | Auth | Descrição |
 |---|---|---|---|
@@ -121,14 +142,21 @@ aprovação → solicitante. Falha de envio nunca quebra o fluxo.
 | GET | `/oauth/login` | não | inicia login com Google |
 | GET | `/oauth/callback` | não | retorno do Google → sessão |
 | POST | `/api/logout` | token | encerra a sessão |
-| POST | `/api/login` | não | legado `{usuario, senha}` → `{token}` |
+| POST | `/api/login` | não | dev/testes `{usuario, senha}` → `{token}` (só `LOCAL_LOGIN=1`) |
 | POST | `/api/contatos` | `X-Admin-Token` | cria (só no seu escopo) |
 | DELETE | `/api/contatos/<id>` | `X-Admin-Token` | remove (só no seu escopo) |
 | POST | `/api/pedidos` | não | solicita acesso (com local) |
 | GET | `/api/pedidos` | `X-Admin-Token` | pendentes (com local pedido) |
 | POST | `/api/pedidos/<id>/aprovar` | `X-Admin-Token` | aprova, cria usuário e concede escopo |
-| GET | `/api/resumo` | `X-Admin-Token` | totais por fórum/unidade/setor + últimos 5 + pendentes |
-| POST | `/api/me/senha` | `X-Admin-Token` | troca a própria senha |
+| POST | `/api/pedidos/<id>/recusar` | `X-Admin-Token` | recusa com motivo (notifica + e-mail) |
+| GET | `/api/meus-pedidos` | `X-Admin-Token` | meus pedidos + motivo de recusa |
+| GET | `/api/usuarios` | `X-Admin-Token` (admin) | usuários + último login + nº de locais |
+| POST | `/api/usuarios/<id>/ativo` | `X-Admin-Token` (admin) | ativa/desativa (`{"ativo":0/1}`) |
+| GET | `/api/busca?q=` | não | busca FTS5 com highlight (autocomplete) |
+| POST | `/api/backup` | `X-Admin-Token` (admin) | gera `backups/diretorio-*.db` (VACUUM INTO) |
+| GET | `/api/backup/<arq>` | `X-Admin-Token` (admin) | baixa o `.db` gerado |
+| GET | `/api/resumo` | `X-Admin-Token` | totais por fórum/unidade/setor + últimos 5 + pendentes + saúde |
+| POST | `/api/me/senha` | `X-Admin-Token` | troca a própria senha (só `LOCAL_LOGIN=1`) |
 | GET | `/api/notificacoes` | `X-Admin-Token` | minhas notificações + `nao_lidas` |
 | POST | `/api/notificacoes/lida` | `X-Admin-Token` | marca uma como lida (`{"id"}`) |
 | POST | `/api/notificacoes/lidas` | `X-Admin-Token` | marca todas como lidas |
