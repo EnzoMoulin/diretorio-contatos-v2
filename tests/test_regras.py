@@ -149,5 +149,202 @@ class TestHeranca(unittest.TestCase):
             con.close()
 
 
+class TestRecusa(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        st, corpo = api("POST", "/api/login",
+                        {"usuario": "admin", "senha": "admin123"})
+        assert st == 200, corpo
+        cls.tok = corpo["token"]
+
+    def _pedido_pendente(self):
+        con = sqlite3.connect(DB)
+        con.execute(
+            "INSERT INTO pedidos (nome, email, usuario_desejado, motivo,"
+            " nivel, alvo_id, status)"
+            " VALUES ('Recusado T','rec-t@exemplo.jus.br','rect','t','setor','S1','pendente')")
+        pid = con.execute("SELECT last_insert_rowid()").fetchone()[0]
+        con.commit()
+        con.close()
+        return pid
+
+    def test_recusa_exige_motivo(self):
+        pid = self._pedido_pendente()
+        try:
+            st, corpo = api("POST", f"/api/pedidos/{pid}/recusar",
+                            {"motivo": ""}, token=self.tok)
+            self.assertEqual(st, 400)
+        finally:
+            con = sqlite3.connect(DB)
+            con.execute("DELETE FROM pedidos WHERE id=?", (pid,))
+            con.commit()
+            con.close()
+
+    def test_recusa_com_motivo(self):
+        pid = self._pedido_pendente()
+        try:
+            st, corpo = api("POST", f"/api/pedidos/{pid}/recusar",
+                            {"motivo": "escopo errado"}, token=self.tok)
+            self.assertEqual(st, 200, corpo)
+            con = sqlite3.connect(DB)
+            row = con.execute(
+                "SELECT status, motivo_recusa FROM pedidos WHERE id=?",
+                (pid,)).fetchone()
+            con.close()
+            self.assertEqual(tuple(row), ("recusado", "escopo errado"))
+            st2, _ = api("POST", f"/api/pedidos/{pid}/recusar",
+                         {"motivo": "x"}, token=self.tok)
+            self.assertEqual(st2, 404)
+        finally:
+            con = sqlite3.connect(DB)
+            con.execute("DELETE FROM pedidos WHERE id=?", (pid,))
+            con.commit()
+            con.close()
+
+
+class TestMeusPedidos(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        st, corpo = api("POST", "/api/login",
+                        {"usuario": "admin", "senha": "admin123"})
+        assert st == 200, corpo
+        cls.tok = corpo["token"]
+        st, me = api("GET", "/api/me", token=cls.tok)
+        assert st == 200, me
+        cls.email = me["email"]
+
+    def test_meus_pedidos_mostra_recusa_com_motivo(self):
+        con = sqlite3.connect(DB)
+        con.execute(
+            "INSERT INTO pedidos (nome, email, usuario_desejado, motivo,"
+            " nivel, alvo_id, status) VALUES ('Eu','" +
+            self.email.replace("'", "''") +
+            "','admin','t','setor','S1','pendente')")
+        pid = con.execute("SELECT last_insert_rowid()").fetchone()[0]
+        con.commit()
+        con.close()
+        try:
+            st, _ = api("POST", f"/api/pedidos/{pid}/recusar",
+                        {"motivo": "ver depois"}, token=self.tok)
+            self.assertEqual(st, 200)
+            st, lista = api("GET", "/api/meus-pedidos", token=self.tok)
+            self.assertEqual(st, 200)
+            item = [p for p in lista if p["id"] == pid]
+            self.assertTrue(item)
+            self.assertEqual(item[0]["status"], "recusado")
+            self.assertEqual(item[0]["motivo_recusa"], "ver depois")
+        finally:
+            con = sqlite3.connect(DB)
+            con.execute("DELETE FROM pedidos WHERE id=?", (pid,))
+            con.commit()
+            con.close()
+
+
+class TestBuscaBackup(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        st, corpo = api("POST", "/api/login",
+                        {"usuario": "admin", "senha": "admin123"})
+        assert st == 200, corpo
+        cls.tok = corpo["token"]
+
+    def test_busca_fts_com_highlight(self):
+        st, lista = api("GET", "/api/busca?q=atendimento&limite=3", token=self.tok)
+        self.assertEqual(st, 200)
+        self.assertTrue(lista)
+        self.assertIn("<b>", lista[0].get("nome_hl", ""))
+
+    def test_backup_gera_arquivo(self):
+        import glob as _glob, os as _os
+        st, corpo = api("POST", "/api/backup", token=self.tok)
+        self.assertEqual(st, 200, corpo)
+        arq = corpo.get("arquivo", "")
+        self.assertTrue(arq.endswith(".db"))
+        caminho = "/home/enzo/Emprego/Projetos/diretorio-contatos-v2/backups/" + arq
+        try:
+            self.assertTrue(_os.path.isfile(caminho))
+            import urllib.request as _url
+            req = _url.Request("http://localhost:8000/api/backup/" + arq,
+                               headers={"X-Admin-Token": self.tok})
+            with _url.urlopen(req) as r:
+                self.assertEqual(r.status, 200)
+                self.assertTrue(r.read(16).startswith(b"SQLite format 3"))
+        finally:
+            for f in _glob.glob("/home/enzo/Emprego/Projetos/diretorio-contatos-v2/backups/diretorio-*.db"):
+                try:
+                    _os.remove(f)
+                except OSError:
+                    pass
+
+    def test_login_faz_upgrade_para_pbkdf2(self):
+        import hashlib as _hl
+        velho = _hl.sha256(b"segredo1").hexdigest()
+        con = sqlite3.connect(DB)
+        con.execute(
+            "INSERT INTO usuarios (usuario, senha_sha256, aprovado, email)"
+            " VALUES ('tmp-hash',?,1,'tmp-hash@exemplo.jus.br')", (velho,))
+        con.commit()
+        con.close()
+        try:
+            st, _ = api("POST", "/api/login",
+                        {"usuario": "tmp-hash", "senha": "errada"})
+            self.assertEqual(st, 401)
+            st, corpo = api("POST", "/api/login",
+                            {"usuario": "tmp-hash", "senha": "segredo1"})
+            self.assertEqual(st, 200, corpo)
+            con = sqlite3.connect(DB)
+            novo = con.execute(
+                "SELECT senha_sha256 FROM usuarios WHERE usuario='tmp-hash'").fetchone()[0]
+            con.close()
+            self.assertTrue(novo.startswith("pbkdf2$"))
+            st, _ = api("POST", "/api/login",
+                        {"usuario": "tmp-hash", "senha": "segredo1"})
+            self.assertEqual(st, 200)
+        finally:
+            con = sqlite3.connect(DB)
+            con.execute("DELETE FROM usuarios WHERE usuario='tmp-hash'")
+            con.commit()
+            con.close()
+
+
+class TestUsuarios(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        st, corpo = api("POST", "/api/login",
+                        {"usuario": "admin", "senha": "admin123"})
+        assert st == 200, corpo
+        cls.tok = corpo["token"]
+
+    def test_lista_e_ativo(self):
+        con = sqlite3.connect(DB)
+        con.execute(
+            "INSERT INTO usuarios (usuario, senha_sha256, aprovado, email)"
+            " VALUES ('tmp-rev','x',1,'tmp-rev@exemplo.jus.br')")
+        uid = con.execute("SELECT last_insert_rowid()").fetchone()[0]
+        con.commit()
+        con.close()
+        try:
+            st, lista = api("GET", "/api/usuarios", token=self.tok)
+            self.assertEqual(st, 200)
+            item = [u for u in lista if u["usuario"] == "tmp-rev"]
+            self.assertTrue(item)
+            self.assertIn("ultimo_login", item[0])
+            self.assertEqual(item[0]["ativo"], 1)
+            st, _ = api("POST", f"/api/usuarios/{uid}/ativo",
+                        {"ativo": 0}, token=self.tok)
+            self.assertEqual(st, 200)
+            st, lista = api("GET", "/api/usuarios", token=self.tok)
+            item = [u for u in lista if u["usuario"] == "tmp-rev"]
+            self.assertEqual(item[0]["ativo"], 0)
+            st, _ = api("POST", f"/api/usuarios/{uid}/ativo",
+                        {"ativo": 1}, token=self.tok)
+            self.assertEqual(st, 200)
+        finally:
+            con = sqlite3.connect(DB)
+            con.execute("DELETE FROM usuarios WHERE id=?", (uid,))
+            con.commit()
+            con.close()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

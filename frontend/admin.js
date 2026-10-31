@@ -26,7 +26,7 @@ function esc(s) {
 const auth = () => ({ 'Content-Type': 'application/json', 'X-Admin-Token': token });
 const logado = () => !!me;
 
-const VIEWS = ['consulta', 'dashboard', 'solicitacoes', 'registro', 'config', 'notificacoes', 'pedido'];
+const VIEWS = ['consulta', 'dashboard', 'solicitacoes', 'meus-pedidos', 'usuarios', 'registro', 'config', 'notificacoes', 'pedido'];
 function mostrarConsulta() {
   VIEWS.forEach(v => { const s = $('view-' + v); if (s) s.classList.add('hidden'); });
   $('view-consulta').classList.remove('hidden');
@@ -47,6 +47,8 @@ document.querySelectorAll('.menu-item[data-view]').forEach(btn => {
       VIEWS.forEach(x => $('view-' + x).classList.add('hidden'));
       $('view-' + v).classList.remove('hidden');
       if (v === 'solicitacoes') carregarPedidos();
+      if (v === 'meus-pedidos') carregarMeusPedidos();
+      if (v === 'usuarios') carregarUsuarios();
       if (v === 'registro') carregarHistorico();
       if (v === 'dashboard') carregarDashboard();
       if (v === 'notificacoes') carregarNotificacoes();
@@ -1292,6 +1294,9 @@ async function refresh() {
   $('menu-dash').classList.toggle('hidden', !dentro);
   $('menu-notif').classList.toggle('hidden', !dentro);
   $('menu-sol').classList.toggle('hidden', !dentro);
+  $('menu-meus').classList.toggle('hidden', !dentro);
+  $('menu-usu').classList.toggle('hidden', !(dentro && me && me.admin));
+  ligarBackup();
   $('menu-reg').classList.toggle('hidden', !dentro);
   $('who-mail').classList.toggle('hidden', !dentro);
   if (dentro) $('who-mail').innerHTML = ICON_PESSOA + ' ' + esc(me.email || me.usuario);
@@ -1479,17 +1484,15 @@ function renderArvore() {
 }
 async function abrirPedidoNovo(modo) {
   if (!logado()) {
-    sessionStorage.setItem('pedirAposLogin', modo === 'locais' ? 'locais' : 'cadastro');
+    sessionStorage.setItem('pedirAposLogin', 'pedido');
     $('modal-login').classList.remove('hidden');
     $('l-status').textContent = 'Entre com sua conta Google para solicitar acesso.';
     return;
   }
-  window._pedModo = (modo === 'locais') ? 'locais' : 'cadastro';
+  window._pedModo = 'pedido';
   mostrarPedido();
   $('p-status').textContent = '';
-  $('ped-hint').textContent = window._pedModo === 'locais'
-    ? 'Escolha mais locais para o seu acesso.'
-    : 'Primeiro acesso: só a identidade. Os locais vêm depois, em Solicitar locais.';
+  $('ped-hint').textContent = 'Identidade + locais num só pedido. Sem marcar nada, vale só o cadastro.';
   if (logado()) {
     $('p-nome').value = '';
     $('p-email').value = me.email || '';
@@ -1502,9 +1505,8 @@ async function abrirPedidoNovo(modo) {
   }
   if (!(H.comarcas || []).length) { try { await recarregarHierarquia(true); } catch (e) {} }
   preencherLocais();
-  $('bloco-locais').classList.toggle('hidden', window._pedModo !== 'locais');
-  $('bloco-admin').classList.toggle('hidden', window._pedModo !== 'locais');
-  if (window._pedModo !== 'locais') { try { $('p-admin').checked = false; } catch (e) {} }
+  $('bloco-locais').classList.remove('hidden');
+  $('bloco-admin').classList.remove('hidden');
 }
 function mostrarPedido() {
   VIEWS.forEach(v => { const s = $('view-' + v); if (s) s.classList.add('hidden'); });
@@ -1561,18 +1563,16 @@ $('c-enviar').onclick = async () => {
     : 'Erro: ' + await r.text();
 };
 $('p-enviar').onclick = async () => {
-  const emCadastro = window._pedModo !== 'locais';
   const corpo = { nome: $('p-nome').value.trim(),
                   email: (logado() ? me.email : $('p-email').value.trim()),
                   usuario: (($('p-user').disabled && logado()) ? me.usuario : $('p-user').value.trim()),
                   motivo: $('p-motivo').value.trim(),
-                  admin: (!emCadastro && $('p-admin').checked === true),
+                  admin: ($('p-admin').checked === true),
                   escopos: [...pedSel].map(k => {
                     const i = k.indexOf(':');
                     return { tipo: k.slice(0, i), id: k.slice(i + 1) };
                   }) };
   if (!corpo.nome) { $('p-status').textContent = 'Informe seu nome.'; return; }
-  if (!emCadastro && !corpo.escopos.length && !corpo.admin) { $('p-status').textContent = 'Selecione ao menos um local na árvore.'; return; }
   const r = await fetch('/api/pedidos', { method: 'POST',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
   const txt = await r.text();
@@ -1608,6 +1608,8 @@ async function carregarDashboard() {
     ['👥 Contatos (total)', totalGeral],
     ['✏️ Contatos editáveis', me.escopo === 'all' ? totalGeral : totalEdit],
     ['⏳ Solicitações pendentes', r.pendentes],
+    ['🔄 Alterações (30d)', (r.saude || {}).alteracoes_30d || 0],
+    ['⚠️ Sem alteração há 6m+', (r.saude || {}).obsoletos_180d || 0],
   ].map(([t, v]) => `<div class="dash-card"><span>${v}</span>${t}</div>`).join('');
   const max = Math.max(1, ...coms.map(c => c.qtdContatos || 0));
   $('dash-mun').innerHTML = coms.map(c => {
@@ -1665,6 +1667,82 @@ $('btn-todas-lidas').onclick = async () => {
   carregarNotificacoes();
 };
 
+/* ---- meus pedidos ---- */
+async function carregarMeusPedidos() {
+  if (!logado()) return;
+  const r = await fetch('/api/meus-pedidos', { headers: auth() });
+  const lista = r.ok ? await r.json() : [];
+  const nomes = { comarca: 'comarca', forum: 'fórum', unidade: 'unidade', setor: 'setor', admin: 'administrador' };
+  $('meus-pedidos').innerHTML = (Array.isArray(lista) ? lista : []).map(p =>
+    `<li><b>${esc(p.status || '')}</b> — ${esc(nomes[p.nivel] || p.nivel || 'cadastro')}` +
+    (p.alvo_nome ? ` <b>${esc(p.alvo_nome)}</b>` : '') +
+    (p.criado_em ? ` <i>${esc(String(p.criado_em).slice(0, 10))}</i>` : '') +
+    (p.status === 'recusado' && p.motivo_recusa ? `<br>Motivo: ${esc(p.motivo_recusa)}` : '') +
+    `</li>`
+  ).join('') || '<li>Você ainda não fez pedidos.</li>';
+}
+/* ---- backup ---- */
+function ligarBackup(){
+  const b = $('btn-backup');
+  if (!b || b.dataset.ligado) return;
+  b.dataset.ligado = '1';
+  b.onclick = async () => {
+    const st = $('backup-status');
+    st.textContent = 'Gerando…';
+    const r = await fetch('/api/backup', { method: 'POST', headers: auth() });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { st.textContent = 'Erro: ' + (j.erro || ''); return; }
+    st.textContent = `Pronto (${j.kb} KB).`;
+    location.href = '/api/backup/' + encodeURIComponent(j.arquivo);
+  };
+}
+/* ---- usuários (revisão de acessos) ---- */
+let usuCache = [];
+function usuNorm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");}
+function fmtUltimoLogin(v){
+  if (!v) return 'nunca';
+  try {
+    const d = new Date(String(v).replace(' ', 'T'));
+    return isNaN(d) ? String(v) : d.toLocaleDateString('pt-BR');
+  } catch (e) { return String(v); }
+}
+async function carregarUsuarios() {
+  if (!logado()) return;
+  usuLigar();
+  const r = await fetch('/api/usuarios', { headers: auth() });
+  if (!r.ok) { $('usuarios').innerHTML = '<li>Sem permissão (só administrador).</li>'; return; }
+  usuCache = await r.json();
+  renderUsuarios();
+}
+function usuLigar(){
+  const f = $('usu-filtro');
+  if (f && !f.dataset.ligado) { f.dataset.ligado = '1'; f.oninput = renderUsuarios; }
+}
+function renderUsuarios(){
+  const termo = usuNorm($('usu-filtro') && $('usu-filtro').value);
+  const lista = usuCache
+    .filter(u => !termo || usuNorm(u.usuario).includes(termo) || usuNorm(u.email).includes(termo) || usuNorm(u.nome).includes(termo))
+    .sort((a, b) => String(a.ultimo_login || '').localeCompare(String(b.ultimo_login || '')));
+  $('usuarios').innerHTML = lista.map(u =>
+    `<li><b>${esc(u.usuario)}</b> (${esc(u.email || '-')})` +
+    (u.admin ? ' — <b>administrador</b>' : ` — ${u.n_acessos || 0} local(is)`) +
+    ` — último acesso: <b>${esc(fmtUltimoLogin(u.ultimo_login))}</b>` +
+    (u.ativo ? '' : ' — <b>DESATIVADO</b>') +
+    (u.admin ? '' : ` <button class="btn-ghost dark" data-usu="${u.id}" data-at="${u.ativo ? 0 : 1}">${u.ativo ? 'desativar' : 'reativar'}</button>`) +
+    `</li>`
+  ).join('') || `<li>${termo ? 'Nenhum usuário para este filtro.' : 'Nenhum usuário.'}</li>`;
+  document.querySelectorAll('#usuarios button[data-usu]').forEach(b => {
+    b.onclick = async () => {
+      const acao = b.dataset.at === '0' ? 'desativar' : 'reativar';
+      if (!confirm(`${acao} ${b.closest('li').querySelector('b').textContent}?`)) return;
+      await fetch('/api/usuarios/' + b.dataset.usu + '/ativo', {
+        method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, auth()),
+        body: JSON.stringify({ ativo: Number(b.dataset.at) })
+      });
+      carregarUsuarios();
+    };
+  });
+}
 /* ---- solicitações / registro ---- */
 let pedidosCache = [];
 function pedNormalizar(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");}
@@ -1695,7 +1773,8 @@ function renderPedidos(){
     (p.nivel === 'admin' && !p.alvo_id ? ` — <b>administrador</b>` :
     (p.alvo_nome ? ` — ${esc({comarca:'comarca',forum:'fórum',unidade:'unidade',setor:'setor'}[p.nivel]||p.nivel)}: <b>${esc(p.alvo_nome)}</b>` : (p.localidade ? ` — local: <b>${esc(p.localidade)}</b>` : ''))) +
     (p.motivo ? ` — ${esc(p.motivo)}` : '') +
-    ` <button class="btn-primary" data-id="${p.id}">aprovar</button></span></label></li>`
+    ` <button class="btn-primary" data-id="${p.id}">aprovar</button>` +
+    ` <button class="btn-ghost dark" data-rec="${p.id}">recusar</button></span></label></li>`
   ).join('') || `<li>${termo ? 'Nenhuma solicitação para este filtro.' : 'Nenhuma solicitação pendente.'}</li>`;
   if ($('ped-todas')) $('ped-todas').checked = false;
   pedAtualizarLote();
@@ -1708,9 +1787,35 @@ function renderPedidos(){
       carregarPedidos();
     };
   });
+  document.querySelectorAll('#pedidos button[data-rec]').forEach(b => {
+    b.onclick = (e) => {
+      e.stopPropagation();
+      abrirRecusa(b.dataset.rec);
+    };
+  });
   document.querySelectorAll('#pedidos input[type=checkbox]').forEach(c => {
     c.onchange = pedAtualizarLote;
   });
+}
+/* ---- recusa com motivo ---- */
+let recId = null;
+function abrirRecusa(id) {
+  recId = id;
+  $('rec-motivo').value = '';
+  $('rec-status').textContent = '';
+  $('modal-rec').classList.remove('hidden');
+}
+async function enviarRecusa() {
+  const motivo = ($('rec-motivo').value || '').trim();
+  if (!motivo) { $('rec-status').textContent = 'Informe o motivo — ele aparece para o solicitante.'; return; }
+  const r = await fetch('/api/pedidos/' + recId + '/recusar', {
+    method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, auth()),
+    body: JSON.stringify({ motivo })
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { $('rec-status').textContent = 'Erro: ' + (j.erro || ''); return; }
+  $('modal-rec').classList.add('hidden');
+  carregarPedidos();
 }
 function pedPreselecionar(nivel, id) {
   id = String(id);
@@ -1735,6 +1840,12 @@ function pedPreselecionar(nivel, id) {
   return true;
 }
 function pedLigarBarra(){
+  const rc = $('rec-cancel');
+  if (rc && !rc.dataset.ligado) {
+    rc.dataset.ligado = '1';
+    rc.onclick = () => $('modal-rec').classList.add('hidden');
+    $('rec-enviar').onclick = enviarRecusa;
+  }
   const f = $('ped-filtro');
   if (f && !f.dataset.ligado) { f.dataset.ligado = '1'; f.oninput = renderPedidos; }
   const t = $('ped-todas');

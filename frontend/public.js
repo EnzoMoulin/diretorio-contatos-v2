@@ -450,10 +450,55 @@
         else { btn.classList.remove("ativo"); btn.setAttribute("aria-selected", "false"); }
       });
     }
+    var buscaSrvTimer = null;
+    function buscarServidor(termo, cb) {
+      fetch('/api/busca?q=' + encodeURIComponent(termo) + '&limite=6')
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (lista) { cb(Array.isArray(lista) ? lista : []); })
+        .catch(function () { cb([]); });
+    }
+    function resolverLocal(id, nome) {
+      var todos = [];
+      try { todos = buscarContatos(nome) || []; } catch (e) { todos = []; }
+      for (var i = 0; i < todos.length; i++) {
+        var c = todos[i].contato || {};
+        if (String(c.id) === String(id)) return todos[i];
+      }
+      return todos.length ? todos[0] : null;
+    }
     campo.addEventListener("input", function () {
       indiceAtivo = -1;
+      if (buscaSrvTimer) clearTimeout(buscaSrvTimer);
       var resultados = buscarContatos(campo.value);
-      if (!resultados.length) { fechar(); return; }
+      if (resultados.length) { /* render local abaixo */ }
+      else {
+        var termo = campo.value.trim();
+        if (termo.length >= 2) {
+          buscaSrvTimer = setTimeout(function () {
+            buscarServidor(termo, function (srv) {
+              if (!srv.length || campo.value.trim() !== termo) { fechar(); return; }
+              caixa.innerHTML = srv.map(function (c, i) {
+                var hl = esc(c.nome_hl || c.nome).split("&lt;b&gt;").join("<b>").split("&lt;/b&gt;").join("</b>");
+                return '<button type="button" class="fc-busca-item" data-srv="' + esc(c.id) + '" data-srv-nome="' + esc(c.nome) + '" role="option" id="fc-busca-opcao-' + i + '">' +
+                  '<strong>' + hl + '</strong>' +
+                  '<small>' + esc((c.cargo ? c.cargo + ' · ' : '') + (c.telefone || c.email || '')) + '</small>' +
+                  '<small>Enter para abrir</small></button>';
+              }).join("");
+              caixa.removeAttribute("hidden");
+              campo.setAttribute("aria-expanded", "true");
+              caixa.querySelectorAll("[data-srv]").forEach(function (btn) {
+                btn.onclick = function () {
+                  var alvo = resolverLocal(btn.getAttribute("data-srv"), btn.getAttribute("data-srv-nome"));
+                  fechar(); campo.value = "";
+                  if (alvo) irParaResultado(alvo);
+                };
+              });
+            });
+          }, 220);
+          return;
+        }
+        fechar(); return;
+      }
       caixa.innerHTML = resultados.map(function (item, i) {
         var c = item.contato;
         return '<button type="button" class="fc-busca-item" data-busca-i="' + i + '" role="option" id="fc-busca-opcao-' + i + '" aria-selected="false">' +
