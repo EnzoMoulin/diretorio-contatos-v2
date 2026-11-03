@@ -1,6 +1,6 @@
-# Diretório de Contatos do PJES — evolução Python + SQLite
+# Diretório de Contatos — evolução Python + SQLite
 
-> Case real de estágio no TJES: o MVP original (Google Apps Script + Google
+> Case real de estágio em tribunal estadual: o MVP original (Google Apps Script + Google
 > Sheets) validou o fluxo a custo zero no ecossistema Workspace do tribunal;
 > esta é a **fase 2 — reescrita em Python + SQLite**, com a mesma arquitetura
 > e a mesma modelagem (consulta pública + área administrativa com login,
@@ -10,19 +10,87 @@
 > **Dados 100% fictícios** — comarcas reais do ES, fóruns/setores
 > representativos; nomes de pessoas, telefones e e-mails inventados
 > (`@exemplo.jus.br`). Nenhum dado real ou interno do tribunal é usado aqui.
-> Versão corporativa completa (MVP original):
-> [EnzoMoulin/diretorio-contatos](https://github.com/EnzoMoulin/diretorio-contatos).
+> Fase 1 — MVP corporativo (Google Apps Script + Sheets): repositório privado
+> (código institucional); o arco técnico está documentado abaixo, em
+> [Estudo de caso](#estudo-de-caso-v1--v2--v3).
+
+## Evolução v1 → v2 → v3
+Mesmo produto, três fases de maturidade — a interface e as regras de negócio
+são as mesmas; o que evolui é a fundação técnica:
+
+| Aspecto | v1 — MVP (privado) | v2 — reescrita (este repo) | v3 — direção |
+|---|---|---|---|
+| Runtime + dados | Apps Script + Sheets (planilha como banco, sem FKs) | Python stdlib + SQLite (FKs, zero dependências) | Migrações versionadas, Postgres opcional |
+| Concorrência | `LockService` por execução | `ThreadingHTTPServer` + lock em escrita | Servidor ASGI, pool de conexões |
+| Busca | Substring no frontend | FTS5 no servidor + autocomplete com highlight | Ranking por relevância, tolerância a erro de digitação |
+| Auth | Sessão Google + planilha | Google OAuth + login local (só dev, flag `LOCAL_LOGIN`) com PBKDF2 | Expiração de sessão, papéis granulares |
+| Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
+| Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
+| Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
+| Testes | Sem testes automatizados | 14 testes (`unittest`, banco temporário) | CI rodando a suíte a cada push |
+
+Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
+zero dentro do ecossistema onde os dados viviam; o v2 prova a mesma arquitetura
+sem dependência de fornecedor; o v3 endurece para escala.
+
+## Estudo de caso: v1 → v2 → v3
+
+O v1 foi o MVP entregue e aprovado como piloto no órgão (Google Apps Script +
+Sheets, repositório privado por ser código institucional). O v2 é a reescrita
+independente — backend 100% novo em Python, mesma modelagem e mesma
+experiência. O que segue é o arco técnico: decisões, o que mudou e por quê.
+
+### Fase 1 — MVP no ecossistema (Apps Script + Sheets)
+
+```mermaid
+flowchart LR
+    Browser["Navegador (HTML + JS)"] --> GAS["Apps Script Web App\n(API + auth Google)"]
+    GAS --> Sheets[("Google Sheets\n(4 abas: dados + gestão)")]
+    GAS -.-> Lock["LockService\n(escrita)"]
+    GAS -.-> Cache["CacheService\n(leitura)"]
+```
+
+- **Decisão central:** planilha como banco — custo zero, zero infraestrutura, e os
+  dados já viviam no Workspace do tribunal. Frontend e backend conversando em JSON.
+- **O que segurou o piloto:** `LockService` em escrita, cache de referência com TTL,
+  autorização sempre no servidor, concorrência validada no uso real.
+- **Limites que motivaram a v2:** planilha não tem chaves estrangeiras nem testes
+  automatizados; tudo preso ao ecossistema Google; sem como provar a arquitetura
+  fora dele.
+
+### Fase 2 — reescrita independente (Python stdlib + SQLite)
+
+```mermaid
+flowchart LR
+    Browser["Navegador (HTML + CSS + JS)"] --> HTTP["http.server\n(Threading + sessões)"]
+    HTTP --> SQL[("SQLite\n(11 tabelas, FKs)")]
+    HTTP -.-> FTS["FTS5 + triggers\n(busca)"]
+    HTTP -.-> LRU["lru_cache\n(hierarquia)"]
+```
+
+- **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
+  mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
+  `lru_cache` com invalidação, 14 testes (`unittest`, banco temporário).
+- **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
+  escopo por nível, UX das telas — a interface e as regras são as mesmas, propositalmente.
+- **Por que só stdlib:** zero dependências = deploy gratuito trivial e prova de que a
+  arquitetura se sustenta sem fornecedor.
+
+### Fase 3 — direção (endurecer para escala)
+
+Migrações versionadas, Postgres opcional, CI rodando a suíte a cada push, papéis
+granulares (RBAC), paginação, ranking de busca com tolerância a erro de digitação.
 
 ## Arquitetura (espelha o sistema original)
 - **Duas implantações isoladas, sem trânsito entre elas** — como no original
   (implantação pública no site × privada na intranet, definidas por propriedade):
   - `/` pública: só consulta; falha fechada (nenhuma mutação sem token)
   - `/admin` interna: portão de login; sem token válido, nada além do portão aparece
-- **Portão institucional (simulado)**: no original, sessão Google + intranet + domínio
+- **Portão institucional (para avaliação)**: no original, sessão Google + intranet + domínio
   institucional; aqui, qualquer conta Google entra como visitante, e a intranet
-  é simulada pelo `INTRANET_ONLY` (só localhost/rede local alcança o `/admin`).
-  A aprovação é automática nesta demonstração (`SIMULACAO_AUTO_APROVAR=1`,
-  marcada como "SIMULAÇÃO AUTOMÁTICA"); produção = aprovação manual.
+  é representada pelo `INTRANET_ONLY` (só localhost/rede local alcança o `/admin`).
+  Para avaliação, a aprovação é automática (`SIMULACAO_AUTO_APROVAR=1`,
+  sinalizada como automática); produção = aprovação manual.
 - **Tabela de usuários decide permissões**: sem cadastro, mesmo no interno a
   visão seria só consulta; com cadastro, edita os locais do seu escopo
   (`acessos`, com herança comarca > fórum > unidade > setor); admin edita tudo
@@ -48,7 +116,7 @@
   unidade > setor, para quem já tem cadastro); **Sair do acesso administrativo**
   volta à consulta, continua no interno e invalida a sessão no servidor.
   Primeiro login vira admin se não houver nenhum; o resto é liberado por
-  aprovação (automática nesta demonstração).
+  aprovação (automática para avaliação).
 - **Gestão dentro da consulta, com escopo por nível**: o usuário cria/edita/remove
   contatos só onde tem cobertura (comarca, fórum, unidade ou setor, com herança de
   cima); fora dela, só consulta. Ao lado de cada nível selecionado sem cobertura,
@@ -57,8 +125,8 @@
   Admin aprova e a cobertura amplia. Servidor barra tudo fora do escopo (403).
 - **Solicitação de acesso**: página em dois modos — primeiro acesso (só
   identidade) e locais (árvore comarca > fórum > unidade > setor); nome e motivo
-  opcional → um pedido por local → aprovação automática nesta demonstração
-  (marcada como simulação) ou manual pelo admin; o acesso libera na conta
+  opcional → um pedido por local → aprovação automática para avaliação
+  (sinalizada na tela) ou manual pelo admin; o acesso libera na conta
   Google do solicitante. Servidor barra duplicata, excesso de pendentes e tudo
   fora do escopo (403).
 - **Registro de alterações**: criar / editar / remover / pedidos / aprovações
@@ -79,7 +147,7 @@
 ## Stack
 - Backend: Python 3, somente biblioteca padrão (`http.server` + `sqlite3`) — zero dependências
 - Frontend: HTML + CSS + JS puro (sem framework); mapa com Leaflet via CDN
-- Banco: SQLite local (`contatos.db`, criado na primeira execução, ~1900 registros da base mascarada + `seed_pjes.json` versionado)
+- Banco: SQLite local (`contatos.db`, criado na primeira execução, ~1900 registros da base mascarada versionada)
 
 ## Como rodar
 ```bash
@@ -99,14 +167,23 @@ arquivo `contatos.db` pelo da data desejada com o servidor parado.
 
 ## Hospedagem (pôr no ar)
 Só stdlib: sem `pip install`. No Render (gratuito): novo Web Service a partir
-do repo, Start Command `INTRANET_ONLY=0 HOST=0.0.0.0 python3 app.py`
-(`render.yaml` já traz isso). `PORT` vem do ambiente. O banco é recriado do
-seed a cada boot limpo (disco efêmero) — dados de demonstração voltam sozinhos;
-o que for criado em produção se perde no restart (ok para demo).
+do repo (`render.yaml` já traz tudo: `INTRANET_ONLY=0`, `LOCAL_LOGIN=0`,
+`SIMULACAO_AUTO_APROVAR=1`). `PORT` vem do ambiente. O banco é recriado do
+seed a cada boot limpo (disco efêmero) — dados fictícios voltam sozinhos;
+o que for criado em produção se perde no restart (esperado no plano gratuito).
 
-## Como avaliar este demo (2 minutos)
+Login com Google em produção precisa de um client OAuth tipo **Web**:
+1. No [Google Cloud Console](https://console.cloud.google.com/) crie um ID do
+   cliente OAuth (tipo Web) com origem `https://<seu-app>.onrender.com` e
+   redirect `https://<seu-app>.onrender.com/oauth/callback`.
+2. No dashboard do Render, defina as variáveis `GOOGLE_CLIENT_JSON` (o JSON do
+   client) e `APP_BASE_URL` (a URL pública) — o `redirect_uri` já sai em
+   `https` atrás do proxy. Sem isso, o `/oauth/login` responde 500 explicando.
+   Tela de consentimento não verificada mostra aviso do Google — esperado fora de produção.
+
+## Como avaliar (2 minutos)
 1. Abra `/admin` e entre com qualquer conta Google → você entra como visitante.
-2. Peça acesso em **Solicitar acesso** → liberação automática (simulação).
+2. Peça acesso em **Solicitar acesso** → liberação automática (sinalizada na tela).
 3. Peça locais em **Solicitar locais** (marque a caixa de Administrador para ver a parte administrativa).
 4. No projeto real, os passos 2–3 aguardam aprovação manual de um Administrador — aqui é automático só para você testar sem depender de ninguém.
 
@@ -125,7 +202,7 @@ aprovação → solicitante. Falha de envio nunca quebra o fluxo.
 
 ## Login local (só dev/testes)
 O login por usuário/senha (`/api/login`, admin/admin123) existe para testes
-automatizados e demo sem Google. Em produção use só o Google: rode com
+automatizados e avaliação sem Google. Em produção use só o Google: rode com
 `LOCAL_LOGIN=0` (as rotas somem com 404). As senhas usam PBKDF2-HMAC-SHA256
 com salt; hashes sha256 legados são convertidos no primeiro login.
 
@@ -162,9 +239,10 @@ com salt; hashes sha256 legados são convertidos no primeiro login.
 | POST | `/api/notificacoes/lidas` | `X-Admin-Token` | marca todas como lidas |
 
 ## Fase 1 — MVP corporativo (Google Apps Script)
-Mesma arquitetura, implementação validada no ecossistema Workspace
-(auth Google, papéis, hierarquia, auditoria):
-[EnzoMoulin/diretorio-contatos](https://github.com/EnzoMoulin/diretorio-contatos).
+Implementação validada no ecossistema Workspace (auth Google, papéis,
+hierarquia, auditoria). Repositório privado (código institucional) — o arco
+técnico está documentado acima, em
+[Estudo de caso](#estudo-de-caso-v1--v2--v3).
 
 ## Screenshots
 ![Consulta no desktop](docs/img/desktop.png)

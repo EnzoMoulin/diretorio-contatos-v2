@@ -1,6 +1,6 @@
-"""Diretório Institucional de Contatos do PJES — reimplementação para portfólio.
+"""Diretório de Contatos — reimplementação para portfólio.
 
-Case real de estágio no TJES (MVP original em Google Apps Script + Sheets),
+Case real de estágio em tribunal estadual (MVP original em Google Apps Script + Sheets),
 aqui reescrito em Python + SQLite como evolução da arquitetura, com a mesma
 modelagem do original: comarca > fórum > unidade > setor > contatos.
 Consulta pública + área administrativa com login + histórico de alterações
@@ -15,9 +15,9 @@ Como rodar:
 
 Autenticação: identidade via Google OAuth (sem senha, como o privado do v1).
 Entrada aberta: qualquer conta Google vira visitante; locais e gestão saem
-por aprovação — automática nesta demonstração (SIMULACAO_AUTO_APROVAR=1),
-marcada como "SIMULAÇÃO AUTOMÁTICA". O primeiro login vira admin se não
-houver nenhum. Intranet simulada: /admin só abre de localhost/rede local
+por aprovação — automática para avaliação (SIMULACAO_AUTO_APROVAR=1),
+sinalizada como automática. O primeiro login vira admin se não
+houver nenhum. Intranet representada: /admin só abre de localhost/rede local
 (INTRANET_ONLY=1). Credencial em GOOGLE_CLIENT_FILE
 (padrão: ~/.hermes/google_client_secret.json).
 
@@ -63,12 +63,29 @@ OAUTH_STATES = {}  # state -> expiração (login Google)
 
 SIMULACAO_AUTO_APROVAR = os.environ.get("SIMULACAO_AUTO_APROVAR", "1") == "1"
 
+# Base pública do app (links em e-mails). Em hospedagem, definir APP_BASE_URL
+# com a URL pública (ex. https://diretorio-contatos-v2.onrender.com).
+APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://localhost:8000").rstrip("/")
+
 GOOGLE_CLIENT_FILE = os.environ.get("GOOGLE_CLIENT_FILE") or str(
     Path.home() / ".hermes" / "google_client_secret.json")
 
 
 def google_client():
-    """Lê client_id/secret do OAuth Google (arquivo local, nunca commitado)."""
+    """Lê client_id/secret do OAuth Google (arquivo local, nunca commitado).
+
+    Em hospedagem, usa GOOGLE_CLIENT_JSON (JSON inline do client OAuth tipo
+    'web'); localmente, lê GOOGLE_CLIENT_FILE.
+    """
+    raw = os.environ.get("GOOGLE_CLIENT_JSON", "").strip()
+    if raw:
+        try:
+            d = json.loads(raw)
+            cfg = d.get("installed") or d.get("web") or {}
+            if cfg.get("client_id"):
+                return cfg
+        except ValueError:
+            pass
     try:
         d = json.load(open(GOOGLE_CLIENT_FILE, encoding="utf-8"))
         cfg = d.get("installed") or d.get("web") or {}
@@ -77,6 +94,18 @@ def google_client():
     except (OSError, ValueError):
         pass
     return {}
+
+
+def _oauth_redirect_base(handler):
+    """Base https atrás de proxy (Render) ou http local.
+
+    Hospedagem HTTPS termina o TLS no proxy e avisa via X-Forwarded-Proto;
+    o redirect_uri precisa sair com o mesmo esquema registrado no Google.
+    """
+    host = (handler.headers.get("Host") or "localhost:8000").strip()
+    proto = (handler.headers.get("X-Forwarded-Proto") or "").split(",")[0].strip().lower()
+    scheme = proto if proto in ("http", "https") else "http"
+    return f"{scheme}://{host}/oauth/callback"
 
 NIVEIS = ("comarca", "forum", "unidade", "setor")
 
@@ -120,15 +149,15 @@ def aprovar_pedido(con, pid, automatico=False):
     if ped["nivel"] == "admin" and not ped["alvo_id"]:
         con.execute("UPDATE usuarios SET admin=1 WHERE id=?", (uid_novo,))
     con.execute("UPDATE pedidos SET status='aprovado' WHERE id=?", (pid,))
-    marca = " (aprovação automática — simulação)" if automatico else ""
+    marca = " (aprovação automática — avaliação)" if automatico else ""
     log(con, "aprovar", None, f"acesso aprovado: {ped['usuario_desejado']}{marca}")
     texto_aprov = ("Seu acesso foi aprovado. Entre com sua conta Google." +
-                   (" (Aprovação automática — simulação.)" if automatico else ""))
+                   (" (Aprovação automática para avaliação.)" if automatico else ""))
     notify(con, uid_novo, "aprovada", texto_aprov)
     if not automatico:
         _send_email(ped["email"], "Acesso liberado — Diretório de Contatos",
                     f"Olá {ped['nome']},\n\nSeu acesso foi liberado pelo administrador.\n"
-                    f"Entre com sua conta Google: http://localhost:8000/admin")
+                    f"Entre com sua conta Google: {APP_BASE_URL}/admin")
     con.commit()
     return True, {"ok": True, "usuario": ped["usuario_desejado"]}, 200
 
@@ -154,7 +183,7 @@ def recusar_pedido(con, pid, motivo):
 
 
 def _ip_rede_local(ip):
-    """Simula a intranet: só loopback e redes privadas alcançam o /admin."""
+    """Representa a intranet para avaliação: só loopback e redes privadas alcançam o /admin."""
     try:
         import ipaddress
         addr = ipaddress.ip_address(ip)
@@ -391,7 +420,7 @@ def novo_id(con, tabela, prefixo):
         return "%s%d" % (prefixo, _CONT[(tabela, prefixo)])
 
 def _carregar_seed_legado(con, seed):
-    """Formato antigo (seed_pjes.json): sem suporte no esquema atual."""
+    """Formato antigo: sem suporte no esquema atual."""
     return False
     coms = {}
     for c in seed.get("comarcas", []):
@@ -485,10 +514,7 @@ def _carregar_seed_json(con):
     """Seed a partir da base oficial (seed_oficial.json). Devolve True se usou."""
     pj = BASE / "seed_oficial.json"
     if not pj.exists():
-        pj = BASE / "seed_pjes.json"
-        if not pj.exists():
-            return False
-        return _carregar_seed_legado(con, json.loads(pj.read_text(encoding="utf-8")))
+        return False
     seed = json.loads(pj.read_text(encoding="utf-8"))
     if "nos" not in seed:
         return _carregar_seed_legado(con, seed)
@@ -1005,8 +1031,8 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/admin":
             if INTRANET_ONLY and not _ip_rede_local(self.client_address[0]):
                 return self._page(403, "Restrito à intranet",
-                                   "O acesso interno só abre dentro da rede do tribunal. "
-                                   "Esta é a simulação da intranet no v2 (no v1 real, a URL "
+                                   "O acesso interno só abre dentro da rede interna. "
+                                   "Este é o controle de intranet no v2 (no original, a URL "
                                    "privada só resolve dentro da rede). Para desligar, "
                                    "rode com INTRANET_ONLY=0.")
             return self._static("admin.html", "text/html; charset=utf-8")
@@ -1018,9 +1044,9 @@ class Handler(BaseHTTPRequestHandler):
             cfg = google_client()
             if not cfg.get("client_id"):
                 return self._page(500, "Login Google não configurado",
-                                   "Defina GOOGLE_CLIENT_FILE com um client OAuth válido.")
-            host = (self.headers.get("Host") or "localhost:8000").strip()
-            redir = f"http://{host}/oauth/callback"
+                                   "Defina GOOGLE_CLIENT_JSON (hospedagem) ou "
+                                   "GOOGLE_CLIENT_FILE (local) com um client OAuth válido.")
+            redir = _oauth_redirect_base(self)
             st = secrets.token_urlsafe(24)
             OAUTH_STATES[st] = time.time() + 600
             q = urllib.parse.urlencode({
@@ -1040,8 +1066,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._page(400, "Login expirado",
                                    "A sessão de login expirou. Tente entrar de novo.")
             cfg = google_client()
-            host = (self.headers.get("Host") or "localhost:8000").strip()
-            redir = f"http://{host}/oauth/callback"
+            redir = _oauth_redirect_base(self)
             try:
                 treq = urllib.request.Request(
                     "https://oauth2.googleapis.com/token",
@@ -1071,7 +1096,7 @@ class Handler(BaseHTTPRequestHandler):
                     "SELECT * FROM usuarios WHERE lower(email)=? AND aprovado=1",
                     (email,)).fetchone()
                 if not row:
-                    # Intranet simulada: e-mail institucional entra sozinho como
+                    # Intranet representada: e-mail institucional entra sozinho como
                     # visitante (só consulta); locais e gestão continuam por
                     # solicitação aprovada. O primeiro acesso vira admin se não
                     # houver nenhum.
@@ -1107,7 +1132,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header(
                     "Set-Cookie",
                     f"tc_session={tok}; Path=/; HttpOnly; SameSite=Lax; Max-Age=43200")
-                self.send_header("Location", f"http://{host}/admin#token={tok}")
+                self.send_header("Location",
+                                 _oauth_redirect_base(self).replace("/oauth/callback", f"/admin#token={tok}"))
                 self.end_headers()
             except Exception:
                 try:
@@ -1558,12 +1584,12 @@ class Handler(BaseHTTPRequestHandler):
             for aid in admin_ids(con):
                 notify(con, aid, "solicitacao",
                        f"Nova solicitação de {data.get('nome')} ({usuario}):{detalhe}" +
-                       (" (aprovada automaticamente — simulação)" if auto else ""))
+                       (" (liberada automaticamente para avaliação)" if auto else ""))
             if auto:
                 _send_email(email, "Acesso liberado — Diretório de Contatos",
                             f"Olá {data.get('nome')},\n\nSeu acesso foi liberado "
-                            f"automaticamente (demonstração — simulação).\n"
-                            f"Entre com sua conta Google: http://localhost:8000/admin")
+                            f"automaticamente (ambiente de avaliação).\n"
+                            f"Entre com sua conta Google: {APP_BASE_URL}/admin")
             else:
                 chefes = [r["email"] for r in con.execute(
                     "SELECT email FROM usuarios WHERE admin=1 AND aprovado=1").fetchall()
@@ -1576,10 +1602,10 @@ class Handler(BaseHTTPRequestHandler):
                 if chefes:
                     _send_email(chefes, "Nova solicitação de acesso — Diretório de Contatos",
                                 f"Nova solicitação de {data.get('nome')} ({usuario}):{detalhe}\n\n"
-                                f"Analise em Solicitações de Acesso: http://localhost:8000/admin")
+                                f"Analise em Solicitações de Acesso: {APP_BASE_URL}/admin")
             log(con, "pedido", None,
                 f"solicitação de acesso: {data.get('nome')} ({usuario})" +
-                (" (auto-aprovada — simulação)" if auto else ""))
+                (" (aprovada automaticamente para avaliação)" if auto else ""))
             con.commit()
             con.close()
             return self._json({"ok": True, "id": primeiro_id, "auto_aprovado": auto}, 201)

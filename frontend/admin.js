@@ -1,6 +1,6 @@
 /* Acesso interno: consulta unificada com a pública (frontend/public.js é a referência)
    + gestão por escopo. Navegação SÓ por /api/hierarquia:
-   Início (Comarcas) > Fóruns | TJES > Fórum > Nó (Unidade/Setor).
+   Início (Comarcas) > Fóruns | Sede > Fórum > Nó (Unidade/Setor).
    "Acesso administrativo" (login e-mail+senha) eleva quem tem cadastro;
    "Solicitar acesso" abre o formulário; "Sair" volta à consulta (continua no interno). */
 const $ = id => document.getElementById(id);
@@ -40,7 +40,7 @@ document.querySelectorAll('.menu-item[data-view]').forEach(btn => {
     marcarMenu(btn.dataset.view);
     const v = btn.dataset.view;
     if (v === 'consulta') { mostrarConsulta(); renderInicio(); }
-    else if (v === 'tjes') { mostrarConsulta(); abrirTJES(); }
+    else if (v === 'sede') { mostrarConsulta(); abrirSede(); }
     else if (v === 'uteis') { mostrarConsulta(); renderUteis(); }
     else if (v === 'favoritos') { renderFavoritos(); }
     else {
@@ -207,7 +207,7 @@ function renderFavoritos() {
       : '<div class="fc-empty">Nenhum favorito ainda. Toque na estrela de um contato para guardar aqui.</div>');
   const btnPrintFav = document.getElementById('fc-print-fav');
   if (btnPrintFav) btnPrintFav.onclick = () => {
-    abrirImpressao('Favoritos — PJES', '<ul>' + chaves.map(k => { const f = favs[k]; return contatoPrint({ tipo: f.tipo, descricao: f.nome, valor: f.valor }); }).join('') + '</ul>');
+    abrirImpressao('Favoritos', '<ul>' + chaves.map(k => { const f = favs[k]; return contatoPrint({ tipo: f.tipo, descricao: f.nome, valor: f.valor }); }).join('') + '</ul>');
   };
   const painelFav = host() && host().closest('.fc-panel');
   const rolaFav = !!(painelFav && painelFav.scrollHeight > painelFav.clientHeight + 4);
@@ -325,7 +325,7 @@ document.addEventListener('click', (e) => {
     const linkId = lk.getAttribute('data-link-id');
     if (linkId) {
       const linkUrl = String(window.location.href).split('?')[0] + '?contato=' + encodeURIComponent(linkId);
-      if (navigator.share) { navigator.share({ title: 'Contato — Diretório PJES', url: linkUrl }).catch(() => {}); piscarBotao(lk); }
+      if (navigator.share) { navigator.share({ title: 'Contato — Diretório de Contatos', url: linkUrl }).catch(() => {}); piscarBotao(lk); }
       else { copiarTexto(linkUrl); piscarBotao(lk); }
     }
   }
@@ -725,7 +725,7 @@ function renderInicio() {
       badgeQuantidade(setores, 'Setor', 'Setores') +
       badgeQuantidade(m.qtdContatos, 'Contato', 'Contatos') + solBtn('comarca', m.id) + gestBtn('comarca', m.id) + '</div></div>';
   }).join('');
-  c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Contatos do PJES</h2>' +
+  c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Contatos da Sede</h2>' +
     '<p class="fc-subtitle fc-subtitle--intro">Consulte a estrutura completa por Comarca, Fórum, Unidade e Setor. Selecione uma Comarca no mapa, no menu suspenso ou na lista abaixo.</p></div></div>' +
     (comarcas.length ? '<div class="fc-catalog-counts">' +
       (totalComarcas ? '<span class="fc-pill fc-total-comarcas">' + esc(rotuloQuantidade(totalComarcas, 'Comarca', 'Comarcas')) + '</span>' : '') + '</div>' : '') +
@@ -798,9 +798,9 @@ function renderOrgao() {
     '<div class="fc-head"><div><h2 class="fc-title">' + esc(m.nome) + '</h2>' +
     '<p class="fc-subtitle">' + esc(resumo) + '</p>' + breadcrumbHtml(m, null, null) + '</div></div>' +
     '<select id="fc-comarca" class="fc-select">' + opcoesComarcas(H.comarcas || [], m.id) + '</select>' +
-    '<div class="fc-meta"><span class="fc-pill fc-total-orgaos">TJES</span>' +
+    '<div class="fc-meta"><span class="fc-pill fc-total-orgaos">Sede</span>' +
     badgeQuantidade(m.qtdUnidades, 'Unidade', 'Unidades') + '</div>' +
-    '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço do TJES:</strong> ' + linkEndereco(m.endereco) +
+    '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço da Sede:</strong> ' + linkEndereco(m.endereco) +
     (m.cep ? ' • CEP ' + esc(m.cep) : '') + '</div></div>' +
     cardContatosGerais(m.contatos || [], true, ctxOk) +
     '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
@@ -820,10 +820,10 @@ function renderOrgao() {
   vincularAcoes();
   destacarMapaAdmin(m.nome);
 }
-function abrirTJES() {
+function abrirSede() {
   const orgao = (H.comarcas || []).filter(ehOrgao)[0];
   if (orgao) abrirComarca(orgao.id);
-  marcarMenu('tjes');
+  marcarMenu('sede');
 }
 function renderUteis() {
   const c = host();
@@ -833,7 +833,7 @@ function renderUteis() {
   esconderCreate();
   const uteis = H.uteis || [];
   c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Telefones Úteis</h2>' +
-    '<p class="fc-subtitle">Canais de atendimento e serviços de apoio do PJES.</p></div></div>' +
+    '<p class="fc-subtitle">Canais de atendimento e serviços de apoio.</p></div></div>' +
     (uteis.length ? '<div class="fc-contatos">' + uteis.map(u => {
       const href = hrefContato(u.tipo, u.valor);
       const valorHtml = href ? '<a class="fc-contato-valor" href="' + esc(href) + '">' + esc(u.valor) + '</a>'
@@ -848,7 +848,7 @@ function renderUteis() {
     '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
     '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
   $('fc-print-uteis').onclick = () => {
-    abrirImpressao('Telefones Úteis — PJES', '<ul>' + uteis.map(u =>
+    abrirImpressao('Telefones Úteis', '<ul>' + uteis.map(u =>
       contatoPrint({ tipo: u.tipo, descricao: u.nome, valor: u.valor })).join('') + '</ul>');
   };
   vincularAcoes();
@@ -911,14 +911,14 @@ function renderNo() {
     badgeQuantidade(qtdSetores(no.filhos || []), 'Setor', 'Setores') + solBtn(nivelNo, no.id) + gestBtn(nivelNo, no.id) + '</div>' +
     '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço:</strong> ' + linkEndereco(no.enderecoExibicao) +
     (no.cepExibicao ? ' • CEP ' + esc(no.cepExibicao) : '') +
-    (no.endereco ? '' : ' <span class="fc-muted">(' + (pai ? 'herdado da Unidade' : (ehOrgao(m) ? 'herdado do TJES' : 'herdado do Fórum')) + ')</span>') + '</div></div>' +
+    (no.endereco ? '' : ' <span class="fc-muted">(' + (pai ? 'herdado da Unidade' : (ehOrgao(m) ? 'herdado da Sede' : 'herdado do Fórum')) + ')</span>') + '</div></div>' +
     '<div class="fc-section"><div class="fc-section-title"><h3>Contatos ' + (tipoTela === 'Setor' ? 'deste Setor' : 'desta Unidade') + '</h3></div>' +
     contatosCards(no.contatos || [], ctxOk) + '</div>' +
     ((no.filhos || []).length
       ? '<div class="fc-section"><div class="fc-section-title"><h3>Setores</h3></div>' +
         no.filhos.map(cardNo).join('') + '</div>'
       : '') +
-    barraAcoesUnidade(tipoTela, pai ? 'Unidade' : (ehOrgao(m) ? 'TJES' : 'Fórum'));
+    barraAcoesUnidade(tipoTela, pai ? 'Unidade' : (ehOrgao(m) ? 'Sede' : 'Fórum'));
   $('fc-back-no').onclick = () => {
     if (pai) abrirNo(pai.id);
     else { estado.noId = ''; if (ehOrgao(m)) renderOrgao(); else renderForum(); }
@@ -1154,8 +1154,8 @@ function imprimirOrgao() {
   const corpo = (m.contatos || []).length
     ? '<ul>' + (m.contatos || []).map(contatoPrint).join('') + '</ul>'
     : '<p class="muted">Sem contatos gerais.</p>';
-  abrirImpressao('Contatos Gerais — TJES',
-    '<section><h2>TJES</h2>' +
+  abrirImpressao('Contatos Gerais — Sede',
+    '<section><h2>Sede</h2>' +
     '<p class="meta">' + esc(m.endereco || 'Endereço não informado') +
     (m.cep ? ' • CEP ' + esc(m.cep) : '') + '</p>' + corpo + '</section>');
 }
@@ -1168,7 +1168,7 @@ function imprimirForum() {
     : '<p class="muted">Sem contatos gerais.</p>';
   abrirImpressao('Contatos Gerais — ' + f.nome,
     '<section><h2>' + esc(f.nome) + '</h2>' +
-    '<p class="meta">' + esc(ehOrgao(m) ? 'TJES' : m.nome) + ' • ' +
+    '<p class="meta">' + esc(m.nome) + ' • ' +
     esc(f.endereco || 'Endereço não informado') +
     (f.cep ? ' • CEP ' + esc(f.cep) : '') + '</p>' + corpo + '</section>');
 }
@@ -1579,7 +1579,7 @@ $('p-enviar').onclick = async () => {
   let j = {};
   try { j = JSON.parse(txt); } catch (e) {}
   if (r.ok && j.auto_aprovado) {
-    $('p-status').textContent = 'Acesso liberado automaticamente (demonstração).';
+    $('p-status').textContent = 'Acesso liberado automaticamente (ambiente de avaliação).';
     try { me = await (await fetch('/api/me', { headers: auth() })).json(); } catch (e) {}
     setTimeout(() => voltarConsulta(), 900);
     return;
@@ -1916,7 +1916,7 @@ document.addEventListener("keydown", function(e){
 window.addEventListener("beforeprint", function(){
   var m = document.getElementById("print-meta");
   if(!m){ m = document.createElement("div"); m.id = "print-meta"; m.className = "print-meta"; document.body.prepend(m); }
-  m.textContent = "Diretório Institucional de Contatos – PJES · Gerado em " + new Date().toLocaleString("pt-BR");
+  m.textContent = "Diretório de Contatos · Gerado em " + new Date().toLocaleString("pt-BR");
 });
 window.addEventListener("afterprint", function(){
   var m = document.getElementById("print-meta");
