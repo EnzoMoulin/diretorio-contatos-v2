@@ -306,7 +306,7 @@
       var linkId = lk.getAttribute("data-link-id");
       if (linkId) {
         var linkUrl = String(window.location.href).split("?")[0] + "?contato=" + encodeURIComponent(linkId);
-        if (navigator.share) { navigator.share({ title: "Contato — Diretório", url: linkUrl }).catch(function () {}); piscarBotao(lk); }
+        if (navigator.share) { navigator.share({ title: "Contato — Diretório de Contatos", url: linkUrl }).catch(function () {}); piscarBotao(lk); }
         else { copiarTexto(linkUrl); piscarBotao(lk); }
       }
     }
@@ -808,7 +808,7 @@
         badgeQuantidade(setores, "Setor", "Setores") +
         badgeQuantidade(m.qtdContatos, "Contato", "Contatos") + "</div></div>";
     }).join("");
-    c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Contatos Gerais</h2>' +
+    c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Contatos da Sede</h2>' +
       '<p class="fc-subtitle fc-subtitle--intro">Consulte a estrutura completa por Comarca, Fórum, Unidade e Setor. Selecione uma Comarca no mapa, no menu suspenso ou na lista abaixo.</p></div></div>' +
       (comarcas.length ? '<div class="fc-catalog-counts">' +
         (totalComarcas ? '<span class="fc-pill fc-total-comarcas">' + esc(rotuloQuantidade(totalComarcas, "Comarca", "Comarcas")) + "</span>" : "") + "</div>" : "") +
@@ -927,7 +927,7 @@
       if (ehOrgao(comarcas[i])) { orgao = comarcas[i]; break; }
     }
     if (orgao) abrirComarca(orgao.id);
-    marcarMenuV2("tjes");
+    marcarMenuV2("sede");
   }
 
   function renderUteis() {
@@ -939,7 +939,7 @@
     estado.noId = "";
     var uteis = (estado.dados && estado.dados.uteis) || [];
     c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Telefones Úteis</h2>' +
-      '<p class="fc-subtitle">Canais de atendimento e serviços de apoio do Diretório.</p></div></div>' +
+      '<p class="fc-subtitle">Canais de atendimento e serviços de apoio.</p></div></div>' +
       (uteis.length ? '<div class="fc-contatos">' + uteis.map(function (u) {
         var href = hrefContato(u.tipo, u.valor);
         var valorHtml = href ? '<a class="fc-contato-valor" href="' + esc(href) + '">' + esc(u.valor) + "</a>" : '<span class="fc-contato-valor">' + esc(u.valor) + "</span>";
@@ -954,7 +954,7 @@
       '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
       '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
     document.getElementById("fc-print-uteis").onclick = function () {
-      abrirImpressao("Telefones Úteis — Diretório", "<ul>" + uteis.map(function (u) { return contatoPrint({ tipo: u.tipo, descricao: u.nome, valor: u.valor }); }).join("") + "</ul>");
+      abrirImpressao("Telefones Úteis", "<ul>" + uteis.map(function (u) { return contatoPrint({ tipo: u.tipo, descricao: u.nome, valor: u.valor }); }).join("") + "</ul>");
     };
     vincularAcoes();
   }
@@ -1039,7 +1039,7 @@
       badgeQuantidade(qtdSetores(no.filhos || []), "Setor", "Setores") + "</div>" +
       '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço:</strong> ' + linkEndereco(no.enderecoExibicao) +
       (no.cepExibicao ? " • CEP " + esc(no.cepExibicao) : "") +
-      (no.endereco ? "" : ' <span class="fc-muted">(' + (pai ? "herdado da Unidade" : (ehOrgao(m) ? "herdado do Sede" : "herdado do Fórum")) + ")</span>") + "</div></div>" +
+      (no.endereco ? "" : ' <span class="fc-muted">(' + (pai ? "herdado da Unidade" : (ehOrgao(m) ? "herdado da Sede" : "herdado do Fórum")) + ")</span>") + "</div></div>" +
       '<div class="fc-section"><div class="fc-section-title"><h3>Contatos ' + (tipoTela === "Setor" ? "deste Setor" : "desta Unidade") + "</h3></div>" +
       contatosCards(no.contatos || []) + "</div>" +
       ((no.filhos || []).length
@@ -1139,7 +1139,7 @@
       : '<p class="muted">Sem contatos gerais.</p>';
     abrirImpressao("Contatos Gerais — " + f.nome,
       "<section><h2>" + esc(f.nome) + "</h2>" +
-      '<p class="meta">' + esc(ehOrgao(m) ? "Sede" : m.nome) + " • " +
+      '<p class="meta">' + esc(m.nome) + " • " +
       esc(f.endereco || "Endereço não informado") +
       (f.cep ? " • CEP " + esc(f.cep) : "") + "</p>" + corpo + "</section>");
   }
@@ -1344,7 +1344,7 @@
           ["consulta", "config"].forEach(function (x) { var s = $("view-" + x); if (s) s.classList.add("hidden"); });
           $("view-consulta").classList.remove("hidden");
           if (v === "consulta") { renderInicio(); }
-          else if (v === "tjes") { abrirSede(); }
+          else if (v === "sede") { abrirSede(); }
           else if (v === "uteis") { renderUteis(); }
           else if (v === "favoritos") { renderFavoritos(); }
           else { $("view-consulta").classList.add("hidden"); $("view-" + v).classList.remove("hidden"); }

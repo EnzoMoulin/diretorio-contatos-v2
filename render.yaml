@@ -4,8 +4,19 @@ services:
     runtime: python
     plan: free
     buildCommand: "echo ok"
-    startCommand: "INTRANET_ONLY=0 HOST=0.0.0.0 python3 app.py"
+    startCommand: "HOST=0.0.0.0 python3 app.py"
     healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
-        value: 3.14.7
+        value: 3.14.3
+      - key: INTRANET_ONLY
+        value: 0
+      - key: LOCAL_LOGIN
+        value: 0
+      - key: SIMULACAO_AUTO_APROVAR
+        value: 1
+      # Preencher após o primeiro deploy (URL pública + OAuth):
+      # - key: APP_BASE_URL
+      #   value: https://diretorio-contatos-v2.onrender.com
+      # - key: GOOGLE_CLIENT_JSON
+      #   sync: false  # JSON do client OAuth tipo "web", via dashboard (segredo)

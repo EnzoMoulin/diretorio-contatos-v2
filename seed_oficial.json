@@ -5,8 +5,8 @@
    "nome": "Sede Administrativa",
    "ibge": "",
    "tipo": "ORGAO",
-   "end": "Rua Desembargador Homero Mafra, nº 60 - Enseada do Suá, Vitória/ES",
-   "cep": "29050-275",
+   "end": "Av. Exemplo, 1000 - Centro, Vitória/ES",
+   "cep": "29000-000",
    "email": "",
    "obs": "",
    "idx": 0
@@ -1573,7 +1573,7 @@
    "tipo": "UNIDADE",
    "nome": "Protocolo • Distribuição",
    "end": "Rua Desembargador Homero Mafra, nº 89/11º andar Enseada do Suá - Edifício Greenwich. Vitória/ES",
-   "cep": "29050-275",
+   "cep": "29000-000",
    "obs": "",
    "sel": true,
    "ativo": true,
@@ -1648,7 +1648,7 @@
    "tipo": "UNIDADE",
    "nome": "5ª Secretaria Unificada",
    "end": "Rua Desembargador Homero Mafra, nº 89/11º andar Enseada do Suá - Edifício Greenwich. Vitória/ES",
-   "cep": "29050-275",
+   "cep": "29000-000",
    "obs": "Englobam: 1ª, 2ª, 3ª, 4ª e 5ª Vara da Fazenda Pública Estadual, Municipal, Registro Públicos, Meio Ambiente e Saúde e Acidentes de Trabalho",
    "sel": true,
    "ativo": true,
@@ -1663,7 +1663,7 @@
    "tipo": "UNIDADE",
    "nome": "6ª Secretaria Unificada",
    "end": "Rua Desembargador Homero Mafra, nº 89/11º andar Enseada do Suá - Edifício Greenwich. Vitória/ES",
-   "cep": "29050-275",
+   "cep": "29000-000",
    "obs": "Englobam: 1ª e 2ª Vara da Fazenda Pública Privativa de Execuções Fiscais Municipais, a 1ª e 2ª Vara da Fazenda Pública Privativa de Execuções Fiscais Estaduais",
    "sel": true,
    "ativo": true,
@@ -2159,7 +2159,7 @@
    "nome": "3º Juizado Especial Cível (Justiça Volante)",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 4.0,
@@ -2354,7 +2354,7 @@
    "nome": "Central de Mandados",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": true,
    "ativo": true,
    "ordem": 10.0,
@@ -2369,7 +2369,7 @@
    "nome": "Contadorias",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": true,
    "ativo": true,
    "ordem": 11.0,
@@ -2519,7 +2519,7 @@
    "nome": "1ª Vara Criminal",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 1.0,
@@ -2534,7 +2534,7 @@
    "nome": "1º Juizado Especial Criminal",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 1.0,
@@ -2549,7 +2549,7 @@
    "nome": "1ª Contadoria",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 1.0,
@@ -2609,7 +2609,7 @@
    "nome": "2ª Vara Criminal",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 2.0,
@@ -2624,7 +2624,7 @@
    "nome": "2º Juizado Especial Criminal",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 2.0,
@@ -2639,7 +2639,7 @@
    "nome": "2ª Contadoria",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 2.0,
@@ -2669,7 +2669,7 @@
    "nome": "3ª Vara Criminal",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 3.0,
@@ -2684,7 +2684,7 @@
    "nome": "3º Juizado Especial Criminal",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 3.0,
@@ -2714,7 +2714,7 @@
    "nome": "4ª Vara Criminal",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 4.0,
@@ -2729,7 +2729,7 @@
    "nome": "5ª Vara Criminal",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 5.0,
@@ -2744,7 +2744,7 @@
    "nome": "6ª Vara Criminal",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 6.0,
@@ -2759,7 +2759,7 @@
    "nome": "7ª Vara Criminal",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 7.0,
@@ -2774,7 +2774,7 @@
    "nome": "8ª Vara Criminal",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 8.0,
@@ -2789,7 +2789,7 @@
    "nome": "9ª Vara Criminal",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 9.0,
@@ -2804,7 +2804,7 @@
    "nome": "10ª Vara Criminal",
    "end": "",
    "cep": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "sel": false,
    "ativo": true,
    "ordem": 10.0,
@@ -14146,7 +14146,7 @@
    "valor": "3jecivel-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0040",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 0
   },
@@ -14158,7 +14158,7 @@
    "valor": "(27) 99860-XXXX",
    "ordem": 2.0,
    "uo": "UNI0040",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 1
   },
@@ -14278,7 +14278,7 @@
    "valor": "distribuicaocriminal-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0044",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 11
   },
@@ -14290,7 +14290,7 @@
    "valor": "(27) 99991-XXXX",
    "ordem": 2.0,
    "uo": "UNI0044",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 12
   },
@@ -14302,7 +14302,7 @@
    "valor": "(27) 99984-XXXX",
    "ordem": 1.0,
    "uo": "UNI0045",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 13
   },
@@ -14314,7 +14314,7 @@
    "valor": "1criminal-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0064",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 14
   },
@@ -14326,7 +14326,7 @@
    "valor": "(27) 99820-XXXX",
    "ordem": 2.0,
    "uo": "UNI0064",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 15
   },
@@ -14338,7 +14338,7 @@
    "valor": "2criminal-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0070",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 16
   },
@@ -14350,7 +14350,7 @@
    "valor": "(27) 99886-XXXX",
    "ordem": 2.0,
    "uo": "UNI0070",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 17
   },
@@ -14362,7 +14362,7 @@
    "valor": "3criminal-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0074",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 18
   },
@@ -14374,7 +14374,7 @@
    "valor": "(27) 99780-XXXX",
    "ordem": 2.0,
    "uo": "UNI0074",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 19
   },
@@ -14386,7 +14386,7 @@
    "valor": "4criminal-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0077",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 20
   },
@@ -14398,7 +14398,7 @@
    "valor": "(27) 99579-XXXX",
    "ordem": 2.0,
    "uo": "UNI0077",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 21
   },
@@ -14410,7 +14410,7 @@
    "valor": "5criminal-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0078",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 22
   },
@@ -14422,7 +14422,7 @@
    "valor": "(27) 99741-XXXX",
    "ordem": 2.0,
    "uo": "UNI0078",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 23
   },
@@ -14434,7 +14434,7 @@
    "valor": "6criminal-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0079",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 24
   },
@@ -14446,7 +14446,7 @@
    "valor": "(27) 99615-XXXX",
    "ordem": 2.0,
    "uo": "UNI0079",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 25
   },
@@ -14458,7 +14458,7 @@
    "valor": "7criminal-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0080",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 26
   },
@@ -14470,7 +14470,7 @@
    "valor": "(27) 3357-XXXX",
    "ordem": 2.0,
    "uo": "UNI0080",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 27
   },
@@ -14482,7 +14482,7 @@
    "valor": "8criminal-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0081",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 28
   },
@@ -14494,7 +14494,7 @@
    "valor": "(27) 99795-XXXX",
    "ordem": 2.0,
    "uo": "UNI0081",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 29
   },
@@ -14506,7 +14506,7 @@
    "valor": "9criminal-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0082",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 30
   },
@@ -14518,7 +14518,7 @@
    "valor": "(27) 99788-XXXX",
    "ordem": 2.0,
    "uo": "UNI0082",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 31
   },
@@ -14530,7 +14530,7 @@
    "valor": "10criminal-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0083",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 32
   },
@@ -14542,7 +14542,7 @@
    "valor": "(27) 99661-XXXX",
    "ordem": 2.0,
    "uo": "UNI0083",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 33
   },
@@ -14554,7 +14554,7 @@
    "valor": "1jecriminal-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0065",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 34
   },
@@ -14566,7 +14566,7 @@
    "valor": "(27) 99524-XXXX",
    "ordem": 2.0,
    "uo": "UNI0065",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 35
   },
@@ -14578,7 +14578,7 @@
    "valor": "2jecrimvix@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0071",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 36
   },
@@ -14590,7 +14590,7 @@
    "valor": "2jecriminal-vitoria@exemplo.jus.br",
    "ordem": 2.0,
    "uo": "UNI0071",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 37
   },
@@ -14602,7 +14602,7 @@
    "valor": "(27) 99509-XXXX",
    "ordem": 3.0,
    "uo": "UNI0071",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 38
   },
@@ -14614,7 +14614,7 @@
    "valor": "gabinete3jecrimdevitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0075",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 39
   },
@@ -14626,7 +14626,7 @@
    "valor": "3jecriminal-vitoria@exemplo.jus.br",
    "ordem": 2.0,
    "uo": "UNI0075",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 40
   },
@@ -14638,7 +14638,7 @@
    "valor": "(27) 99715-XXXX",
    "ordem": 3.0,
    "uo": "UNI0075",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 41
   },
@@ -14650,7 +14650,7 @@
    "valor": "1militar-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0049",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 42
   },
@@ -14662,7 +14662,7 @@
    "valor": "(27) 99523-XXXX",
    "ordem": 2.0,
    "uo": "UNI0049",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 43
   },
@@ -14674,7 +14674,7 @@
    "valor": "1vara-violenciadomestica@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0050",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 44
   },
@@ -14686,7 +14686,7 @@
    "valor": "(27) 99658-XXXX",
    "ordem": 2.0,
    "uo": "UNI0050",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 45
   },
@@ -14698,7 +14698,7 @@
    "valor": "centralmandados-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0053",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 46
   },
@@ -14710,7 +14710,7 @@
    "valor": "(27) 99925-XXXX",
    "ordem": 2.0,
    "uo": "UNI0053",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 47
   },
@@ -14722,7 +14722,7 @@
    "valor": "1contadoria-vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0066",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 48
   },
@@ -14734,7 +14734,7 @@
    "valor": "mblima@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "UNI0072",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 49
   },
@@ -14746,7 +14746,7 @@
    "valor": "(27) 99834-XXXX",
    "ordem": 2.0,
    "uo": "UNI0072",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 50
   },
@@ -14758,7 +14758,7 @@
    "valor": "vitoria@exemplo.jus.br",
    "ordem": 1.0,
    "uo": "",
-   "obs": "Contato provisório - Ofício 432/2024, SEI 7001802-03.2024.8.08.0024. Validar vigência.",
+   "obs": "Contato provisório — validar vigência.",
    "comarca": "",
    "idx": 51
   },
@@ -23086,7 +23086,7 @@
    "valor": "XXXX",
    "ordem": 1.0,
    "uo": "UNI0681",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 745
   },
@@ -23290,7 +23290,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0698",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 762
   },
@@ -23746,7 +23746,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0714",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 800
   },
@@ -23938,7 +23938,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0730",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 816
   },
@@ -25150,7 +25150,7 @@
    "valor": "XXXX",
    "ordem": 1.0,
    "uo": "UNI0682",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 917
   },
@@ -25318,7 +25318,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0699",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 931
   },
@@ -25486,7 +25486,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0715",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 945
   },
@@ -25570,7 +25570,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0731",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 952
   },
@@ -25606,7 +25606,7 @@
    "valor": "XXXX",
    "ordem": 5.0,
    "uo": "UNI0743",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 955
   },
@@ -25630,7 +25630,7 @@
    "valor": "XXXX",
    "ordem": 6.0,
    "uo": "UNI0743",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 957
   },
@@ -25666,7 +25666,7 @@
    "valor": "XXXX",
    "ordem": 7.0,
    "uo": "UNI0753",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 960
   },
@@ -25678,7 +25678,7 @@
    "valor": "XXXX",
    "ordem": 8.0,
    "uo": "UNI0753",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 961
   },
@@ -25702,7 +25702,7 @@
    "valor": "XXXX",
    "ordem": 9.0,
    "uo": "UNI0762",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 963
   },
@@ -25714,7 +25714,7 @@
    "valor": "XXXX",
    "ordem": 10.0,
    "uo": "UNI0762",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 964
   },
@@ -25726,7 +25726,7 @@
    "valor": "XXXX",
    "ordem": 11.0,
    "uo": "UNI0771",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 965
   },
@@ -25738,7 +25738,7 @@
    "valor": "XXXX",
    "ordem": 12.0,
    "uo": "UNI0771",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 966
   },
@@ -25750,7 +25750,7 @@
    "valor": "XXXX",
    "ordem": 13.0,
    "uo": "UNI0779",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 967
   },
@@ -25762,7 +25762,7 @@
    "valor": "XXXX",
    "ordem": 14.0,
    "uo": "UNI0779",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 968
   },
@@ -25774,7 +25774,7 @@
    "valor": "XXXX",
    "ordem": 15.0,
    "uo": "UNI0786",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 969
   },
@@ -25786,7 +25786,7 @@
    "valor": "XXXX",
    "ordem": 16.0,
    "uo": "UNI0792",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 970
   },
@@ -25798,7 +25798,7 @@
    "valor": "XXXX",
    "ordem": 17.0,
    "uo": "UNI0798",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 971
   },
@@ -25810,7 +25810,7 @@
    "valor": "XXXX",
    "ordem": 18.0,
    "uo": "UNI0798",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 972
   },
@@ -25822,7 +25822,7 @@
    "valor": "XXXX",
    "ordem": 19.0,
    "uo": "UNI0804",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 973
   },
@@ -25834,7 +25834,7 @@
    "valor": "XXXX",
    "ordem": 20.0,
    "uo": "UNI0809",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 974
   },
@@ -25846,7 +25846,7 @@
    "valor": "XXXX",
    "ordem": 21.0,
    "uo": "UNI0813",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 975
   },
@@ -25858,7 +25858,7 @@
    "valor": "XXXX",
    "ordem": 22.0,
    "uo": "UNI0817",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 976
   },
@@ -26410,7 +26410,7 @@
    "valor": "XXXX",
    "ordem": 1.0,
    "uo": "UNI0683",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1022
   },
@@ -26530,7 +26530,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0700",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1032
   },
@@ -26650,7 +26650,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0716",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1042
   },
@@ -26698,7 +26698,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0716",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1046
   },
@@ -26842,7 +26842,7 @@
    "valor": "(27) 3145-XXXX",
    "ordem": 1.0,
    "uo": "UNI0663",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1058
   },
@@ -26902,7 +26902,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0663",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1063
   },
@@ -26950,7 +26950,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0663",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1067
   },
@@ -27238,7 +27238,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0684",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1091
   },
@@ -27250,7 +27250,7 @@
    "valor": "XXXX",
    "ordem": 5.0,
    "uo": "UNI0684",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1092
   },
@@ -27262,7 +27262,7 @@
    "valor": "XXXX",
    "ordem": 6.0,
    "uo": "UNI0684",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1093
   },
@@ -27358,7 +27358,7 @@
    "valor": "XXXX",
    "ordem": 7.0,
    "uo": "UNI0701",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1101
   },
@@ -27370,7 +27370,7 @@
    "valor": "XXXX",
    "ordem": 8.0,
    "uo": "UNI0701",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1102
   },
@@ -27382,7 +27382,7 @@
    "valor": "XXXX",
    "ordem": 9.0,
    "uo": "UNI0701",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1103
   },
@@ -27394,7 +27394,7 @@
    "valor": "XXXX",
    "ordem": 10.0,
    "uo": "UNI0701",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1104
   },
@@ -27490,7 +27490,7 @@
    "valor": "XXXX",
    "ordem": 11.0,
    "uo": "UNI0717",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1112
   },
@@ -27502,7 +27502,7 @@
    "valor": "XXXX",
    "ordem": 12.0,
    "uo": "UNI0717",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1113
   },
@@ -27514,7 +27514,7 @@
    "valor": "XXXX",
    "ordem": 13.0,
    "uo": "UNI0717",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1114
   },
@@ -27526,7 +27526,7 @@
    "valor": "XXXX",
    "ordem": 14.0,
    "uo": "UNI0717",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1115
   },
@@ -27538,7 +27538,7 @@
    "valor": "XXXX",
    "ordem": 15.0,
    "uo": "UNI0717",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1116
   },
@@ -27550,7 +27550,7 @@
    "valor": "XXXX",
    "ordem": 16.0,
    "uo": "UNI0717",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1117
   },
@@ -27562,7 +27562,7 @@
    "valor": "XXXX",
    "ordem": 17.0,
    "uo": "UNI0717",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1118
   },
@@ -27574,7 +27574,7 @@
    "valor": "XXXX",
    "ordem": 18.0,
    "uo": "UNI0717",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1119
   },
@@ -27586,7 +27586,7 @@
    "valor": "XXXX",
    "ordem": 19.0,
    "uo": "UNI0717",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1120
   },
@@ -27646,7 +27646,7 @@
    "valor": "XXXX",
    "ordem": 20.0,
    "uo": "UNI0732",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1125
   },
@@ -27658,7 +27658,7 @@
    "valor": "XXXX",
    "ordem": 21.0,
    "uo": "UNI0732",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1126
   },
@@ -27670,7 +27670,7 @@
    "valor": "XXXX",
    "ordem": 22.0,
    "uo": "UNI0732",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1127
   },
@@ -27682,7 +27682,7 @@
    "valor": "XXXX",
    "ordem": 23.0,
    "uo": "UNI0732",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1128
   },
@@ -27694,7 +27694,7 @@
    "valor": "XXXX",
    "ordem": 24.0,
    "uo": "UNI0732",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1129
   },
@@ -27718,7 +27718,7 @@
    "valor": "XXXX",
    "ordem": 25.0,
    "uo": "UNI0744",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1131
   },
@@ -27730,7 +27730,7 @@
    "valor": "XXXX",
    "ordem": 26.0,
    "uo": "UNI0744",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1132
   },
@@ -27742,7 +27742,7 @@
    "valor": "XXXX",
    "ordem": 27.0,
    "uo": "UNI0744",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1133
   },
@@ -27754,7 +27754,7 @@
    "valor": "XXXX",
    "ordem": 28.0,
    "uo": "UNI0744",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1134
   },
@@ -27766,7 +27766,7 @@
    "valor": "XXXX",
    "ordem": 29.0,
    "uo": "UNI0744",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1135
   },
@@ -27790,7 +27790,7 @@
    "valor": "XXXX",
    "ordem": 30.0,
    "uo": "UNI0754",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1137
   },
@@ -27802,7 +27802,7 @@
    "valor": "XXXX",
    "ordem": 31.0,
    "uo": "UNI0754",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1138
   },
@@ -27814,7 +27814,7 @@
    "valor": "XXXX",
    "ordem": 32.0,
    "uo": "UNI0754",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1139
   },
@@ -27826,7 +27826,7 @@
    "valor": "XXXX",
    "ordem": 33.0,
    "uo": "UNI0754",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1140
   },
@@ -27850,7 +27850,7 @@
    "valor": "XXXX",
    "ordem": 34.0,
    "uo": "UNI0763",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1142
   },
@@ -27862,7 +27862,7 @@
    "valor": "XXXX",
    "ordem": 35.0,
    "uo": "UNI0763",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1143
   },
@@ -27874,7 +27874,7 @@
    "valor": "XXXX",
    "ordem": 36.0,
    "uo": "UNI0763",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1144
   },
@@ -27886,7 +27886,7 @@
    "valor": "XXXX",
    "ordem": 37.0,
    "uo": "UNI0763",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1145
   },
@@ -27898,7 +27898,7 @@
    "valor": "XXXX",
    "ordem": 38.0,
    "uo": "UNI0763",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1146
   },
@@ -27910,7 +27910,7 @@
    "valor": "XXXX",
    "ordem": 39.0,
    "uo": "UNI0763",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1147
   },
@@ -27922,7 +27922,7 @@
    "valor": "XXXX",
    "ordem": 40.0,
    "uo": "UNI0763",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1148
   },
@@ -27934,7 +27934,7 @@
    "valor": "XXXX",
    "ordem": 41.0,
    "uo": "UNI0763",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1149
   },
@@ -27946,7 +27946,7 @@
    "valor": "XXXX",
    "ordem": 42.0,
    "uo": "UNI0763",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1150
   },
@@ -27958,7 +27958,7 @@
    "valor": "XXXX",
    "ordem": 43.0,
    "uo": "UNI0763",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1151
   },
@@ -27970,7 +27970,7 @@
    "valor": "XXXX",
    "ordem": 44.0,
    "uo": "UNI0772",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1152
   },
@@ -27982,7 +27982,7 @@
    "valor": "XXXX",
    "ordem": 45.0,
    "uo": "UNI0772",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1153
   },
@@ -27994,7 +27994,7 @@
    "valor": "XXXX",
    "ordem": 46.0,
    "uo": "UNI0772",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1154
   },
@@ -28006,7 +28006,7 @@
    "valor": "XXXX",
    "ordem": 47.0,
    "uo": "UNI0772",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1155
   },
@@ -28018,7 +28018,7 @@
    "valor": "XXXX",
    "ordem": 48.0,
    "uo": "UNI0772",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1156
   },
@@ -28030,7 +28030,7 @@
    "valor": "XXXX",
    "ordem": 49.0,
    "uo": "UNI0772",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1157
   },
@@ -28078,7 +28078,7 @@
    "valor": "(27) 3145-XXXX",
    "ordem": 1.0,
    "uo": "UNI0664",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1161
   },
@@ -28126,7 +28126,7 @@
    "valor": "(27) 3145-XXXX",
    "ordem": 2.0,
    "uo": "UNI0664",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1165
   },
@@ -28786,7 +28786,7 @@
    "valor": "0800 970 XXXX",
    "ordem": 1.0,
    "uo": "UNI0665",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1220
   },
@@ -29638,7 +29638,7 @@
    "valor": "XXXX",
    "ordem": 1.0,
    "uo": "UNI0685",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1291
   },
@@ -29698,7 +29698,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0685",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1296
   },
@@ -29770,7 +29770,7 @@
    "valor": "(27) 3134-XXXX",
    "ordem": 3.0,
    "uo": "UNI0702",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1302
   },
@@ -29830,7 +29830,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0718",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1307
   },
@@ -29842,7 +29842,7 @@
    "valor": "XXXX",
    "ordem": 5.0,
    "uo": "UNI0718",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1308
   },
@@ -29878,7 +29878,7 @@
    "valor": "XXXX",
    "ordem": 6.0,
    "uo": "UNI0733",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1311
   },
@@ -29890,7 +29890,7 @@
    "valor": "XXXX",
    "ordem": 7.0,
    "uo": "UNI0733",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1312
   },
@@ -29914,7 +29914,7 @@
    "valor": "XXXX",
    "ordem": 8.0,
    "uo": "UNI0745",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1314
   },
@@ -29926,7 +29926,7 @@
    "valor": "XXXX",
    "ordem": 9.0,
    "uo": "UNI0745",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1315
   },
@@ -30178,7 +30178,7 @@
    "valor": "XXXX",
    "ordem": 1.0,
    "uo": "UNI0686",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1336
   },
@@ -30250,7 +30250,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0703",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1342
   },
@@ -30274,7 +30274,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0703",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1344
   },
@@ -30298,7 +30298,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0719",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1346
   },
@@ -30322,7 +30322,7 @@
    "valor": "XXXX",
    "ordem": 5.0,
    "uo": "UNI0734",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1348
   },
@@ -30346,7 +30346,7 @@
    "valor": "XXXX",
    "ordem": 6.0,
    "uo": "UNI0746",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1350
   },
@@ -30358,7 +30358,7 @@
    "valor": "XXXX",
    "ordem": 7.0,
    "uo": "UNI0746",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1351
   },
@@ -30370,7 +30370,7 @@
    "valor": "XXXX",
    "ordem": 8.0,
    "uo": "UNI0755",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1352
   },
@@ -30382,7 +30382,7 @@
    "valor": "XXXX",
    "ordem": 9.0,
    "uo": "UNI0764",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1353
   },
@@ -30394,7 +30394,7 @@
    "valor": "XXXX",
    "ordem": 10.0,
    "uo": "UNI0764",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1354
   },
@@ -30406,7 +30406,7 @@
    "valor": "XXXX",
    "ordem": 11.0,
    "uo": "UNI0773",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1355
   },
@@ -30418,7 +30418,7 @@
    "valor": "XXXX",
    "ordem": 12.0,
    "uo": "UNI0780",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1356
   },
@@ -30430,7 +30430,7 @@
    "valor": "XXXX",
    "ordem": 13.0,
    "uo": "UNI0787",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1357
   },
@@ -30442,7 +30442,7 @@
    "valor": "XXXX",
    "ordem": 14.0,
    "uo": "UNI0793",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1358
   },
@@ -30454,7 +30454,7 @@
    "valor": "XXXX",
    "ordem": 15.0,
    "uo": "UNI0799",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1359
   },
@@ -30466,7 +30466,7 @@
    "valor": "XXXX",
    "ordem": 16.0,
    "uo": "UNI0799",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1360
   },
@@ -30478,7 +30478,7 @@
    "valor": "XXXX",
    "ordem": 17.0,
    "uo": "UNI0805",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1361
   },
@@ -30490,7 +30490,7 @@
    "valor": "XXXX",
    "ordem": 18.0,
    "uo": "UNI0810",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1362
   },
@@ -30502,7 +30502,7 @@
    "valor": "XXXX",
    "ordem": 19.0,
    "uo": "UNI0814",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1363
   },
@@ -30514,7 +30514,7 @@
    "valor": "XXXX",
    "ordem": 20.0,
    "uo": "UNI0818",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1364
   },
@@ -30526,7 +30526,7 @@
    "valor": "XXXX",
    "ordem": 21.0,
    "uo": "UNI0818",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1365
   },
@@ -30538,7 +30538,7 @@
    "valor": "XXXX",
    "ordem": 22.0,
    "uo": "UNI0821",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1366
   },
@@ -30550,7 +30550,7 @@
    "valor": "XXXX",
    "ordem": 23.0,
    "uo": "UNI0823",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1367
   },
@@ -30562,7 +30562,7 @@
    "valor": "XXXX",
    "ordem": 24.0,
    "uo": "UNI0825",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1368
   },
@@ -30574,7 +30574,7 @@
    "valor": "XXXX",
    "ordem": 25.0,
    "uo": "UNI0827",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1369
   },
@@ -30586,7 +30586,7 @@
    "valor": "XXXX",
    "ordem": 26.0,
    "uo": "UNI0829",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1370
   },
@@ -30598,7 +30598,7 @@
    "valor": "XXXX",
    "ordem": 27.0,
    "uo": "UNI0830",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1371
   },
@@ -30610,7 +30610,7 @@
    "valor": "XXXX",
    "ordem": 28.0,
    "uo": "UNI0831",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1372
   },
@@ -30622,7 +30622,7 @@
    "valor": "XXXX",
    "ordem": 29.0,
    "uo": "UNI0831",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1373
   },
@@ -30634,7 +30634,7 @@
    "valor": "XXXX",
    "ordem": 30.0,
    "uo": "UNI0832",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1374
   },
@@ -30646,7 +30646,7 @@
    "valor": "XXXX",
    "ordem": 31.0,
    "uo": "UNI0833",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1375
   },
@@ -30658,7 +30658,7 @@
    "valor": "XXXX",
    "ordem": 32.0,
    "uo": "UNI0833",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1376
   },
@@ -30670,7 +30670,7 @@
    "valor": "XXXX",
    "ordem": 33.0,
    "uo": "UNI0834",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1377
   },
@@ -30682,7 +30682,7 @@
    "valor": "XXXX",
    "ordem": 34.0,
    "uo": "UNI0835",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1378
   },
@@ -30694,7 +30694,7 @@
    "valor": "XXXX",
    "ordem": 35.0,
    "uo": "UNI0836",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1379
   },
@@ -30706,7 +30706,7 @@
    "valor": "XXXX",
    "ordem": 36.0,
    "uo": "UNI0837",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1380
   },
@@ -30718,7 +30718,7 @@
    "valor": "XXXX",
    "ordem": 37.0,
    "uo": "UNI0837",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1381
   },
@@ -30730,7 +30730,7 @@
    "valor": "XXXX",
    "ordem": 38.0,
    "uo": "UNI0838",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1382
   },
@@ -30742,7 +30742,7 @@
    "valor": "XXXX",
    "ordem": 1.0,
    "uo": "UNI0668",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1383
   },
@@ -30766,7 +30766,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0668",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1385
   },
@@ -30778,7 +30778,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0668",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1386
   },
@@ -31030,7 +31030,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0687",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1407
   },
@@ -31378,7 +31378,7 @@
    "valor": "XXXX",
    "ordem": 1.0,
    "uo": "UNI0669",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1436
   },
@@ -31426,7 +31426,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0669",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1440
   },
@@ -31450,7 +31450,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0669",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1442
   },
@@ -31954,7 +31954,7 @@
    "valor": "XXXX",
    "ordem": 1.0,
    "uo": "UNI0688",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1484
   },
@@ -32002,7 +32002,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0688",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1488
   },
@@ -32074,7 +32074,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0704",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1494
   },
@@ -32110,7 +32110,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0704",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1497
   },
@@ -32134,7 +32134,7 @@
    "valor": "XXXX",
    "ordem": 5.0,
    "uo": "UNI0704",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1499
   },
@@ -32194,7 +32194,7 @@
    "valor": "XXXX",
    "ordem": 6.0,
    "uo": "UNI0720",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1504
   },
@@ -32254,7 +32254,7 @@
    "valor": "XXXX",
    "ordem": 7.0,
    "uo": "UNI0735",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1509
   },
@@ -32266,7 +32266,7 @@
    "valor": "XXXX",
    "ordem": 8.0,
    "uo": "UNI0735",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1510
   },
@@ -32302,7 +32302,7 @@
    "valor": "XXXX",
    "ordem": 9.0,
    "uo": "UNI0747",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1513
   },
@@ -32326,7 +32326,7 @@
    "valor": "XXXX",
    "ordem": 10.0,
    "uo": "UNI0756",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1515
   },
@@ -32338,7 +32338,7 @@
    "valor": "XXXX",
    "ordem": 11.0,
    "uo": "UNI0756",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1516
   },
@@ -32350,7 +32350,7 @@
    "valor": "XXXX",
    "ordem": 12.0,
    "uo": "UNI0756",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1517
   },
@@ -32374,7 +32374,7 @@
    "valor": "XXXX",
    "ordem": 13.0,
    "uo": "UNI0765",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1519
   },
@@ -32398,7 +32398,7 @@
    "valor": "XXXX",
    "ordem": 14.0,
    "uo": "UNI0774",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1521
   },
@@ -32410,7 +32410,7 @@
    "valor": "XXXX",
    "ordem": 15.0,
    "uo": "UNI0774",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1522
   },
@@ -32422,7 +32422,7 @@
    "valor": "XXXX",
    "ordem": 16.0,
    "uo": "UNI0781",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1523
   },
@@ -32578,7 +32578,7 @@
    "valor": "XXXX",
    "ordem": 1.0,
    "uo": "UNI0689",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1536
   },
@@ -32626,7 +32626,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0689",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1540
   },
@@ -32710,7 +32710,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0705",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1547
   },
@@ -32818,7 +32818,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0721",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1556
   },
@@ -32830,7 +32830,7 @@
    "valor": "XXXX",
    "ordem": 5.0,
    "uo": "UNI0721",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1557
   },
@@ -32842,7 +32842,7 @@
    "valor": "XXXX",
    "ordem": 6.0,
    "uo": "UNI0721",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1558
   },
@@ -32854,7 +32854,7 @@
    "valor": "XXXX",
    "ordem": 7.0,
    "uo": "UNI0721",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1559
   },
@@ -32938,7 +32938,7 @@
    "valor": "XXXX",
    "ordem": 8.0,
    "uo": "UNI0736",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1566
   },
@@ -32950,7 +32950,7 @@
    "valor": "XXXX",
    "ordem": 9.0,
    "uo": "UNI0736",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1567
   },
@@ -33178,7 +33178,7 @@
    "valor": "XXXX",
    "ordem": 1.0,
    "uo": "UNI0672",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1586
   },
@@ -33202,7 +33202,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0672",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1588
   },
@@ -33574,7 +33574,7 @@
    "valor": "XXXX",
    "ordem": 1.0,
    "uo": "UNI0673",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1619
   },
@@ -33754,7 +33754,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0690",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1634
   },
@@ -33778,7 +33778,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0706",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1636
   },
@@ -33802,7 +33802,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0722",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1638
   },
@@ -33826,7 +33826,7 @@
    "valor": "XXXX",
    "ordem": 5.0,
    "uo": "UNI0737",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1640
   },
@@ -33970,7 +33970,7 @@
    "valor": "XXXX",
    "ordem": 1.0,
    "uo": "UNI0691",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1652
   },
@@ -33994,7 +33994,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0691",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1654
   },
@@ -34018,7 +34018,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0707",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1656
   },
@@ -34042,7 +34042,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0723",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1658
   },
@@ -34066,7 +34066,7 @@
    "valor": "XXXX",
    "ordem": 5.0,
    "uo": "UNI0738",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1660
   },
@@ -34078,7 +34078,7 @@
    "valor": "XXXX",
    "ordem": 6.0,
    "uo": "UNI0738",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1661
   },
@@ -34090,7 +34090,7 @@
    "valor": "XXXX",
    "ordem": 7.0,
    "uo": "UNI0738",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1662
   },
@@ -34102,7 +34102,7 @@
    "valor": "XXXX",
    "ordem": 8.0,
    "uo": "UNI0748",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1663
   },
@@ -34114,7 +34114,7 @@
    "valor": "XXXX",
    "ordem": 9.0,
    "uo": "UNI0757",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1664
   },
@@ -34126,7 +34126,7 @@
    "valor": "XXXX",
    "ordem": 10.0,
    "uo": "UNI0766",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1665
   },
@@ -34138,7 +34138,7 @@
    "valor": "XXXX",
    "ordem": 11.0,
    "uo": "UNI0766",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1666
   },
@@ -34150,7 +34150,7 @@
    "valor": "XXXX",
    "ordem": 12.0,
    "uo": "UNI0766",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1667
   },
@@ -34162,7 +34162,7 @@
    "valor": "XXXX",
    "ordem": 13.0,
    "uo": "UNI0775",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1668
   },
@@ -34174,7 +34174,7 @@
    "valor": "(27) 3357-XXXX",
    "ordem": 14.0,
    "uo": "UNI0782",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1669
   },
@@ -34186,7 +34186,7 @@
    "valor": "(27) 3145-XXXX",
    "ordem": 15.0,
    "uo": "UNI0788",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1670
   },
@@ -34198,7 +34198,7 @@
    "valor": "(27) 3442-XXXX",
    "ordem": 16.0,
    "uo": "UNI0794",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1671
   },
@@ -34210,7 +34210,7 @@
    "valor": "XXXX",
    "ordem": 17.0,
    "uo": "UNI0800",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1672
   },
@@ -34222,7 +34222,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 18.0,
    "uo": "UNI0806",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1673
   },
@@ -34234,7 +34234,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 19.0,
    "uo": "UNI0806",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1674
   },
@@ -34246,7 +34246,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 20.0,
    "uo": "UNI0806",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1675
   },
@@ -34306,7 +34306,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 1.0,
    "uo": "UNI0692",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1680
   },
@@ -34342,7 +34342,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 2.0,
    "uo": "UNI0708",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1683
   },
@@ -34366,7 +34366,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 3.0,
    "uo": "UNI0724",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1685
   },
@@ -34378,7 +34378,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0724",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1686
   },
@@ -34402,7 +34402,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 5.0,
    "uo": "UNI0739",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1688
   },
@@ -34414,7 +34414,7 @@
    "valor": "XXXX",
    "ordem": 6.0,
    "uo": "UNI0739",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1689
   },
@@ -34426,7 +34426,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 7.0,
    "uo": "UNI0749",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1690
   },
@@ -34438,7 +34438,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 8.0,
    "uo": "UNI0758",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1691
   },
@@ -34450,7 +34450,7 @@
    "valor": "XXXX",
    "ordem": 9.0,
    "uo": "UNI0758",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1692
   },
@@ -34462,7 +34462,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 10.0,
    "uo": "UNI0767",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1693
   },
@@ -34474,7 +34474,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 11.0,
    "uo": "UNI0776",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1694
   },
@@ -34486,7 +34486,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 12.0,
    "uo": "UNI0783",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1695
   },
@@ -34498,7 +34498,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 13.0,
    "uo": "UNI0789",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1696
   },
@@ -34510,7 +34510,7 @@
    "valor": "XXXX",
    "ordem": 14.0,
    "uo": "UNI0789",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1697
   },
@@ -34522,7 +34522,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 15.0,
    "uo": "UNI0795",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1698
   },
@@ -34534,7 +34534,7 @@
    "valor": "XXXX",
    "ordem": 16.0,
    "uo": "UNI0795",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1699
   },
@@ -34546,7 +34546,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 17.0,
    "uo": "UNI0801",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1700
   },
@@ -34558,7 +34558,7 @@
    "valor": "XXXX",
    "ordem": 18.0,
    "uo": "UNI0801",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1701
   },
@@ -34618,7 +34618,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 1.0,
    "uo": "UNI0693",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1706
   },
@@ -34642,7 +34642,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 2.0,
    "uo": "UNI0709",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1708
   },
@@ -34666,7 +34666,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 3.0,
    "uo": "UNI0725",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1710
   },
@@ -34690,7 +34690,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 4.0,
    "uo": "UNI0740",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1712
   },
@@ -34702,7 +34702,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 5.0,
    "uo": "UNI0750",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1713
   },
@@ -34714,7 +34714,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 6.0,
    "uo": "UNI0759",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1714
   },
@@ -34726,7 +34726,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 7.0,
    "uo": "UNI0768",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1715
   },
@@ -34738,7 +34738,7 @@
    "valor": "XXXX",
    "ordem": 8.0,
    "uo": "UNI0768",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1716
   },
@@ -34750,7 +34750,7 @@
    "valor": "(27) 3442-XXXX",
    "ordem": 9.0,
    "uo": "UNI0777",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1717
   },
@@ -34762,7 +34762,7 @@
    "valor": "(27) 3442-XXXX",
    "ordem": 10.0,
    "uo": "UNI0784",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1718
   },
@@ -34774,7 +34774,7 @@
    "valor": "(27) 3442-XXXX",
    "ordem": 11.0,
    "uo": "UNI0790",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1719
   },
@@ -34786,7 +34786,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 12.0,
    "uo": "UNI0796",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1720
   },
@@ -34798,7 +34798,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 13.0,
    "uo": "UNI0802",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1721
   },
@@ -34810,7 +34810,7 @@
    "valor": "XXXX",
    "ordem": 14.0,
    "uo": "UNI0802",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1722
   },
@@ -34822,7 +34822,7 @@
    "valor": "XXXX",
    "ordem": 15.0,
    "uo": "UNI0802",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1723
   },
@@ -34834,7 +34834,7 @@
    "valor": "XXXX",
    "ordem": 16.0,
    "uo": "UNI0802",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1724
   },
@@ -34846,7 +34846,7 @@
    "valor": "XXXX",
    "ordem": 17.0,
    "uo": "UNI0802",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1725
   },
@@ -34858,7 +34858,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 18.0,
    "uo": "UNI0807",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1726
   },
@@ -34870,7 +34870,7 @@
    "valor": "XXXX",
    "ordem": 19.0,
    "uo": "UNI0807",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1727
   },
@@ -34882,7 +34882,7 @@
    "valor": "XXXX",
    "ordem": 20.0,
    "uo": "UNI0807",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1728
   },
@@ -34894,7 +34894,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 21.0,
    "uo": "UNI0811",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1729
   },
@@ -34906,7 +34906,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 22.0,
    "uo": "UNI0815",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1730
   },
@@ -34918,7 +34918,7 @@
    "valor": "XXXX",
    "ordem": 23.0,
    "uo": "UNI0815",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1731
   },
@@ -34930,7 +34930,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 24.0,
    "uo": "UNI0819",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1732
   },
@@ -34942,7 +34942,7 @@
    "valor": "(27) 3357-XXXX",
    "ordem": 25.0,
    "uo": "UNI0822",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1733
   },
@@ -34954,7 +34954,7 @@
    "valor": "(27) 3357-XXXX",
    "ordem": 26.0,
    "uo": "UNI0824",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1734
   },
@@ -34966,7 +34966,7 @@
    "valor": "XXXX",
    "ordem": 27.0,
    "uo": "UNI0824",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1735
   },
@@ -34978,7 +34978,7 @@
    "valor": "(27) 3442-XXXX",
    "ordem": 28.0,
    "uo": "UNI0826",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1736
   },
@@ -34990,7 +34990,7 @@
    "valor": "XXXX",
    "ordem": 29.0,
    "uo": "UNI0826",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1737
   },
@@ -35002,7 +35002,7 @@
    "valor": "(27) 3442-XXXX",
    "ordem": 30.0,
    "uo": "UNI0828",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1738
   },
@@ -35014,7 +35014,7 @@
    "valor": "(27) 99903-XXXX",
    "ordem": 31.0,
    "uo": "UNI0828",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1739
   },
@@ -35074,7 +35074,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 1.0,
    "uo": "UNI0694",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1744
   },
@@ -35098,7 +35098,7 @@
    "valor": "(27) 3441-XXXX",
    "ordem": 2.0,
    "uo": "UNI0694",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1746
   },
@@ -35122,7 +35122,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0710",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1748
   },
@@ -35146,7 +35146,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0726",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1750
   },
@@ -35290,7 +35290,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 1.0,
    "uo": "UNI0695",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1762
   },
@@ -35302,7 +35302,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 2.0,
    "uo": "UNI0711",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1763
   },
@@ -35314,7 +35314,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0727",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1764
   },
@@ -35326,7 +35326,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 4.0,
    "uo": "UNI0741",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1765
   },
@@ -35338,7 +35338,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 5.0,
    "uo": "UNI0751",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1766
   },
@@ -35350,7 +35350,7 @@
    "valor": "(27) 3134-XXXX",
    "ordem": 6.0,
    "uo": "UNI0760",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1767
   },
@@ -35362,7 +35362,7 @@
    "valor": "(27) 3134-XXXX",
    "ordem": 7.0,
    "uo": "UNI0769",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1768
   },
@@ -35374,7 +35374,7 @@
    "valor": "(27) 3134-XXXX",
    "ordem": 8.0,
    "uo": "UNI0778",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1769
   },
@@ -35386,7 +35386,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 9.0,
    "uo": "UNI0785",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1770
   },
@@ -35398,7 +35398,7 @@
    "valor": "XXXX",
    "ordem": 10.0,
    "uo": "UNI0785",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1771
   },
@@ -35410,7 +35410,7 @@
    "valor": "(27) 3134-XXXX",
    "ordem": 11.0,
    "uo": "UNI0791",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1772
   },
@@ -35422,7 +35422,7 @@
    "valor": "XXXX",
    "ordem": 12.0,
    "uo": "UNI0797",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1773
   },
@@ -35434,7 +35434,7 @@
    "valor": "XXXX",
    "ordem": 13.0,
    "uo": "UNI0803",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1774
   },
@@ -35446,7 +35446,7 @@
    "valor": "XXXX",
    "ordem": 14.0,
    "uo": "UNI0808",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1775
   },
@@ -35458,7 +35458,7 @@
    "valor": "XXXX",
    "ordem": 15.0,
    "uo": "UNI0808",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1776
   },
@@ -35470,7 +35470,7 @@
    "valor": "XXXX",
    "ordem": 16.0,
    "uo": "UNI0812",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1777
   },
@@ -35482,7 +35482,7 @@
    "valor": "XXXX",
    "ordem": 17.0,
    "uo": "UNI0816",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1778
   },
@@ -35494,7 +35494,7 @@
    "valor": "XXXX",
    "ordem": 18.0,
    "uo": "UNI0820",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1779
   },
@@ -35506,7 +35506,7 @@
    "valor": "XXXX",
    "ordem": 19.0,
    "uo": "UNI0820",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1780
   },
@@ -35518,7 +35518,7 @@
    "valor": "XXXX",
    "ordem": 20.0,
    "uo": "UNI0820",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1781
   },
@@ -35530,7 +35530,7 @@
    "valor": "XXXX",
    "ordem": 21.0,
    "uo": "UNI0820",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1782
   },
@@ -35542,7 +35542,7 @@
    "valor": "XXXX",
    "ordem": 22.0,
    "uo": "UNI0820",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1783
   },
@@ -35554,7 +35554,7 @@
    "valor": "XXXX",
    "ordem": 23.0,
    "uo": "UNI0820",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1784
   },
@@ -35566,7 +35566,7 @@
    "valor": "XXXX",
    "ordem": 24.0,
    "uo": "UNI0820",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1785
   },
@@ -35578,7 +35578,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 1.0,
    "uo": "UNI0696",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1786
   },
@@ -35590,7 +35590,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 2.0,
    "uo": "UNI0712",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1787
   },
@@ -35602,7 +35602,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 3.0,
    "uo": "UNI0728",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1788
   },
@@ -35614,7 +35614,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0728",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1789
   },
@@ -35626,7 +35626,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 5.0,
    "uo": "UNI0742",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1790
   },
@@ -35638,7 +35638,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 6.0,
    "uo": "UNI0752",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1791
   },
@@ -35650,7 +35650,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 7.0,
    "uo": "UNI0761",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1792
   },
@@ -35662,7 +35662,7 @@
    "valor": "XXXX",
    "ordem": 8.0,
    "uo": "UNI0761",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1793
   },
@@ -35674,7 +35674,7 @@
    "valor": "XXXX",
    "ordem": 9.0,
    "uo": "UNI0761",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1794
   },
@@ -35686,7 +35686,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 10.0,
    "uo": "UNI0770",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1795
   },
@@ -35698,7 +35698,7 @@
    "valor": "XXXX",
    "ordem": 1.0,
    "uo": "UNI0697",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1796
   },
@@ -35710,7 +35710,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "UNI0697",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1797
   },
@@ -35722,7 +35722,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "UNI0697",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1798
   },
@@ -35734,7 +35734,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "UNI0713",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1799
   },
@@ -35746,7 +35746,7 @@
    "valor": "XXXX",
    "ordem": 5.0,
    "uo": "UNI0729",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1800
   },
@@ -35758,7 +35758,7 @@
    "valor": "XXXX",
    "ordem": 6.0,
    "uo": "UNI0729",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1801
   },
@@ -35770,7 +35770,7 @@
    "valor": "(27) 3334-XXXX",
    "ordem": 1.0,
    "uo": "",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1802
   },
@@ -35782,7 +35782,7 @@
    "valor": "XXXX",
    "ordem": 2.0,
    "uo": "",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1803
   },
@@ -35794,7 +35794,7 @@
    "valor": "XXXX",
    "ordem": 3.0,
    "uo": "",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1804
   },
@@ -35806,7 +35806,7 @@
    "valor": "XXXX",
    "ordem": 4.0,
    "uo": "",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1805
   },
@@ -35818,7 +35818,7 @@
    "valor": "XXXX",
    "ordem": 5.0,
    "uo": "",
-   "obs": "Catálogo Ramais Sede - agosto/2026",
+   "obs": "Catálogo de ramais — agosto/2026",
    "comarca": "MUN0000",
    "idx": 1806
   }
@@ -35826,67 +35826,67 @@
  "uteis": [
   {
    "id": "UTL0001",
-   "nome": "Ajudes",
+   "nome": "Central de ajuda",
    "tipo": "Telefone",
    "valor": "(27) 3232-XXXX"
   },
   {
    "id": "UTL0002",
-   "nome": "Banestes (SAC)",
+   "nome": "Banco (SAC)",
    "tipo": "Telefone",
    "valor": "0800 727  XXXX"
   },
   {
    "id": "UTL0003",
-   "nome": "Banestes (Ouvidoria)",
+   "nome": "Banco (Ouvidoria)",
    "tipo": "Telefone",
    "valor": "0800 727  XXXX"
   },
   {
    "id": "UTL0004",
-   "nome": "Corregedoria Geral da Justiça",
+   "nome": "Corregedoria",
    "tipo": "Telefone",
    "valor": "(27) 3145-XXXX"
   },
   {
    "id": "UTL0005",
-   "nome": "Escola da Magistratura (EMES)",
+   "nome": "Escola de formação",
    "tipo": "Telefone",
    "valor": "(27) 3145-XXXX"
   },
   {
    "id": "UTL0006",
-   "nome": "Escola da Magistratura (EMES)",
+   "nome": "Escola de formação",
    "tipo": "Telefone",
    "valor": "(27) 3145-XXXX"
   },
   {
    "id": "UTL0007",
-   "nome": "IPAJM (Perícia)",
+   "nome": "Previdência (perícia)",
    "tipo": "Telefone",
    "valor": "0800 283  XXXX"
   },
   {
    "id": "UTL0008",
-   "nome": "IPAJM (Perícia)",
+   "nome": "Previdência (perícia)",
    "tipo": "Telefone",
    "valor": "(27) 3381-XXXX"
   },
   {
    "id": "UTL0009",
-   "nome": "IPAJM (Perícia)",
+   "nome": "Previdência (perícia)",
    "tipo": "Telefone",
    "valor": "(27) 3381-XXXX"
   },
   {
    "id": "UTL0010",
-   "nome": "Sindijudiciário",
+   "nome": "Sindicato",
    "tipo": "Telefone",
    "valor": "(27) 3357-XXXX"
   },
   {
    "id": "UTL0011",
-   "nome": "Ordem dos Advogados do Brasil (OAB)",
+   "nome": "Ordem dos Advogados",
    "tipo": "Telefone",
    "valor": "(27) 3232. XXXX"
   }
