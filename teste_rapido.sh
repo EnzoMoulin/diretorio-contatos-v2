@@ -101,4 +101,4 @@ echo -n "marcar todas lidas (200 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/notificacoes/lidas -H "X-Admin-Token: $TA"
 kill $PID 2>/dev/null
 rm -f contatos.db /tmp/contatos_test.log
-echo "OK"
+echo "fim: confira os códigos acima"

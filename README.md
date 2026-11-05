@@ -1,5 +1,7 @@
 # Diretório de Contatos — evolução Python + SQLite
 
+[![Testes](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions/workflows/testes.yml/badge.svg)](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions)
+
 > Case real de estágio em tribunal estadual: o MVP original (Google Apps Script + Google
 > Sheets) validou o fluxo a custo zero no ecossistema Workspace do tribunal;
 > esta é a **fase 2 — reescrita em Python + SQLite**, com a mesma arquitetura

@@ -83,11 +83,16 @@ async function initMapa(mapId, msgId, locs, onSelect) {
     _layer.eachLayer(l => { if (l._total) l.bringToFront(); });
     const enquadrar = () => {
       try {
-        _map.fitBounds(_layer.getBounds(), { padding: [3, 3] });
+        _map.fitBounds(_layer.getBounds(), { padding: [14, 14] });
       } catch (e) {}
     };
     enquadrar();
     setTimeout(() => { try { _map.invalidateSize(); enquadrar(); } catch (e) {} }, 220);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('load', () => {
+        try { _map.invalidateSize(); enquadrar(); } catch (e) {}
+      });
+    }
     const legenda = L.control({ position: 'bottomright' });
     legenda.onAdd = () => {
       const div = L.DomUtil.create('div', 'fc-map-legenda');
