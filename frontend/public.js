@@ -1214,7 +1214,7 @@
     }
     try {
       if (estado.mapa) estado.mapa.remove();
-      estado.mapa = L.map("map", { scrollWheelZoom: true }).setView([-19.7, -40.5], 7.6);
+      estado.mapa = L.map("map", { scrollWheelZoom: true, zoomSnap: 0.5, zoomDelta: 0.5 }).setView([-19.7, -40.5], 7.6);
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap"
       }).addTo(estado.mapa);
@@ -1264,7 +1264,24 @@
           return div;
         };
         legenda.addTo(estado.mapa);
-        estado.mapa.fitBounds(estado.geojson.getBounds(), { padding: [3, 3] });
+        estado.reenquadrarMapa = function () {
+          try {
+            var el = document.getElementById("map");
+            estado.mapa.invalidateSize();
+            var r = el.getBoundingClientRect();
+            estado.tamMapa = Math.round(r.width) + "x" + Math.round(r.height);
+            var gb = estado.geojson.getBounds();
+            estado.mapa.fitBounds(gb, { padding: [28, 28] });
+            var tentativas = 0;
+            while (tentativas < 4 && !estado.mapa.getBounds().contains(gb)) {
+              estado.mapa.zoomOut();
+              tentativas++;
+            }
+          } catch (err) {}
+        };
+        estado.reenquadrarMapa();
+        setTimeout(estado.reenquadrarMapa, 300);
+        window.addEventListener('load', estado.reenquadrarMapa);
         var msg2 = $("map-msg");
         if (msg2) msg2.textContent = "";
       }).catch(function () {
@@ -1274,7 +1291,14 @@
       if (window.ResizeObserver) {
         try {
           new ResizeObserver(function () {
-            try { estado.mapa.invalidateSize(); } catch (e) {}
+            try {
+              if (!estado.mapa || !estado.geojson || !estado.reenquadrarMapa) return;
+              var el = document.getElementById("map");
+              var r = el.getBoundingClientRect();
+              var chave = Math.round(r.width) + "x" + Math.round(r.height);
+              estado.mapa.invalidateSize();
+              if (chave !== estado.tamMapa) estado.reenquadrarMapa();
+            } catch (e) {}
           }).observe(document.getElementById("map"));
         } catch (e) {}
       }

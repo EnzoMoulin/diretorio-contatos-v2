@@ -1,5 +1,7 @@
 # Diretório de Contatos — evolução Python + SQLite
 
+[![Testes](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions/workflows/testes.yml/badge.svg)](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions)
+
 > Case real de estágio em tribunal estadual: o MVP original (Google Apps Script + Google
 > Sheets) validou o fluxo a custo zero no ecossistema Workspace do tribunal;
 > esta é a **fase 2 — reescrita em Python + SQLite**, com a mesma arquitetura
@@ -35,7 +37,8 @@ sem dependência de fornecedor; o v3 endurece para escala.
 
 ## Estudo de caso: v1 → v2 → v3
 
-O v1 foi o MVP entregue e aprovado como piloto no órgão (Google Apps Script +
+O v1 foi o MVP cuja proposta e entrega foram avaliadas e aprovadas no órgão;
+o piloto foi então lançado para testes internos (Google Apps Script +
 Sheets, repositório privado por ser código institucional). O v2 é a reescrita
 independente — backend 100% novo em Python, mesma modelagem e mesma
 experiência. O que segue é o arco técnico: decisões, o que mudou e por quê.
@@ -45,7 +48,7 @@ experiência. O que segue é o arco técnico: decisões, o que mudou e por quê.
 ```mermaid
 flowchart LR
     Browser["Navegador (HTML + JS)"] --> GAS["Apps Script Web App\n(API + auth Google)"]
-    GAS --> Sheets[("Google Sheets\n(4 abas: dados + gestão)")]
+    GAS --> Sheets[("Google Sheets\n(privada 14 abas, pública 5)")]
     GAS -.-> Lock["LockService\n(escrita)"]
     GAS -.-> Cache["CacheService\n(leitura)"]
 ```

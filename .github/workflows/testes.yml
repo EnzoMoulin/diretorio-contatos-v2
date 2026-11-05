@@ -1,0 +1,25 @@
+name: Testes
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Subir servidor (os testes batem na API via HTTP)
+        run: |
+          python3 app.py > /tmp/servidor.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8000/api/hierarquia -o /dev/null && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8000/api/hierarquia -o /dev/null
+      - name: Rodar testes
+        run: python3 -m unittest discover -s tests -t . -v
+      - name: Log do servidor (só em falha)
+        if: failure()
+        run: cat /tmp/servidor.log || true

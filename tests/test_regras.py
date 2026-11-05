@@ -5,13 +5,16 @@ Roda contra o servidor local: python3 -m unittest tests.test_regras
 Exige o servidor no ar (http://localhost:8000).
 """
 import json
+import os
 import sqlite3
 import unittest
 import urllib.error
 import urllib.request
 
 BASE = "http://localhost:8000"
-DB = "/home/enzo/Emprego/Projetos/diretorio-contatos-v2/contatos.db"
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB = os.path.join(RAIZ, "contatos.db")
+BACKUPS = os.path.join(RAIZ, "backups")
 
 
 def api(method, path, corpo=None, token=None):
@@ -100,11 +103,20 @@ class TestPedido(unittest.TestCase):
                          {}, token=self.tok)
             self.assertEqual(st2, 404)
         finally:
+            # Limpeza do que este teste criou: o pedido (pid) e o acesso
+            # (1, setor, S1) concedido pela aprovação automática dele.
+            # O DELETE do acesso é condicionado à existência do pedido
+            # aprovado — sem pedido, nada é tocado (sem DELETE por padrão).
             con = sqlite3.connect(DB)
-            con.execute("DELETE FROM acessos WHERE usuario_id=1 "
-                        "AND nivel='setor' AND alvo_id='S1'")
             if pid:
+                n = con.execute(
+                    "DELETE FROM acessos WHERE usuario_id=1 "
+                    "AND nivel='setor' AND alvo_id='S1' "
+                    "AND EXISTS (SELECT 1 FROM pedidos WHERE id=? "
+                    "AND status='aprovado' AND nivel='setor' "
+                    "AND alvo_id='S1')", (pid,)).rowcount
                 con.execute("DELETE FROM pedidos WHERE id=?", (pid,))
+                assert n <= 1, f"limpeza atingiu {n} acessos"
             con.commit()
             con.close()
 
@@ -126,11 +138,10 @@ class TestHeranca(unittest.TestCase):
             con.execute("INSERT INTO acessos (usuario_id, nivel, alvo_id) "
                         "VALUES (?, 'unidade', ?)", (uid, u2))
             import sys
-            sys.path.insert(0, "/home/enzo/Emprego/Projetos/"
-                               "diretorio-contatos-v2")
+            sys.path.insert(0, RAIZ)
             import types
-            src = open("/home/enzo/Emprego/Projetos/diretorio-contatos-v2/"
-                       "app.py", encoding="utf-8").read().replace(
+            src = open(os.path.join(RAIZ,
+                       "app.py"), encoding="utf-8").read().replace(
                            'if __name__ == "__main__":', "if False:")
             g = {"__name__": "x", "__file__": "app.py"}
             exec(compile(src, "app.py", "exec"), g)  # noqa: S102
@@ -255,12 +266,12 @@ class TestBuscaBackup(unittest.TestCase):
         self.assertIn("<b>", lista[0].get("nome_hl", ""))
 
     def test_backup_gera_arquivo(self):
-        import glob as _glob, os as _os
+        import os as _os
         st, corpo = api("POST", "/api/backup", token=self.tok)
         self.assertEqual(st, 200, corpo)
         arq = corpo.get("arquivo", "")
         self.assertTrue(arq.endswith(".db"))
-        caminho = "/home/enzo/Emprego/Projetos/diretorio-contatos-v2/backups/" + arq
+        caminho = os.path.join(BACKUPS, arq)
         try:
             self.assertTrue(_os.path.isfile(caminho))
             import urllib.request as _url
@@ -270,11 +281,10 @@ class TestBuscaBackup(unittest.TestCase):
                 self.assertEqual(r.status, 200)
                 self.assertTrue(r.read(16).startswith(b"SQLite format 3"))
         finally:
-            for f in _glob.glob("/home/enzo/Emprego/Projetos/diretorio-contatos-v2/backups/diretorio-*.db"):
-                try:
-                    _os.remove(f)
-                except OSError:
-                    pass
+            try:
+                _os.remove(caminho)
+            except OSError:
+                pass
 
     def test_login_faz_upgrade_para_pbkdf2(self):
         import hashlib as _hl
