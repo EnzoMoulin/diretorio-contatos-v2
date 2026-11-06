@@ -29,7 +29,7 @@ são as mesmas; o que evolui é a fundação técnica:
 | Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
 | Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
 | Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 14 testes (`unittest`, banco temporário) | CI rodando a suíte a cada push |
+| Testes | Sem testes automatizados | 23 testes (`unittest`, banco temporário) + CI no GitHub Actions | Cobertura medida e testes de contrato da API |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
 zero dentro do ecossistema onde os dados viviam; o v2 prova a mesma arquitetura
@@ -40,8 +40,8 @@ sem dependência de fornecedor; o v3 endurece para escala.
 O v1 foi o MVP cuja proposta e entrega foram avaliadas e aprovadas no órgão;
 o piloto foi então lançado para testes internos (Google Apps Script +
 Sheets, repositório privado por ser código institucional). O v2 é a reescrita
-independente — backend 100% novo em Python, mesma modelagem e mesma
-experiência. O que segue é o arco técnico: decisões, o que mudou e por quê.
+do backend em Python, com a mesma modelagem e a mesma experiência. O que segue
+é o arco técnico: decisões, o que mudou e por quê.
 
 ### Fase 1 — MVP no ecossistema (Apps Script + Sheets)
 
@@ -56,12 +56,12 @@ flowchart LR
 - **Decisão central:** planilha como banco — custo zero, zero infraestrutura, e os
   dados já viviam no Workspace do tribunal. Frontend e backend conversando em JSON.
 - **O que segurou o piloto:** `LockService` em escrita, cache de referência com TTL,
-  autorização sempre no servidor, concorrência validada no uso real.
+  autorização sempre no servidor.
 - **Limites que motivaram a v2:** planilha não tem chaves estrangeiras nem testes
   automatizados; tudo preso ao ecossistema Google; sem como provar a arquitetura
   fora dele.
 
-### Fase 2 — reescrita independente (Python stdlib + SQLite)
+### Fase 2 — reescrita em Python stdlib + SQLite
 
 ```mermaid
 flowchart LR
@@ -73,7 +73,7 @@ flowchart LR
 
 - **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
   mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
-  `lru_cache` com invalidação, 14 testes (`unittest`, banco temporário).
+  `lru_cache` com invalidação, 23 testes (`unittest`, banco temporário).
 - **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
   escopo por nível, UX das telas — a interface e as regras são as mesmas, propositalmente.
 - **Por que só stdlib:** zero dependências = deploy gratuito trivial e prova de que a
@@ -81,8 +81,8 @@ flowchart LR
 
 ### Fase 3 — direção (endurecer para escala)
 
-Migrações versionadas, Postgres opcional, CI rodando a suíte a cada push, papéis
-granulares (RBAC), paginação, ranking de busca com tolerância a erro de digitação.
+Migrações versionadas, Postgres opcional, papéis granulares (RBAC), paginação,
+ranking de busca com tolerância a erro de digitação.
 
 ## Arquitetura
 - **Duas implantações isoladas, sem trânsito entre elas** — pública e
@@ -113,13 +113,13 @@ granulares (RBAC), paginação, ranking de busca com tolerância a erro de digit
   sem funções administrativas; logado, os locais liberados vêm marcados com ✓
   (consulta em todos, edição só no escopo); clicar no mapa filtra qualquer local.
   Botões na base da sidebar: **Acesso administrativo** (login com Google, sem
-  senha — identidade igual ao privado do v1; com acesso aprovado, eleva e libera
+  senha; com acesso aprovado, eleva e libera
   gestão por escopo + Solicitações + Registro), **Solicitar acesso** (primeiro
   acesso, só identidade) e **Solicitar locais** (árvore comarca > fórum >
   unidade > setor, para quem já tem cadastro); **Sair do acesso administrativo**
   volta à consulta, continua no interno e invalida a sessão no servidor.
-  Primeiro login vira admin se não houver nenhum; o resto é liberado por
-  aprovação (automática para avaliação).
+  Primeiro login entra como visitante; o perfil de Administrador não é pedido
+  pela tela: ele vem apenas da allowlist `ADMIN_EMAILS` do dono do ambiente.
 - **Gestão dentro da consulta, com escopo por nível**: o usuário cria/edita/remove
   contatos só onde tem cobertura (comarca, fórum, unidade ou setor, com herança de
   cima); fora dela, só consulta. Ao lado de cada nível selecionado sem cobertura,
@@ -133,7 +133,7 @@ granulares (RBAC), paginação, ranking de busca com tolerância a erro de digit
   Google do solicitante. Servidor barra duplicata, excesso de pendentes e tudo
   fora do escopo (403).
 - **Registro de alterações**: criar / editar / remover / pedidos / aprovações
-- **Dashboard** (só logado): cards (comarcas, fóruns, unidades, setores, contatos,
+- **Dashboard** (só admin): cards (comarcas, fóruns, unidades, setores, contatos,
   editáveis, pendências), barras por comarca com ✓ de cobertura e últimas
   alterações — tudo recortado pelo seu escopo
 - **Notificações** (só logado): solicitações chegam aos admins, aprovação
@@ -156,19 +156,13 @@ granulares (RBAC), paginação, ranking de busca com tolerância a erro de digit
 SIMULACAO_AUTO_APROVAR=1 ADMIN_EMAILS=seu@gmail.com python3 app.py
 # pública: http://localhost:8000
 # admin:   http://localhost:8000/admin   (login Google; admin só p/ e-mail em ADMIN_EMAILS)
-bash teste_rapido.sh   # imprime os códigos do fluxo completo (não é teste automatizado)
-python3 -m unittest discover -s tests -t . -v   # 14 testes (com o servidor no ar)
+bash teste_rapido.sh   # imprime os códigos do fluxo completo (não é teste automatizado;
+                       # atenção: encerra qualquer processo na porta 8000)
+python3 -m unittest discover -s tests -t . -v   # 23 testes (com o servidor no ar)
 ```
 Os testes batem na API por HTTP e assumem o modo de avaliação
 (`SIMULACAO_AUTO_APROVAR=1`), por isso o servidor precisa subir com a variável —
 é o mesmo env que o CI usa.
-
-## Backup
-Toda segunda às 3h (`~/.hermes/scripts/backup_planilhas.sh`, agendado):
-planilhas pública e privada (`.xlsx`) + banco local (`contatos.db`, cópia íntegra
-via API do sqlite) em `~/Emprego/Backups/planilhas/`, mantendo 4 semanas.
-Sucesso é silencioso; falha chega como alerta. Restaurar o banco é trocar o
-arquivo `contatos.db` pelo da data desejada com o servidor parado.
 
 ## Hospedagem (pôr no ar)
 Só stdlib: sem `pip install`. No Render (gratuito): novo Web Service a partir
@@ -202,10 +196,12 @@ Login com Google em produção precisa de um client OAuth tipo **Web**:
    Tela de consentimento não verificada mostra aviso do Google — esperado fora de produção.
 
 ## Como avaliar (2 minutos)
-1. Abra `/admin` e entre com qualquer conta Google → você entra como visitante.
-2. Peça acesso em **Solicitar acesso** → liberação automática (sinalizada na tela).
-3. Peça locais em **Solicitar locais** (marque a caixa de Administrador para ver a parte administrativa).
-4. No projeto real, os passos 2–3 aguardam aprovação manual de um Administrador — aqui é automático só para você testar sem depender de ninguém.
+1. Abra a página pública `/` (sem login): clique no mapa ou use a busca.
+2. Para testar edição, abra `/admin` e entre com uma conta Google: você entra como visitante.
+3. Peça acesso em **Solicitar acesso** e depois locais em **Solicitar locais**: a aprovação é automática no demo (sinalizada na tela) e libera edição nos locais pedidos.
+4. A área administrativa (painel, solicitações, registro, usuários, backup) é restrita ao dono do demo; veja as capturas abaixo ou me chame no LinkedIn ([linkedin.com/in/enzodadaltomoulin](https://linkedin.com/in/enzodadaltomoulin)) para ver ao vivo.
+
+Privacidade: o demo guarda o e-mail e o nome da sua conta Google só enquanto o servidor estiver ativo; o banco é recriado do seed a cada boot limpo, então esses dados somem no reinício.
 
 ## E-mail de verdade (opcional)
 Sem SMTP configurado, os avisos ficam só dentro do sistema. Para enviar de
@@ -221,9 +217,10 @@ O que é enviado: pedido novo → admins (`NOTIFY_EMAILS` + contas admin);
 aprovação → solicitante. Falha de envio nunca quebra o fluxo.
 
 ## Login local (só dev/testes)
-O login por usuário/senha (`/api/login`, admin/admin123) existe para testes
-automatizados e avaliação sem Google. Em produção use só o Google: rode com
-`LOCAL_LOGIN=0` (as rotas somem com 404). As senhas usam PBKDF2-HMAC-SHA256
+O login por usuário/senha (`/api/login`, `admin`/`admin123`) existe para testes
+automatizados e avaliação sem Google. `admin`/`admin123` são credenciais de
+demonstração: ficam desativadas no deploy, que roda com `LOCAL_LOGIN=0` (as
+rotas somem com 404). As senhas usam PBKDF2-HMAC-SHA256
 com salt; hashes sha256 legados são convertidos no primeiro login.
 
 ## Endpoints
@@ -235,24 +232,24 @@ com salt; hashes sha256 legados são convertidos no primeiro login.
 | GET | `/api/setores?unidade_id=` | não | setores da unidade |
 | GET | `/api/contatos?q=&setor_id=&unidade_id=&forum_id=&comarca_id=` | não | lista/busca com escopo |
 | GET | `/api/me` | `X-Admin-Token` | usuário + flag admin + escopo |
-| GET | `/api/historico` | `X-Admin-Token` | últimas 50 alterações |
+| GET | `/api/historico` | `X-Admin-Token` (admin) | últimas 50 alterações |
 | GET | `/oauth/login` | não | inicia login com Google |
 | GET | `/oauth/callback` | não | retorno do Google → sessão |
 | POST | `/api/logout` | token | encerra a sessão |
 | POST | `/api/login` | não | dev/testes `{usuario, senha}` → `{token}` (só `LOCAL_LOGIN=1`) |
 | POST | `/api/contatos` | `X-Admin-Token` | cria (só no seu escopo) |
 | DELETE | `/api/contatos/<id>` | `X-Admin-Token` | remove (só no seu escopo) |
-| POST | `/api/pedidos` | não | solicita acesso (com local) |
-| GET | `/api/pedidos` | `X-Admin-Token` | pendentes (com local pedido) |
-| POST | `/api/pedidos/<id>/aprovar` | `X-Admin-Token` | aprova, cria usuário e concede escopo |
-| POST | `/api/pedidos/<id>/recusar` | `X-Admin-Token` | recusa com motivo (notifica + e-mail) |
+| POST | `/api/pedidos` | token | solicita acesso (com local) |
+| GET | `/api/pedidos` | `X-Admin-Token` (admin) | pendentes (com local pedido) |
+| POST | `/api/pedidos/<id>/aprovar` | `X-Admin-Token` (admin) | aprova, cria usuário e concede escopo |
+| POST | `/api/pedidos/<id>/recusar` | `X-Admin-Token` (admin) | recusa com motivo (notifica + e-mail) |
 | GET | `/api/meus-pedidos` | `X-Admin-Token` | meus pedidos + motivo de recusa |
 | GET | `/api/usuarios` | `X-Admin-Token` (admin) | usuários + último login + nº de locais |
 | POST | `/api/usuarios/<id>/ativo` | `X-Admin-Token` (admin) | ativa/desativa (`{"ativo":0/1}`) |
 | GET | `/api/busca?q=` | não | busca FTS5 com highlight (autocomplete) |
 | POST | `/api/backup` | `X-Admin-Token` (admin) | gera `backups/diretorio-*.db` (VACUUM INTO) |
 | GET | `/api/backup/<arq>` | `X-Admin-Token` (admin) | baixa o `.db` gerado |
-| GET | `/api/resumo` | `X-Admin-Token` | totais por fórum/unidade/setor + últimos 5 + pendentes + saúde |
+| GET | `/api/resumo` | `X-Admin-Token` (admin) | totais por fórum/unidade/setor + últimos 5 + pendentes + saúde |
 | POST | `/api/me/senha` | `X-Admin-Token` | troca a própria senha (só `LOCAL_LOGIN=1`) |
 | GET | `/api/notificacoes` | `X-Admin-Token` | minhas notificações + `nao_lidas` |
 | POST | `/api/notificacoes/lida` | `X-Admin-Token` | marca uma como lida (`{"id"}`) |
@@ -267,6 +264,11 @@ técnico está documentado acima, em
 ## Screenshots
 ![Consulta no desktop](docs/img/desktop.png)
 ![Consulta no celular, com menu gaveta](docs/img/mobile.png)
+
+### Área administrativa (dono do demo)
+![Painel](docs/img/admin-painel.png)
+![Solicitações de acesso](docs/img/admin-solicitacoes.png)
+![Registro de alterações](docs/img/admin-registro.png)
 
 ## Experiência de uso (detalhes)
 - **Favoritos** (aba na sidebar + estrela em cada contato, com contador): salvos no navegador, em ordem A–Z, com filtro próprio, impressão, exportação CSV, download de todos em um `.vcf` e limpeza com confirmação
