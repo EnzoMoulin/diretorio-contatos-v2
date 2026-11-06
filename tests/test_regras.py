@@ -33,6 +33,33 @@ def api(method, path, corpo=None, token=None):
             return e.code, {}
 
 
+def notif_marco():
+    """Maior id de notificação antes do teste: marco para apagar só o que ele criar."""
+    con = sqlite3.connect(DB)
+    try:
+        return con.execute("SELECT COALESCE(MAX(id), 0) FROM notificacoes").fetchone()[0]
+    finally:
+        con.close()
+
+
+def notif_limpar(marco):
+    """Apaga exatamente as notificações criadas depois do marco.
+
+    Notificação é efeito colateral de pedido aprovado/recusado: sem isso o
+    banco acumula avisos de teste (badge de não lidas no admin).
+    """
+    con = sqlite3.connect(DB)
+    try:
+        ids = [r[0] for r in con.execute(
+            "SELECT id FROM notificacoes WHERE id > ?", (marco,))]
+        for i in ids:
+            con.execute("DELETE FROM notificacoes WHERE id = ?", (i,))
+        con.commit()
+        return len(ids)
+    finally:
+        con.close()
+
+
 class TestIdsGlobais(unittest.TestCase):
     def test_prefixos(self):
         con = sqlite3.connect(DB)
@@ -81,6 +108,7 @@ class TestPedido(unittest.TestCase):
 
     def test_cadeia_completa_com_limpeza(self):
         pid = None
+        marco = notif_marco()
         st, corpo = api(
             "POST", "/api/pedidos",
             {"nome": "Teste Auto", "motivo": "teste",
@@ -119,6 +147,7 @@ class TestPedido(unittest.TestCase):
                 assert n <= 1, f"limpeza atingiu {n} acessos"
             con.commit()
             con.close()
+            notif_limpar(marco)
 
 
 class TestHeranca(unittest.TestCase):
@@ -225,6 +254,7 @@ class TestMeusPedidos(unittest.TestCase):
         cls.email = me["email"]
 
     def test_meus_pedidos_mostra_recusa_com_motivo(self):
+        marco = notif_marco()
         con = sqlite3.connect(DB)
         con.execute(
             "INSERT INTO pedidos (nome, email, usuario_desejado, motivo,"
@@ -249,6 +279,7 @@ class TestMeusPedidos(unittest.TestCase):
             con.execute("DELETE FROM pedidos WHERE id=?", (pid,))
             con.commit()
             con.close()
+            notif_limpar(marco)
 
 
 class TestBuscaBackup(unittest.TestCase):

@@ -84,14 +84,14 @@ flowchart LR
 Migrações versionadas, Postgres opcional, CI rodando a suíte a cada push, papéis
 granulares (RBAC), paginação, ranking de busca com tolerância a erro de digitação.
 
-## Arquitetura (espelha o sistema original)
-- **Duas implantações isoladas, sem trânsito entre elas** — como no original
-  (implantação pública no site × privada na intranet, definidas por propriedade):
+## Arquitetura
+- **Duas implantações isoladas, sem trânsito entre elas** — pública e
+  administrativa, separadas por configuração de ambiente:
   - `/` pública: só consulta; falha fechada (nenhuma mutação sem token)
   - `/admin` interna: portão de login; sem token válido, nada além do portão aparece
-- **Portão institucional (para avaliação)**: no original, sessão Google + intranet + domínio
-  institucional; aqui, qualquer conta Google entra como visitante, e a intranet
-  é representada pelo `INTRANET_ONLY` (só localhost/rede local alcança o `/admin`).
+- **Portão de acesso (para avaliação)**: login por conta Google; qualquer conta
+  entra como visitante, e o `/admin` pode ser restrito à rede local com
+  `INTRANET_ONLY=1` (no demo público fica `0`, e o portão é o login).
   Para avaliação, a aprovação é automática (`SIMULACAO_AUTO_APROVAR=1`,
   sinalizada como automática); produção = aprovação manual.
 - **Tabela de usuários decide permissões**: sem cadastro, mesmo no interno a
@@ -141,8 +141,7 @@ granulares (RBAC), paginação, ranking de busca com tolerância a erro de digit
   lidas, marcar uma/todas como lidas. A aba só aparece após o login.
 - **Configurações**: tema claro/escuro para todo mundo (externo e interno,
   com ou sem login); logado ganha dados da conta (sem senha: identidade Google)
-- **E-mails clicáveis**: toda coluna de e-mail abre o app de e-mail (mailto),
-  igual ao original
+- **E-mails clicáveis**: toda coluna de e-mail abre o app de e-mail (mailto)
 - **Imprimir / Salvar PDF**: botão aparece após selecionar uma comarca e
   imprime todos os contatos do nível atual (comarca, fórum, unidade ou setor);
   Dashboard e Registro têm botão próprio; folha limpa em A4
@@ -154,12 +153,15 @@ granulares (RBAC), paginação, ranking de busca com tolerância a erro de digit
 
 ## Como rodar
 ```bash
-python3 app.py
+SIMULACAO_AUTO_APROVAR=1 ADMIN_EMAILS=seu@gmail.com python3 app.py
 # pública: http://localhost:8000
-# admin:   http://localhost:8000/admin   (login com Google; primeiro vira admin)
-bash teste_rapido.sh   # verifica o fluxo completo, incl. escopo por local
-python3 -m unittest tests.test_regras -v   # regras de negócio (IDs, pedido, herança)
+# admin:   http://localhost:8000/admin   (login Google; admin só p/ e-mail em ADMIN_EMAILS)
+bash teste_rapido.sh   # imprime os códigos do fluxo completo (não é teste automatizado)
+python3 -m unittest discover -s tests -t . -v   # 14 testes (com o servidor no ar)
 ```
+Os testes batem na API por HTTP e assumem o modo de avaliação
+(`SIMULACAO_AUTO_APROVAR=1`), por isso o servidor precisa subir com a variável —
+é o mesmo env que o CI usa.
 
 ## Backup
 Toda segunda às 3h (`~/.hermes/scripts/backup_planilhas.sh`, agendado):
@@ -170,10 +172,25 @@ arquivo `contatos.db` pelo da data desejada com o servidor parado.
 
 ## Hospedagem (pôr no ar)
 Só stdlib: sem `pip install`. No Render (gratuito): novo Web Service a partir
-do repo (`render.yaml` já traz tudo: `INTRANET_ONLY=0`, `LOCAL_LOGIN=0`,
+do repo (`render.yaml` já traz `INTRANET_ONLY=0`, `LOCAL_LOGIN=0`,
 `SIMULACAO_AUTO_APROVAR=1`). `PORT` vem do ambiente. O banco é recriado do
-seed a cada boot limpo (disco efêmero) — dados fictícios voltam sozinhos;
-o que for criado em produção se perde no restart (esperado no plano gratuito).
+seed mascarado a cada boot limpo (disco efêmero) — os dados de avaliação voltam
+sozinhos; o que for criado em produção se perde no restart (esperado no plano
+gratuito). O plano free dorme por inatividade: o primeiro acesso pode levar
+~30–60 s.
+
+`ADMIN_EMAILS` (definir no dashboard; é o e-mail Google que vira admin): sem
+ela ninguém é admin — o primeiro login **não** ganha gestão. O link para
+divulgar é `/` (página pública, sem login); `/admin` depende de conta Google e,
+com a tela de consentimento OAuth em "Testing", só entram os usuários de teste
+cadastrados no projeto do Google Cloud.
+
+### Postura do demo público
+- `SIMULACAO_AUTO_APROVAR=1` só no demo: concede escopos de consulta/edição a
+  quem pedir, e a interface avisa que a aprovação é automática. Em produção, `0`.
+- Admin nunca vem de "primeiro login": só da allowlist `ADMIN_EMAILS`.
+- Banco efêmero: edição de visitante desaparece no restart; a página pública é
+  recriada do seed a cada boot.
 
 Login com Google em produção precisa de um client OAuth tipo **Web**:
 1. No [Google Cloud Console](https://console.cloud.google.com/) crie um ID do
@@ -269,8 +286,9 @@ frontend/public.js     lógica da consulta pública
 frontend/admin.html    área administrativa (consulta + modais)
 frontend/admin.js      estados de acesso + gestão por escopo + solicitações + registro
 frontend/mapa.js       mapa Leaflet compartilhado (densidade + clique filtra)
-frontend/style.css     tema (identidade do app original)
+frontend/style.css     tema (paleta, tipografia e componentes)
 ```
 
 ## Licença
-MIT — Enzo Moulin.
+© Enzo Moulin — todos os direitos reservados. Projeto de portfólio: sem licença
+de uso, cópia ou redistribuição.

@@ -32,8 +32,12 @@ function mostrarConsulta() {
   $('view-consulta').classList.remove('hidden');
 }
 function marcarMenu(v) {
-  document.querySelectorAll('.menu-item[data-view]').forEach(b =>
-    b.classList.toggle('active', b.dataset.view === v));
+  document.querySelectorAll('.menu-item[data-view]').forEach(b => {
+    const ativo = b.dataset.view === v;
+    b.classList.toggle('active', ativo);
+    // O menu rola quando a janela é baixa: garante que o item ativo apareça.
+    if (ativo && b.scrollIntoView) b.scrollIntoView({ block: 'nearest' });
+  });
 }
 document.querySelectorAll('.menu-item[data-view]').forEach(btn => {
   btn.onclick = () => {
@@ -1291,13 +1295,13 @@ async function refresh() {
     else { token = ''; localStorage.removeItem('contatos-token'); }
   }
   const dentro = logado();
-  $('menu-dash').classList.toggle('hidden', !dentro);
+  $('menu-dash').classList.toggle('hidden', !(dentro && me && me.admin));
   $('menu-notif').classList.toggle('hidden', !dentro);
-  $('menu-sol').classList.toggle('hidden', !dentro);
+  $('menu-sol').classList.toggle('hidden', !(dentro && me && me.admin));
   $('menu-meus').classList.toggle('hidden', !dentro);
   $('menu-usu').classList.toggle('hidden', !(dentro && me && me.admin));
   ligarBackup();
-  $('menu-reg').classList.toggle('hidden', !dentro);
+  $('menu-reg').classList.toggle('hidden', !(dentro && me && me.admin));
   $('who-mail').classList.toggle('hidden', !dentro);
   if (dentro) $('who-mail').innerHTML = ICON_PESSOA + ' ' + esc(me.email || me.usuario);
   $('who-line').innerHTML = dentro ? ICON_PESSOA + ' ' + esc(me.usuario) : 'Sem acesso administrativo';
@@ -1506,7 +1510,10 @@ async function abrirPedidoNovo(modo) {
   if (!(H.comarcas || []).length) { try { await recarregarHierarquia(true); } catch (e) {} }
   preencherLocais();
   $('bloco-locais').classList.remove('hidden');
-  $('bloco-admin').classList.remove('hidden');
+  // Caixa de Administrador só para o dono do ambiente (allowlist ADMIN_EMAILS).
+  const podeAdmin = !!(me && me.pode_admin);
+  $('bloco-admin').classList.toggle('hidden', !podeAdmin);
+  if (!podeAdmin) $('p-admin').checked = false;
 }
 function mostrarPedido() {
   VIEWS.forEach(v => { const s = $('view-' + v); if (s) s.classList.add('hidden'); });
@@ -1593,6 +1600,7 @@ $('p-enviar').onclick = async () => {
 async function carregarDashboard() {
   if (!logado()) return;
   const r = await (await fetch('/api/resumo', { headers: auth() })).json();
+  if (!r || r.erro) return;  // sem permissão: só admin vê o painel
   const coms = (H.comarcas || []).filter(m => !ehOrgao(m));
   const comEdit = coms.filter(c => cobre('comarca', c.id));
   const totalEdit = comEdit.reduce((a, c) => a + (c.qtdContatos || 0), 0);
@@ -1610,7 +1618,7 @@ async function carregarDashboard() {
     ['⏳ Solicitações pendentes', r.pendentes],
     ['🔄 Alterações (30d)', (r.saude || {}).alteracoes_30d || 0],
     ['⚠️ Sem alteração há 6m+', (r.saude || {}).obsoletos_180d || 0],
-  ].map(([t, v]) => `<div class="dash-card"><span>${v}</span>${t}</div>`).join('');
+  ].map(([t, v]) => `<div class="dash-card"><span>${Number(v)}</span>${esc(t)}</div>`).join('');
   const max = Math.max(1, ...coms.map(c => c.qtdContatos || 0));
   $('dash-mun').innerHTML = coms.map(c => {
     const w = Math.round(100 * (c.qtdContatos || 0) / max);
