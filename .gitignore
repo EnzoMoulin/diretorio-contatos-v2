@@ -2,3 +2,7 @@ contatos.db
 backups/
 __pycache__/
 *.pyc
+.venv/
+venv/
+.pytest_cache/
+.hermes/cache/

@@ -16,8 +16,8 @@ Como rodar:
 Autenticação: identidade via Google OAuth (sem senha, como o privado do v1).
 Entrada aberta: qualquer conta Google vira visitante; locais e gestão saem
 por aprovação — automática para avaliação (SIMULACAO_AUTO_APROVAR=1),
-sinalizada como automática. O primeiro login vira admin se não
-houver nenhum. Intranet representada: /admin só abre de localhost/rede local
+sinalizada como automática. Admin vem só da allowlist ADMIN_EMAILS (vazia =
+ninguém é admin). Intranet representada: /admin só abre de localhost/rede local
 (INTRANET_ONLY=1). Credencial em GOOGLE_CLIENT_FILE
 (padrão: ~/.hermes/google_client_secret.json).
 
@@ -61,7 +61,14 @@ FRONT = BASE / "frontend"
 SESSIONS = {}  # token -> usuario_id (memória local)
 OAUTH_STATES = {}  # state -> expiração (login Google)
 
-SIMULACAO_AUTO_APROVAR = os.environ.get("SIMULACAO_AUTO_APROVAR", "1") == "1"
+SIMULACAO_AUTO_APROVAR = os.environ.get("SIMULACAO_AUTO_APROVAR", "0") == "1"
+
+# Allowlist de admin: só os e-mails listados aqui ganham admin no primeiro login.
+# Vazio (padrão) = ninguém vira admin automaticamente. Nunca usar "primeiro que
+# logar vira admin": num demo público isso entrega a gestão a qualquer conta.
+ADMIN_EMAILS = {
+    e.strip().lower() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()
+}
 
 # Base pública do app (links em e-mails). Em hospedagem, definir APP_BASE_URL
 # com a URL pública (ex. https://diretorio-contatos-v2.onrender.com).
@@ -128,6 +135,11 @@ def aprovar_pedido(con, pid, automatico=False):
     ped = con.execute("SELECT * FROM pedidos WHERE id=?", (pid,)).fetchone()
     if not ped or ped["status"] != "pendente":
         return False, {"erro": "pedido não encontrado"}, 404
+    if ped["nivel"] == "admin" and not ped["alvo_id"] \
+            and str(ped["email"] or "").strip().lower() not in ADMIN_EMAILS:
+        # Admin nunca nasce de pedido: só da allowlist. O pedido fica pendente.
+        return False, {"erro": "Perfil de Administrador só é concedido ao dono "
+                               "do ambiente (allowlist ADMIN_EMAILS)."}, 403
     con.execute(
         "INSERT INTO usuarios (usuario, senha_sha256, aprovado, email)"
         " VALUES (?,?,1,?) ON CONFLICT(usuario) DO UPDATE SET aprovado=1,"
@@ -511,8 +523,8 @@ def _carregar_seed_legado(con, seed):
 
 
 def _carregar_seed_json(con):
-    """Seed a partir da base oficial (seed_oficial.json). Devolve True se usou."""
-    pj = BASE / "seed_oficial.json"
+    """Seed a partir da base mascarada (seed_mascarado.json). Devolve True se usou."""
+    pj = BASE / "seed_mascarado.json"
     if not pj.exists():
         return False
     seed = json.loads(pj.read_text(encoding="utf-8"))
@@ -877,6 +889,12 @@ def init_db():
     con.close()
 
 
+def eh_admin(con, uid):
+    """True quando o usuário da sessão é admin (a linha pode ter sumido)."""
+    linha = con.execute("SELECT admin FROM usuarios WHERE id=?", (uid,)).fetchone()
+    return bool(linha and linha[0])
+
+
 def log(con, acao, contato_id=None, detalhe=""):
     con.execute(
         "INSERT INTO historico (acao, contato_id, detalhe) VALUES (?,?,?)",
@@ -1096,13 +1114,8 @@ class Handler(BaseHTTPRequestHandler):
                     "SELECT * FROM usuarios WHERE lower(email)=? AND aprovado=1",
                     (email,)).fetchone()
                 if not row:
-                    # Intranet representada: e-mail institucional entra sozinho como
-                    # visitante (só consulta); locais e gestão continuam por
-                    # solicitação aprovada. O primeiro acesso vira admin se não
-                    # houver nenhum.
-                    n_admin = con.execute(
-                        "SELECT COUNT(*) FROM usuarios WHERE admin=1 AND aprovado=1"
-                    ).fetchone()[0]
+                    # Sem cadastro: entra como visitante (só consulta). Admin vem
+                    # exclusivamente da allowlist ADMIN_EMAILS.
                     base = email.split("@")[0]
                     nm, i = base, 0
                     while con.execute(
@@ -1112,13 +1125,19 @@ class Handler(BaseHTTPRequestHandler):
                         nm = f"{base}{i}"
                     con.execute(
                         "INSERT INTO usuarios (usuario, senha_sha256, aprovado,"
-                        " admin, email) VALUES (?,?,?,?)",
+                        " admin, email) VALUES (?,?,?,?,?)",
                         (nm, gerar_hash("google-oauth:" + secrets.token_hex(16)), 1,
-                         1 if n_admin == 0 else 0, email))
+                         1 if email in ADMIN_EMAILS else 0, email))
                     con.commit()
                     row = con.execute(
                         "SELECT * FROM usuarios WHERE lower(email)=? AND aprovado=1 AND ativo=1",
                         (email,)).fetchone()
+                elif email in ADMIN_EMAILS and not row["admin"]:
+                    # Allowlist manda: quem já tinha conta sobe para admin.
+                    con.execute("UPDATE usuarios SET admin=1 WHERE id=?", (row["id"],))
+                    con.commit()
+                    row = con.execute(
+                        "SELECT * FROM usuarios WHERE id=?", (row["id"],)).fetchone()
                 if not row:
                     con.close()
                     return self._page(403, "Acesso desativado",
@@ -1237,6 +1256,9 @@ class Handler(BaseHTTPRequestHandler):
                 uid = self._uid()
                 if not uid:
                     return self._json({"erro": "não autenticado"}, 403)
+                if not eh_admin(con, uid):
+                    # O resumo carrega o histórico (nomes/e-mails) — só admin.
+                    return self._json({"erro": "sem permissão"}, 403)
                 por_for = con.execute(
                     "SELECT f.id, f.nome, f.comarca_id, c.nome AS comarca,"
                     " COUNT(ct.id) AS total FROM foruns f"
@@ -1383,8 +1405,12 @@ class Handler(BaseHTTPRequestHandler):
                     "lista": lista,
                     "nao_lidas": sum(1 for r in lista if not r["lida"])})
             if u.path == "/api/historico":
-                if not self._uid():
+                uid = self._uid()
+                if not uid:
                     return self._json({"erro": "não autenticado"}, 403)
+                if not con.execute("SELECT admin FROM usuarios WHERE id=?",
+                                   (uid,)).fetchone()[0]:
+                    return self._json({"erro": "sem permissão"}, 403)
                 rows = con.execute(
                     "SELECT * FROM historico ORDER BY id DESC LIMIT 50").fetchall()
                 return self._json([dict(r) for r in rows])
@@ -1401,10 +1427,16 @@ class Handler(BaseHTTPRequestHandler):
                 esc = self._escopo(con, uid)
                 me["escopo"] = "all" if esc == "all" else (esc or [])
                 me["email_ok"] = bool(os.environ.get("SMTP_HOST", ""))
+                # Só o dono do ambiente (allowlist) vê a caixa de Administrador.
+                me["pode_admin"] = str(row["email"] or "").strip().lower() in ADMIN_EMAILS
                 return self._json(me)
             if u.path == "/api/pedidos":
-                if not self._uid():
+                uid = self._uid()
+                if not uid:
                     return self._json({"erro": "não autenticado"}, 403)
+                if not con.execute("SELECT admin FROM usuarios WHERE id=?",
+                                   (uid,)).fetchone()[0]:
+                    return self._json({"erro": "sem permissão"}, 403)
                 rows = con.execute(
                     "SELECT p.*, c.nome AS comarca FROM pedidos p"
                     " LEFT JOIN comarcas c ON c.id=p.comarca_id"
@@ -1573,9 +1605,17 @@ class Handler(BaseHTTPRequestHandler):
                     primeiro_id = cur.lastrowid
             auto = False
             if SIMULACAO_AUTO_APROVAR:
-                auto = True
                 for pid in novos_ids:
-                    aprovar_pedido(con, pid, automatico=True)
+                    linha = con.execute(
+                        "SELECT nivel, alvo_id, email FROM pedidos WHERE id=?",
+                        (pid,)).fetchone()
+                    if linha and linha["nivel"] == "admin" and not linha["alvo_id"] \
+                            and str(linha["email"] or "").strip().lower() not in ADMIN_EMAILS:
+                        # Pedido de admin fora da allowlist fica pendente: a
+                        # aprovação automática nunca concede gestão.
+                        continue
+                    ok_auto, _, _ = aprovar_pedido(con, pid, automatico=True)
+                    auto = auto or ok_auto
             if len(itens) == 1:
                 nv_txt = nomes_nivel.get(itens[0][0], itens[0][0])
                 detalhe = f" {nv_txt} id {itens[0][1] or '-'}"
@@ -1612,7 +1652,8 @@ class Handler(BaseHTTPRequestHandler):
         parts = u.path.rstrip("/").split("/")
         if len(parts) == 5 and parts[1] == "api" and parts[2] == "pedidos" \
                 and parts[4] == "aprovar":
-            if not self._uid():
+            uid = self._uid()
+            if not uid:
                 return self._json({"erro": "não autenticado"}, 403)
             try:
                 pid = int(parts[3])
@@ -1620,13 +1661,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"erro": "id inválido"}, 400)
             con = get_db()
             try:
+                if not eh_admin(con, uid):
+                    return self._json({"erro": "sem permissão"}, 403)
                 ok, payload, st = aprovar_pedido(con, pid)
             finally:
                 con.close()
             return self._json(payload, st)
         if len(parts) == 5 and parts[1] == "api" and parts[2] == "pedidos" \
                 and parts[4] == "recusar":
-            if not self._uid():
+            uid = self._uid()
+            if not uid:
                 return self._json({"erro": "não autenticado"}, 403)
             try:
                 pid = int(parts[3])
@@ -1638,6 +1682,8 @@ class Handler(BaseHTTPRequestHandler):
                 corpo = {}
             con = get_db()
             try:
+                if not eh_admin(con, uid):
+                    return self._json({"erro": "sem permissão"}, 403)
                 ok, payload, st = recusar_pedido(con, pid, (corpo or {}).get("motivo"))
             finally:
                 con.close()

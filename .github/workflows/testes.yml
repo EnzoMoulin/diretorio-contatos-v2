@@ -5,6 +5,11 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      # Os testes assumem o modo de avaliação; ADMIN_EMAILS dá ao teste da
+      # allowlist o mesmo valor que o servidor enxerga.
+      SIMULACAO_AUTO_APROVAR: "1"
+      ADMIN_EMAILS: "dono@exemplo.jus.br"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
