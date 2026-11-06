@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Cartilha de deploy — Diretório de Contatos v2</title>
+<link rel="stylesheet" href="doc.css">
+<style>
+  .step{display:flex; gap:9pt; margin:0 0 11pt; break-inside:avoid;}
+  .step .n{flex:0 0 auto; width:18pt; height:18pt; border-radius:50%; background:var(--brand-soft);
+           border:0.6pt solid var(--brand-line); color:var(--brand); font-weight:700; font-size:8.5pt;
+           display:flex; align-items:center; justify-content:center; margin-top:1pt;}
+  .step .b{flex:1}
+  .step h4{margin:0 0 2pt; font-size:9.6pt; color:var(--ink);}
+  .step p, .step ul{margin:0 0 3pt; font-size:9.2pt; color:var(--body);}
+  .step ul{margin:2pt 0 3pt 12pt}
+  .step li{margin:1.5pt 0}
+  code.k{font-family:ui-monospace,'DejaVu Sans Mono',monospace; font-size:8.4pt; background:#f2f6f4;
+         border:0.5pt solid var(--line); border-radius:3pt; padding:0.3pt 3pt; color:#0f4a35;}
+  .callout{border-left:2.2pt solid var(--brand); background:var(--brand-soft); border-radius:0 5pt 5pt 0;
+           padding:7pt 9pt; margin:8pt 0; font-size:9pt; break-inside:avoid;}
+  .callout b{color:#0a6b48}
+  .warn{border-left-color:#c9861a; background:#fdf6e8}
+  .warn b{color:#8a5c07}
+  .stop{border-left-color:#c2410c; background:#fdeee8}
+  .stop b{color:#9a3412}
+  .fields{width:100%; border-collapse:collapse; margin:6pt 0 2pt; font-size:8.8pt}
+  .fields td{border:0.6pt solid var(--line); padding:4.5pt 6pt; vertical-align:top}
+  .fields td.l{background:var(--surface); width:34%; font-weight:600; color:var(--ink)}
+  .blank{display:inline-block; min-width:52%; border-bottom:0.6pt dotted #9aa5a2; height:9pt}
+  .chk{font-size:9pt; margin:0 0 3pt; padding-left:14pt; position:relative}
+  .chk:before{content:''; position:absolute; left:0; top:2.3pt; width:8pt; height:8pt;
+              border:0.7pt solid #9aa5a2; border-radius:2pt; background:#fff}
+  .cols{columns:2; column-gap:16pt}
+  .pillw{background:#fdf6e8; border-color:#ead7ac; color:#8a5c07}
+</style>
+</head>
+<body>
+
+<!-- ================= CAPA ================= -->
+<section class="cover">
+  <div class="cover-panel">
+    <p class="kicker">Playbook de publicação · v2</p>
+    <h1>Cartilha de deploy</h1>
+    <p class="sub">Passo a passo para publicar o <strong>Diretório de Contatos v2</strong> no Render com login Google,
+    validar o que ficou no ar e saber como voltar atrás. Escrita para ser seguida com o painel aberto ao lado,
+    sem precisar lembrar de nada.</p>
+    <div class="meta-grid">
+      <div>Projeto<b>Diretório de Contatos v2</b></div>
+      <div>Repositório<b>EnzoMoulin/diretorio-contatos-v2</b></div>
+      <div>Stack<b>Python 3.14 (stdlib) + SQLite + HTML/CSS/JS</b></div>
+      <div>Hospedagem<b>Render — web service, plano free</b></div>
+      <div>Login<b>Google OAuth 2.0 (somente e-mail e perfil)</b></div>
+      <div>Versão da cartilha<b>06/11/2026</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 0 ================= -->
+<section class="sec">
+  <div class="sec-head"><span class="sec-num">00</span><h2>Antes de começar</h2><span class="tag">5 min de leitura</span></div>
+  <p>O deploy tem três partes que dependem uma da outra: o serviço no Render, o cliente OAuth no Google Cloud e as
+  variáveis de ambiente que ligam os dois. Se qualquer uma faltar, a página pública abre mas ninguém consegue entrar
+  no admin — é o modo de falha mais comum desta etapa.</p>
+  <table>
+    <tr><th style="width:30%">Peça</th><th style="width:34%">Para que serve</th><th>Se faltar</th></tr>
+    <tr><td>Serviço no Render</td><td>Executa <span class="mono">app.py</span> e serve a página pública e o admin</td><td>Não há o que acessar</td></tr>
+    <tr><td>Cliente OAuth (Google)</td><td>Permite entrar com conta Google e receber o e-mail verificado</td><td>O botão de entrar falha com <span class="mono">redirect_uri_mismatch</span></td></tr>
+    <tr><td><span class="mono">ADMIN_EMAILS</span></td><td>Define quem é administrador</td><td>O sistema abre, mas ninguém administra</td></tr>
+    <tr><td><span class="mono">APP_BASE_URL</span></td><td>Monta links de e-mail e o retorno do login</td><td>Links apontam para <span class="mono">localhost</span></td></tr>
+  </table>
+  <div class="callout"><b>O que já está pronto:</b> 21 testes automatizados passando, integração contínua verde no
+  GitHub Actions, <span class="mono">render.yaml</span> versionado, banco mascarado para demonstração
+  (<span class="mono">seed_mascarado.json</span>) e login local desligado em produção
+  (<span class="mono">LOCAL_LOGIN=0</span>). Falta apenas a configuração de painel descrita aqui.</div>
+</section>
+
+<!-- ================= 1 ================= -->
+<section class="sec">
+  <div class="sec-head"><span class="sec-num">01</span><h2>O que o deploy vai criar</h2></div>
+  <div class="grid2">
+    <div class="card"><h4>Página pública</h4><p><span class="mono">/</span> — consulta de comarcas, sede, telefones úteis e favoritos, sem login.</p></div>
+    <div class="card"><h4>Admin</h4><p><span class="mono">/admin</span> — só depois do login Google; gestão, solicitações, notificações e usuários.</p></div>
+    <div class="card"><h4>Banco</h4><p><span class="mono">contatos.db</span> criado no primeiro boot e preenchido pelo seed mascarado.</p></div>
+    <div class="card"><h4>Endereço</h4><p><span class="mono">https://diretorio-contatos-v2.onrender.com</span>, se o nome estiver livre.</p></div>
+  </div>
+  <div class="callout warn"><b>Atenção ao disco:</b> o plano free não tem disco persistente. Cada novo deploy ou
+  reinício recria o <span class="mono">contatos.db</span> a partir do seed — o que mantém o demo sempre limpo, mas
+  <strong>descarta edições</strong> feitas por visitantes. Isso é esperado nesta vitrine, não um defeito.</div>
+</section>
+
+<!-- ================= 2 ================= -->
+<section class="sec">
+  <div class="sec-head"><span class="sec-num">02</span><h2>Decisões que precisam estar tomadas</h2><span class="tag">antes do clique</span></div>
+  <p>Três escolhas mudam o comportamento do ambiente publicado. Elas já estão refletidas em
+  <span class="mono">render.yaml</span>; confirme se continuam valendo antes de aplicar.</p>
+
+  <div class="step"><div class="n">A</div><div class="b">
+    <h4>Quem é administrador</h4>
+    <p><span class="mono">ADMIN_EMAILS</span> é uma lista separada por vírgula. Só quem está nela recebe papel de
+    administrador — e a promoção é aplicada no login. Sem essa variável, o sistema funciona com todos os usuários
+    comuns e nenhum admin.</p>
+    <p><b>Valor sugerido:</b> <code class="k">dadaltoenzo@gmail.com</code></p>
+  </div></div>
+
+  <div class="step"><div class="n">B</div><div class="b">
+    <h4>Aprovação automática de acesso</h4>
+    <p>Com <span class="mono">SIMULACAO_AUTO_APROVAR=1</span>, quem pede acesso a uma comarca é aprovado na hora e
+    recebe permissão de <strong>edição</strong> naquela comarca. É o que torna a vitrine avaliável em segundos por um
+    recrutador, ao custo de qualquer visitante poder editar os dados mascarados do demo.</p>
+    <p><b>Alternativa mais fechada:</b> deixar <span class="mono">0</span> e aprovar manualmente em
+    <span class="mono">/admin → Solicitações</span>, exigindo um admin logado para liberar cada pedido.</p>
+  </div></div>
+
+  <div class="step"><div class="n">C</div><div class="b">
+    <h4>Envio de e-mail</h4>
+    <p>O código de aprovação e recusa já chama o envio, mas as variáveis <span class="mono">SMTP_HOST</span>,
+    <span class="mono">SMTP_PORT</span>, <span class="mono">SMTP_USER</span>, <span class="mono">SMTP_PASS</span> e
+    <span class="mono">SMTP_FROM</span> ainda não estão definidas. Sem elas, nada é enviado e o pedido continua
+    registrado no painel.</p>
+    <p><b>Decisão:</b> publicar sem e-mail (padrão) ou configurar o SMTP neste mesmo passo.</p>
+  </div></div>
+</section>
+
+<!-- ================= 3 ================= -->
+<section class="sec">
+  <div class="sec-head"><span class="sec-num">03</span><h2>Deploy do serviço no Render</h2><span class="tag">≈ 8 min</span></div>
+
+  <div class="step"><div class="n">1</div><div class="b">
+    <h4>Criar o serviço por Blueprint</h4>
+    <p>No painel do Render: <b>New → Blueprint</b>, escolher o repositório
+    <span class="mono">EnzoMoulin/diretorio-contatos-v2</span> e confirmar. O Render lê o
+    <span class="mono">render.yaml</span> do repositório e propõe o serviço já configurado.</p>
+  </div></div>
+
+  <div class="step"><div class="n">2</div><div class="b">
+    <h4>Preencher o que o arquivo não guarda</h4>
+    <p>O <span class="mono">render.yaml</span> marca <span class="mono">ADMIN_EMAILS</span> como
+    <span class="mono">sync: false</span>: o painel pede o valor na hora de aplicar. Informe o e-mail definido em 2A.
+    Se preferir criar o serviço manualmente (<b>New → Web Service</b>), use exatamente:</p>
+    <ul>
+      <li><b>Runtime:</b> Python 3 · <b>Build command:</b> <span class="mono">echo ok</span></li>
+      <li><b>Start command:</b> <span class="mono">HOST=0.0.0.0 python3 app.py</span></li>
+      <li><b>Health check path:</b> <span class="mono">/</span> · <b>Plano:</b> Free</li>
+    </ul>
+  </div></div>
+
+  <div class="step"><div class="n">3</div><div class="b">
+    <h4>Conferir as variáveis do arquivo</h4>
+    <p>Devem estar presentes, com estes valores: <span class="mono">PYTHON_VERSION=3.14.3</span> (versão suportada
+    pelo Render, que hoje distribui 3.14.10 por padrão), <span class="mono">INTRANET_ONLY=0</span>,
+    <span class="mono">LOCAL_LOGIN=0</span> e <span class="mono">SIMULACAO_AUTO_APROVAR</span> conforme a decisão 2B.</p>
+  </div></div>
+
+  <div class="step"><div class="n">4</div><div class="b">
+    <h4>Primeiro deploy</h4>
+    <p>Aplicar e acompanhar o log até <span class="mono">Live</span>. O build é imediato porque não há dependências
+    — todo o backend usa a biblioteca padrão do Python. Depois do primeiro boot, abrir a URL e confirmar que a página
+    pública responde.</p>
+  </div></div>
+
+  <div class="step"><div class="n">5</div><div class="b">
+    <h4>Fixar a URL pública no app</h4>
+    <p>Em <b>Environment</b>, adicionar <span class="mono">APP_BASE_URL</span> com a URL real do serviço
+    (sem barra no fim). Isso corrige os links de e-mail e o retorno do login.</p>
+  </div></div>
+</section>
+
+<!-- ================= 4 ================= -->
+<section class="sec">
+  <div class="sec-head"><span class="sec-num">04</span><h2>Login Google (OAuth)</h2><span class="tag">≈ 12 min</span></div>
+
+  <div class="step"><div class="n">1</div><div class="b">
+    <h4>Criar o cliente OAuth</h4>
+    <p>No Google Cloud Console, no mesmo projeto usado antes: <b>APIs e serviços → Credenciais → Criar credenciais
+    → ID do cliente OAuth</b>. Tipo de aplicativo: <b>Aplicativo da Web</b>.</p>
+  </div></div>
+
+  <div class="step"><div class="n">2</div><div class="b">
+    <h4>Registrar as origens e o retorno</h4>
+    <p>Estes dois campos precisam bater com a URL do Render, caractere por caractere:</p>
+    <ul>
+      <li><b>Origens JavaScript autorizadas:</b> <span class="mono">https://diretorio-contatos-v2.onrender.com</span></li>
+      <li><b>URIs de redirecionamento autorizados:</b> <span class="mono">https://diretorio-contatos-v2.onrender.com/oauth/callback</span></li>
+    </ul>
+    <p>O caminho de retorno é <span class="mono">/oauth/callback</span> — sem ele, o Google recusa com
+    <span class="mono">redirect_uri_mismatch</span>.</p>
+  </div></div>
+
+  <div class="step"><div class="n">3</div><div class="b">
+    <h4>Colar o JSON no Render</h4>
+    <p>Baixar o JSON do cliente e colar o conteúdo inteiro em <span class="mono">GOOGLE_CLIENT_JSON</span>
+    (Environment do Render, marcado como segredo). Nada de subir esse arquivo para o repositório.</p>
+  </div></div>
+
+  <div class="step"><div class="n">4</div><div class="b">
+    <h4>Publicar a tela de consentimento</h4>
+    <p>Em <b>Tela de permissão OAuth</b>, o status precisa ser <b>Em produção</b>. Em <b>Teste</b>, só os e-mails
+    cadastrados como testadores conseguem entrar — e um recrutador externo trava na tela do Google.</p>
+    <p>Os escopos usados (<span class="mono">openid</span>, <span class="mono">userinfo.email</span>,
+    <span class="mono">userinfo.profile</span>) são não sensíveis: a publicação não exige verificação do Google.</p>
+  </div></div>
+
+  <div class="callout"><b>Depois de qualquer mudança nessas variáveis,</b> o Render reinicia o serviço sozinho.
+  Aguarde o <span class="mono">Live</span> antes de testar o login — durante o reinício o callback falha.</div>
+</section>
+
+<!-- ================= 5 ================= -->
+<section class="sec pb">
+  <div class="sec-head"><span class="sec-num">05</span><h2>Validação pós-deploy</h2><span class="tag">checklist</span></div>
+  <p>Faça na ordem. Cada item tem um resultado esperado verificável; se algum falhar, pare e corrija antes de divulgar
+  o link.</p>
+
+  <table>
+    <tr><th style="width:30%">Verificação</th><th style="width:40%">Como</th><th>Esperado</th></tr>
+    <tr><td>Página pública</td><td>abrir <span class="mono">/</span> em janela anônima</td><td>carrega sem login, com comarcas no mapa e na lista</td></tr>
+    <tr><td>Saúde do serviço</td><td><span class="mono">/</span> responde ao health check</td><td>status 200 no painel do Render</td></tr>
+    <tr><td>Admin bloqueado</td><td>abrir <span class="mono">/admin</span> sem login</td><td>não mostra gestão; oferece entrar com Google</td></tr>
+    <tr><td>Login Google</td><td>entrar com a conta da allowlist</td><td>volta autenticado e o menu mostra o papel de admin</td></tr>
+    <tr><td>Login de terceiro</td><td>entrar com outra conta</td><td>entra como comum e só vê o que foi liberado</td></tr>
+    <tr><td>Pedido de acesso</td><td>pedir acesso a uma comarca</td><td>pedido registrado; comportamento conforme decisão 2B</td></tr>
+    <tr><td>Edição</td><td>editar um contato como admin</td><td>alteração salva e visível após recarregar</td></tr>
+    <tr><td>Celular</td><td>abrir em 390 px de largura</td><td>sem rolagem horizontal e menu utilizável</td></tr>
+    <tr><td>HTTPS</td><td>abrir <span class="mono">http://</span></td><td>redireciona para <span class="mono">https://</span></td></tr>
+  </table>
+
+  <div class="callout warn"><b>Primeira visita demora:</b> no plano free o serviço hiberna após alguns minutos sem
+  acesso e a primeira requisição pode levar até ~50 s. Se for apresentar o link a um recrutador, abra a página alguns
+  minutos antes para acordar o serviço.</div>
+</section>
+
+<!-- ================= 6 ================= -->
+<section class="sec">
+  <div class="sec-head"><span class="sec-num">06</span><h2>Se algo der errado</h2></div>
+  <div class="grid2">
+    <div class="card"><h4><span class="mono">redirect_uri_mismatch</span></h4><p>URL ou caminho do retorno diferente do registrado. Confira esquema (<span class="mono">https</span>), domínio exato e <span class="mono">/oauth/callback</span>.</p></div>
+    <div class="card"><h4>Admin sem permissão</h4><p>O e-mail do login não está em <span class="mono">ADMIN_EMAILS</span>, ou a variável foi alterada mas o serviço ainda não reiniciou.</p></div>
+    <div class="card"><h4>Erro 502 no primeiro acesso</h4><p>Serviço hibernando ou reiniciando. Recarregar após o <span class="mono">Live</span>; se persistir, ver o log de boot.</p></div>
+    <div class="card"><h4>Dados sumiram</h4><p>Esperado no plano free: o banco foi recriado a partir do seed. Para persistir, seria preciso disco pago ou banco externo.</p></div>
+  </div>
+  <div class="keep">
+  <h3>Voltar atrás</h3>
+  <ul>
+    <li><b>Rollback de deploy:</b> no Render, abrir o deploy anterior em <b>Events</b> e usar <b>Rollback to this deploy</b>.</li>
+    <li><b>Desligar a vitrine:</b> <b>Settings → Suspend</b> mantém a configuração e tira o site do ar.</li>
+    <li><b>Trocar o OAuth:</b> revogar o cliente no Google Cloud e gerar outro JSON; atualizar a variável no Render.</li>
+  </ul>
+  </div>
+</section>
+
+<!-- ================= 7 ================= -->
+<section class="sec">
+  <div class="sec-head"><span class="sec-num">07</span><h2>Registro do deploy</h2><span class="tag">preencher</span></div>
+  <table class="fields">
+    <tr><td class="l">Data e hora</td><td><span class="blank"></span></td></tr>
+    <tr><td class="l">Commit publicado</td><td><span class="blank"></span></td></tr>
+    <tr><td class="l">URL pública</td><td><span class="blank"></span></td></tr>
+    <tr><td class="l">Admin da allowlist</td><td><span class="blank"></span></td></tr>
+    <tr><td class="l">Aprovação automática</td><td><span class="blank"></span></td></tr>
+    <tr><td class="l">SMTP configurado</td><td><span class="blank"></span></td></tr>
+    <tr><td class="l">Checklist da seção 05</td><td><span class="blank"></span></td></tr>
+    <tr><td class="l">Observações</td><td><span class="blank"></span><br><span class="blank"></span></td></tr>
+  </table>
+</section>
+
+<!-- ================= 8 ================= -->
+<section class="sec">
+  <div class="sec-head"><span class="sec-num">08</span><h2>Anexo — variáveis de ambiente</h2></div>
+  <table>
+    <tr><th style="width:24%">Variável</th><th style="width:18%">Onde vive</th><th style="width:12%">Obrigatória</th><th>Função</th></tr>
+    <tr><td class="mono">ADMIN_EMAILS</td><td>painel Render</td><td>sim</td><td>allowlist de administradores</td></tr>
+    <tr><td class="mono">APP_BASE_URL</td><td>painel Render</td><td>sim</td><td>URL pública usada em links e no login</td></tr>
+    <tr><td class="mono">GOOGLE_CLIENT_JSON</td><td>painel Render (segredo)</td><td>sim</td><td>credencial OAuth tipo web</td></tr>
+    <tr><td class="mono">LOCAL_LOGIN</td><td>render.yaml</td><td>sim (0)</td><td>desliga usuário/senha local em produção</td></tr>
+    <tr><td class="mono">INTRANET_ONLY</td><td>render.yaml</td><td>sim (0)</td><td>0 libera acesso fora da rede local</td></tr>
+    <tr><td class="mono">SIMULACAO_AUTO_APROVAR</td><td>render.yaml</td><td>decisão 2B</td><td>aprova pedidos automaticamente</td></tr>
+    <tr><td class="mono">PYTHON_VERSION</td><td>render.yaml</td><td>sim</td><td>fixa a versão do Python do runtime</td></tr>
+    <tr><td class="mono">NOTIFY_EMAILS</td><td>painel Render</td><td>não</td><td>destinatários de avisos internos</td></tr>
+    <tr><td class="mono">GOOGLE_TEST_EMAILS</td><td>painel Render</td><td>não</td><td>contas liberadas em modo de teste local</td></tr>
+    <tr><td class="mono">SMTP_HOST · PORT · USER · PASS · FROM</td><td>painel Render (segredo)</td><td>não</td><td>envio de e-mail de aprovação e recusa</td></tr>
+  </table>
+  <p class="foot-note"><strong>Regra de ouro:</strong> segredo nunca entra no repositório. O que está versionado é
+  apenas o desenho do serviço; credencial vive no painel.</p>
+  <div class="sig">
+    Cartilha de deploy do Diretório de Contatos v2 · Enzo Francisco Costa Dadalto Moulin · 06 de novembro de 2026.
+  </div>
+</section>
+
+</body>
+</html>
