@@ -68,7 +68,7 @@
     <tr><td><span class="mono">ADMIN_EMAILS</span></td><td>Define quem é administrador</td><td>O sistema abre, mas ninguém administra</td></tr>
     <tr><td><span class="mono">APP_BASE_URL</span></td><td>Monta links de e-mail e o retorno do login</td><td>Links apontam para <span class="mono">localhost</span></td></tr>
   </table>
-  <div class="callout"><b>O que já está pronto:</b> 21 testes automatizados passando, integração contínua verde no
+  <div class="callout"><b>O que já está pronto:</b> 24 testes automatizados passando, integração contínua verde no
   GitHub Actions, <span class="mono">render.yaml</span> versionado, banco mascarado para demonstração
   (<span class="mono">seed_mascarado.json</span>) e login local desligado em produção
   (<span class="mono">LOCAL_LOGIN=0</span>). Falta apenas a configuração de painel descrita aqui.</div>
@@ -99,7 +99,7 @@
     <p><span class="mono">ADMIN_EMAILS</span> é uma lista separada por vírgula. Só quem está nela recebe papel de
     administrador — e a promoção é aplicada no login. Sem essa variável, o sistema funciona com todos os usuários
     comuns e nenhum admin.</p>
-    <p><b>Valor sugerido:</b> <code class="k">dadaltoenzo@gmail.com</code></p>
+    <p><b>Valor sugerido:</b> <code class="k">seu@gmail.com</code></p>
   </div></div>
 
   <div class="step"><div class="n">B</div><div class="b">

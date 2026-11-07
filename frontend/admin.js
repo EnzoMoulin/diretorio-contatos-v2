@@ -1605,19 +1605,23 @@ async function carregarDashboard() {
   const comEdit = coms.filter(c => cobre('comarca', c.id));
   const totalEdit = comEdit.reduce((a, c) => a + (c.qtdContatos || 0), 0);
   const totalGeral = coms.reduce((a, c) => a + (c.qtdContatos || 0), 0);
+  // totalGeral soma só as comarcas; a estrutura central (sede, gabinetes,
+  // núcleos) não entra na conta. O total do banco vem em saude.total_contatos.
+  const totalTodos = Number((r.saude || {}).total_contatos || totalGeral);
+  const totalCentral = Math.max(0, totalTodos - totalGeral);
   $('dash-sub').textContent = me.escopo === 'all'
-    ? `Admin: ${totalGeral} contatos em ${coms.length} comarcas.`
-    : `Você edita ${totalEdit} de ${totalGeral} contatos (${comEdit.length} comarca(s) com cobertura total).`;
+    ? `Admin: ${totalTodos} contatos — ${totalGeral} em ${coms.length} comarcas e ${totalCentral} na estrutura central.`
+    : `Você edita ${totalEdit} de ${totalTodos} contatos (${comEdit.length} comarca(s) com cobertura total).`;
   $('dash-cards').innerHTML = [
     ['🏙️ Comarcas', coms.length],
     ['🏢 Fóruns', r.por_forum.length],
     ['🏬 Unidades', r.por_unidade.length],
     ['🗂️ Setores', r.por_setor.length],
-    ['👥 Contatos (total)', totalGeral],
-    ['✏️ Contatos editáveis', me.escopo === 'all' ? totalGeral : totalEdit],
+    ['👥 Contatos cadastrados', totalTodos],
+    ['✏️ Contatos editáveis', me.escopo === 'all' ? totalTodos : totalEdit],
     ['⏳ Solicitações pendentes', r.pendentes],
-    ['🔄 Alterações (30d)', (r.saude || {}).alteracoes_30d || 0],
-    ['⚠️ Sem alteração há 6m+', (r.saude || {}).obsoletos_180d || 0],
+    ['🔄 Alterações no registro (30d)', (r.saude || {}).alteracoes_30d || 0],
+    ['⚠️ Sem alteração registrada (6m+)', (r.saude || {}).obsoletos_180d || 0],
   ].map(([t, v]) => `<div class="dash-card"><span>${Number(v)}</span>${esc(t)}</div>`).join('');
   const max = Math.max(1, ...coms.map(c => c.qtdContatos || 0));
   $('dash-mun').innerHTML = coms.map(c => {
