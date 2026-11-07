@@ -61,6 +61,17 @@ FRONT = BASE / "frontend"
 SESSIONS = {}  # token -> usuario_id (memória local)
 OAUTH_STATES = {}  # state -> expiração (login Google)
 
+
+def _podar_oauth_states(limite=5000):
+    """Descarta states expirados; o dicionário crescia sem limite."""
+    agora = time.time()
+    for chave in [k for k, exp in OAUTH_STATES.items() if exp < agora]:
+        OAUTH_STATES.pop(chave, None)
+    excesso = len(OAUTH_STATES) - limite
+    if excesso > 0:
+        for chave in list(OAUTH_STATES)[:excesso]:
+            OAUTH_STATES.pop(chave, None)
+
 SIMULACAO_AUTO_APROVAR = os.environ.get("SIMULACAO_AUTO_APROVAR", "0") == "1"
 
 # Allowlist de admin: só os e-mails listados aqui ganham admin no primeiro login.
@@ -140,14 +151,38 @@ def aprovar_pedido(con, pid, automatico=False):
         # Admin nunca nasce de pedido: só da allowlist. O pedido fica pendente.
         return False, {"erro": "Perfil de Administrador só é concedido ao dono "
                                "do ambiente (allowlist ADMIN_EMAILS)."}, 403
-    con.execute(
-        "INSERT INTO usuarios (usuario, senha_sha256, aprovado, email)"
-        " VALUES (?,?,1,?) ON CONFLICT(usuario) DO UPDATE SET aprovado=1,"
-        " email=excluded.email",
-        (ped["usuario_desejado"], gerar_hash("google-oauth:" + secrets.token_hex(16)), ped["email"]))
-    uid_novo = con.execute(
-        "SELECT id FROM usuarios WHERE usuario=?",
-        (ped["usuario_desejado"],)).fetchone()["id"]
+    # Concede o acesso ao solicitante identificado no pedido — nunca por nome
+    # vindo do corpo. Sem id (pedidos antigos), resolve pelo e-mail da sessão.
+    email_ped = str(ped["email"] or "").strip().lower()
+    uid_novo = None
+    try:
+        uid_ped = ped["usuario_id"]
+    except (IndexError, KeyError):
+        uid_ped = None
+    if uid_ped:
+        linha = con.execute(
+            "SELECT id, lower(email) AS em FROM usuarios WHERE id=?",
+            (uid_ped,)).fetchone()
+        if linha and str(linha["em"] or "") == email_ped:
+            uid_novo = linha["id"]
+    if uid_novo is None and email_ped:
+        linha = con.execute(
+            "SELECT id FROM usuarios WHERE lower(email)=?", (email_ped,)).fetchone()
+        uid_novo = linha["id"] if linha else None
+    if uid_novo is None:
+        base = (email_ped.split("@")[0] or "usuario").strip().lower()[:40] or "usuario"
+        nome_novo, n = base, 1
+        while con.execute("SELECT 1 FROM usuarios WHERE usuario=?",
+                          (nome_novo,)).fetchone():
+            n += 1
+            nome_novo = "%s%d" % (base, n)
+        uid_novo = con.execute(
+            "INSERT INTO usuarios (usuario, senha_sha256, aprovado, email)"
+            " VALUES (?,?,1,?)",
+            (nome_novo, gerar_hash("google-oauth:" + secrets.token_hex(16)),
+             email_ped)).lastrowid
+    else:
+        con.execute("UPDATE usuarios SET aprovado=1 WHERE id=?", (uid_novo,))
     if ped["comarca_id"] and not ped["alvo_id"]:
         con.execute(
             "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
@@ -161,8 +196,10 @@ def aprovar_pedido(con, pid, automatico=False):
     if ped["nivel"] == "admin" and not ped["alvo_id"]:
         con.execute("UPDATE usuarios SET admin=1 WHERE id=?", (uid_novo,))
     con.execute("UPDATE pedidos SET status='aprovado' WHERE id=?", (pid,))
+    nome_final = con.execute("SELECT usuario FROM usuarios WHERE id=?",
+                             (uid_novo,)).fetchone()["usuario"]
     marca = " (aprovação automática — avaliação)" if automatico else ""
-    log(con, "aprovar", None, f"acesso aprovado: {ped['usuario_desejado']}{marca}")
+    log(con, "aprovar", None, f"acesso aprovado: {nome_final}{marca}")
     texto_aprov = ("Seu acesso foi aprovado. Entre com sua conta Google." +
                    (" (Aprovação automática para avaliação.)" if automatico else ""))
     notify(con, uid_novo, "aprovada", texto_aprov)
@@ -171,7 +208,7 @@ def aprovar_pedido(con, pid, automatico=False):
                     f"Olá {ped['nome']},\n\nSeu acesso foi liberado pelo administrador.\n"
                     f"Entre com sua conta Google: {APP_BASE_URL}/admin")
     con.commit()
-    return True, {"ok": True, "usuario": ped["usuario_desejado"]}, 200
+    return True, {"ok": True, "usuario": nome_final}, 200
 
 
 def recusar_pedido(con, pid, motivo):
@@ -811,6 +848,43 @@ def init_fts(con):
         con.commit()
 
 
+def _unificar_emails(con):
+    """Um usuário por e-mail: a linha mais privilegiada fica com ele.
+
+    O login Google procura por lower(email); sem unicidade, duas linhas com o
+    mesmo e-mail deixavam o resultado depender da ordem da tabela. Duplicatas
+    antigas perdem o e-mail (e ficam registradas no histórico)."""
+    try:
+        dup = con.execute(
+            "SELECT lower(email) AS em, COUNT(*) AS n FROM usuarios"
+            " WHERE TRIM(COALESCE(email,''))<>''"
+            " GROUP BY lower(email) HAVING n>1").fetchall()
+    except Exception:
+        return
+    for r in dup:
+        linhas = con.execute(
+            "SELECT id, usuario FROM usuarios WHERE lower(email)=?"
+            " ORDER BY admin DESC, aprovado DESC, id ASC", (r["em"],)).fetchall()
+        if not linhas:
+            continue
+        dono = linhas[0]
+        for extra in linhas[1:]:
+            con.execute("UPDATE usuarios SET email='' WHERE id=?", (extra["id"],))
+            try:
+                con.execute(
+                    "INSERT INTO historico (acao, detalhe) VALUES (?,?)",
+                    ("email_duplicado",
+                     "e-mail %s removido de %s (mantido em %s)"
+                     % (r["em"], extra["usuario"], dono["usuario"])))
+            except Exception:
+                pass
+    try:
+        con.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_email"
+                    " ON usuarios(lower(email)) WHERE TRIM(email)<>''")
+    except Exception:
+        pass
+
+
 def init_db():
     con = get_db()
     tabelas = {r["name"] for r in con.execute(
@@ -836,6 +910,7 @@ def init_db():
         ("pedidos", "motivo_recusa", "ALTER TABLE pedidos ADD COLUMN motivo_recusa TEXT NOT NULL DEFAULT ''"),
         ("usuarios", "ultimo_login", "ALTER TABLE usuarios ADD COLUMN ultimo_login TEXT NOT NULL DEFAULT ''"),
         ("usuarios", "ativo", "ALTER TABLE usuarios ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1"),
+        ("pedidos", "usuario_id", "ALTER TABLE pedidos ADD COLUMN usuario_id INTEGER"),
     ]:
         try:
             nomes = {r[1] for r in con.execute(f"PRAGMA table_info({_tbl})").fetchall()}
@@ -843,6 +918,7 @@ def init_db():
                 con.execute(_ddl)
         except Exception:
             pass
+    _unificar_emails(con)
     n = con.execute("SELECT COUNT(*) AS c FROM contatos").fetchone()["c"]
     if n == 0 and _carregar_seed_json(con):
         pass  # base mascarada completa
@@ -945,6 +1021,16 @@ class Handler(BaseHTTPRequestHandler):
     def _uid(self):
         tok = self.headers.get("X-Admin-Token") or self._cookie("tc_session") or ""
         return SESSIONS.get(tok)
+
+    def _https(self):
+        """True quando a requisição chegou por HTTPS (proxy do Render)."""
+        proto = (self.headers.get("X-Forwarded-Proto") or "").strip().lower()
+        return proto == "https" or self.headers.get("X-Forwarded-Ssl") == "on"
+
+    def _cookie_sessao(self, tok, max_age=43200):
+        seguro = "; Secure" if self._https() else ""
+        return ("tc_session=%s; Path=/; HttpOnly; SameSite=Lax; Max-Age=%d%s"
+                % (tok, max_age, seguro))
 
     def _cookie(self, name):
         raw = self.headers.get("Cookie") or ""
@@ -1065,6 +1151,7 @@ class Handler(BaseHTTPRequestHandler):
                                    "Defina GOOGLE_CLIENT_JSON (hospedagem) ou "
                                    "GOOGLE_CLIENT_FILE (local) com um client OAuth válido.")
             redir = _oauth_redirect_base(self)
+            _podar_oauth_states()
             st = secrets.token_urlsafe(24)
             OAUTH_STATES[st] = time.time() + 600
             q = urllib.parse.urlencode({
@@ -1148,9 +1235,7 @@ class Handler(BaseHTTPRequestHandler):
                 con.commit()
                 con.close()
                 self.send_response(302)
-                self.send_header(
-                    "Set-Cookie",
-                    f"tc_session={tok}; Path=/; HttpOnly; SameSite=Lax; Max-Age=43200")
+                self.send_header("Set-Cookie", self._cookie_sessao(tok))
                 self.send_header("Location",
                                  _oauth_redirect_base(self).replace("/oauth/callback", f"/admin#token={tok}"))
                 self.end_headers()
@@ -1465,7 +1550,8 @@ class Handler(BaseHTTPRequestHandler):
             SESSIONS.pop(tok, None)
             self.send_response(200)
             self.send_header("Set-Cookie",
-                             "tc_session=; Path=/; Max-Age=0; SameSite=Lax")
+                             "tc_session=; Path=/; Max-Age=0; SameSite=Lax"
+                             + ("; Secure" if self._https() else ""))
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(b'{"ok": true}')
@@ -1502,7 +1588,8 @@ class Handler(BaseHTTPRequestHandler):
             con = get_db()
             try:
                 sess_user = con.execute(
-                    "SELECT email, admin FROM usuarios WHERE id=?", (uid_post,)).fetchone()
+                    "SELECT usuario, email, admin FROM usuarios WHERE id=?",
+                    (uid_post,)).fetchone()
             except Exception:
                 sess_user = None
             if not sess_user:
@@ -1514,7 +1601,9 @@ class Handler(BaseHTTPRequestHandler):
             email = (data.get("email") or "").strip().lower()
             if "@" not in email or "." not in email.split("@")[-1]:
                 return self._json({"erro": "informe um e-mail válido"}, 400)
-            usuario = (data.get("usuario") or "").strip() or email.split("@")[0]
+            # O nome de usuário vem SEMPRE da sessão: aceitar o corpo permitia
+            # reivindicar a linha de outro usuário (inclusive "admin") na aprovação.
+            usuario = str(sess_user["usuario"] or "").strip() or email.split("@")[0]
             # árvore de locais: escopos=[{tipo|nivel, id|alvo_id}] -> um pedido por local.
             # Sem escopos, vale o caminho único (nivel+alvo_id ou comarca_id).
             itens = []
@@ -1596,10 +1685,10 @@ class Handler(BaseHTTPRequestHandler):
                             break
                 cur = con.execute(
                     "INSERT INTO pedidos (nome, email, usuario_desejado, motivo,"
-                    " comarca_id, nivel, alvo_id) VALUES (?,?,?,?,?,?,?)",
+                    " comarca_id, nivel, alvo_id, usuario_id) VALUES (?,?,?,?,?,?,?,?)",
                     (data.get("nome"), data.get("email", ""),
                      usuario, data.get("motivo", ""),
-                     com_id, nivel, alvo))
+                     com_id, nivel, alvo, uid_post))
                 novos_ids.append(cur.lastrowid)
                 if primeiro_id is None:
                     primeiro_id = cur.lastrowid

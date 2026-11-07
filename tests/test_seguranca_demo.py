@@ -222,5 +222,102 @@ class TestGestaoFechada(unittest.TestCase):
             self.assertEqual(st, 200, f"{rota} quebrou para admin: {corpo}")
 
 
+class TestNomeDeUsuarioNaoEscala(unittest.TestCase):
+    """Pedido com usuario='admin' no corpo não pode herdar a linha do admin.
+
+    O corpo do POST /api/pedidos era a fonte do nome de usuário; com a
+    aprovação automática, o upsert por nome reescrevia e-mail e `aprovado` da
+    linha `admin`, e o login Google por e-mail passava a devolver admin.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        st, corpo = api("POST", "/api/login",
+                        {"usuario": "admin", "senha": "admin123"})
+        assert st == 200, corpo
+        cls.admin_tok = corpo["token"]
+
+    def test_usuario_do_corpo_e_ignorado(self):
+        usuario = "t_escalada"
+        email = "t-escalada@exemplo.jus.br"
+        marco = notif_marco()
+        apagar_pedidos(email)
+        uid_visitante = criar_usuario(usuario, email)
+        con = sqlite3.connect(DB)
+        try:
+            antes = con.execute(
+                "SELECT usuario, email, admin, aprovado, senha_sha256"
+                " FROM usuarios WHERE usuario='admin'").fetchone()
+        finally:
+            con.close()
+        self.assertIsNotNone(antes, "seed sem usuário admin: teste inválido")
+
+        try:
+            tok = login(usuario)
+            st, corpo = api("POST", "/api/pedidos",
+                            {"nome": "Tentativa de escalada",
+                             "usuario": "admin",
+                             "escopos": [{"tipo": "setor", "id": "S1"}]},
+                            token=tok)
+            self.assertEqual(st, 201, corpo)
+            pid = corpo["id"]
+            if not corpo.get("auto_aprovado"):
+                # servidor sem SIMULACAO_AUTO_APROVAR: aprova como admin,
+                # para exercitar a concessão de acesso do mesmo jeito
+                st_ap, _ = api("POST", "/api/pedidos/%s/aprovar" % pid, {},
+                               token=self.admin_tok)
+                self.assertEqual(st_ap, 200)
+
+            con = sqlite3.connect(DB)
+            try:
+                depois = con.execute(
+                    "SELECT usuario, email, admin, aprovado, senha_sha256"
+                    " FROM usuarios WHERE usuario='admin'").fetchone()
+                pedido = con.execute(
+                    "SELECT usuario_desejado, usuario_id, email FROM pedidos"
+                    " WHERE id=?", (pid,)).fetchone()
+                por_email = con.execute(
+                    "SELECT id, usuario FROM usuarios WHERE lower(email)=?"
+                    " AND aprovado=1", (email,)).fetchone()
+                acessos_admin = con.execute(
+                    "SELECT COUNT(*) FROM acessos WHERE usuario_id="
+                    "(SELECT id FROM usuarios WHERE usuario='admin')").fetchone()[0]
+            finally:
+                con.close()
+
+            self.assertEqual(depois, antes,
+                             "a linha 'admin' foi alterada pelo pedido do visitante")
+            self.assertEqual(pedido[0], usuario,
+                             "usuario_desejado deveria vir da sessão, não do corpo")
+            self.assertEqual(pedido[1], uid_visitante,
+                             "o pedido deve guardar o id de quem pediu")
+            self.assertIsNotNone(por_email)
+            self.assertEqual(por_email[0], uid_visitante,
+                             "lookup por e-mail do visitante devolveu outro usuário")
+            self.assertNotEqual(por_email[1], "admin")
+            self.assertEqual(acessos_admin, 0,
+                             "acesso concedido ao admin em nome de um visitante")
+
+            # o acesso concedido é do visitante, não de terceiros
+            con = sqlite3.connect(DB)
+            try:
+                dono = con.execute(
+                    "SELECT DISTINCT usuario_id FROM acessos WHERE usuario_id=?",
+                    (uid_visitante,)).fetchall()
+            finally:
+                con.close()
+            self.assertTrue(dono, "o pedido aprovado não liberou o visitante")
+        finally:
+            con = sqlite3.connect(DB)
+            try:
+                con.execute("DELETE FROM pedidos WHERE lower(email)=?", (email,))
+                con.execute("DELETE FROM acessos WHERE usuario_id=?", (uid_visitante,))
+                con.commit()
+            finally:
+                con.close()
+            apagar_usuario(usuario)
+            notif_limpar(marco)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
