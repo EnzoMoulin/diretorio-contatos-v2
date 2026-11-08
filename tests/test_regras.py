@@ -5,13 +5,16 @@ Roda contra o servidor local: python3 -m unittest tests.test_regras
 Exige o servidor no ar (http://localhost:8000).
 """
 import json
+import os
 import sqlite3
 import unittest
 import urllib.error
 import urllib.request
 
 BASE = "http://localhost:8000"
-DB = "/home/enzo/Emprego/Projetos/diretorio-contatos-v2/contatos.db"
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB = os.path.join(RAIZ, "contatos.db")
+BACKUPS = os.path.join(RAIZ, "backups")
 
 
 def api(method, path, corpo=None, token=None):
@@ -28,6 +31,33 @@ def api(method, path, corpo=None, token=None):
             return e.code, json.loads(e.read().decode("utf-8") or "{}")
         except Exception:
             return e.code, {}
+
+
+def notif_marco():
+    """Maior id de notificação antes do teste: marco para apagar só o que ele criar."""
+    con = sqlite3.connect(DB)
+    try:
+        return con.execute("SELECT COALESCE(MAX(id), 0) FROM notificacoes").fetchone()[0]
+    finally:
+        con.close()
+
+
+def notif_limpar(marco):
+    """Apaga exatamente as notificações criadas depois do marco.
+
+    Notificação é efeito colateral de pedido aprovado/recusado: sem isso o
+    banco acumula avisos de teste (badge de não lidas no admin).
+    """
+    con = sqlite3.connect(DB)
+    try:
+        ids = [r[0] for r in con.execute(
+            "SELECT id FROM notificacoes WHERE id > ?", (marco,))]
+        for i in ids:
+            con.execute("DELETE FROM notificacoes WHERE id = ?", (i,))
+        con.commit()
+        return len(ids)
+    finally:
+        con.close()
 
 
 class TestIdsGlobais(unittest.TestCase):
@@ -78,6 +108,7 @@ class TestPedido(unittest.TestCase):
 
     def test_cadeia_completa_com_limpeza(self):
         pid = None
+        marco = notif_marco()
         st, corpo = api(
             "POST", "/api/pedidos",
             {"nome": "Teste Auto", "motivo": "teste",
@@ -100,13 +131,23 @@ class TestPedido(unittest.TestCase):
                          {}, token=self.tok)
             self.assertEqual(st2, 404)
         finally:
+            # Limpeza do que este teste criou: o pedido (pid) e o acesso
+            # (1, setor, S1) concedido pela aprovação automática dele.
+            # O DELETE do acesso é condicionado à existência do pedido
+            # aprovado — sem pedido, nada é tocado (sem DELETE por padrão).
             con = sqlite3.connect(DB)
-            con.execute("DELETE FROM acessos WHERE usuario_id=1 "
-                        "AND nivel='setor' AND alvo_id='S1'")
             if pid:
+                n = con.execute(
+                    "DELETE FROM acessos WHERE usuario_id=1 "
+                    "AND nivel='setor' AND alvo_id='S1' "
+                    "AND EXISTS (SELECT 1 FROM pedidos WHERE id=? "
+                    "AND status='aprovado' AND nivel='setor' "
+                    "AND alvo_id='S1')", (pid,)).rowcount
                 con.execute("DELETE FROM pedidos WHERE id=?", (pid,))
+                assert n <= 1, f"limpeza atingiu {n} acessos"
             con.commit()
             con.close()
+            notif_limpar(marco)
 
 
 class TestHeranca(unittest.TestCase):
@@ -126,11 +167,10 @@ class TestHeranca(unittest.TestCase):
             con.execute("INSERT INTO acessos (usuario_id, nivel, alvo_id) "
                         "VALUES (?, 'unidade', ?)", (uid, u2))
             import sys
-            sys.path.insert(0, "/home/enzo/Emprego/Projetos/"
-                               "diretorio-contatos-v2")
+            sys.path.insert(0, RAIZ)
             import types
-            src = open("/home/enzo/Emprego/Projetos/diretorio-contatos-v2/"
-                       "app.py", encoding="utf-8").read().replace(
+            src = open(os.path.join(RAIZ,
+                       "app.py"), encoding="utf-8").read().replace(
                            'if __name__ == "__main__":', "if False:")
             g = {"__name__": "x", "__file__": "app.py"}
             exec(compile(src, "app.py", "exec"), g)  # noqa: S102
@@ -214,6 +254,7 @@ class TestMeusPedidos(unittest.TestCase):
         cls.email = me["email"]
 
     def test_meus_pedidos_mostra_recusa_com_motivo(self):
+        marco = notif_marco()
         con = sqlite3.connect(DB)
         con.execute(
             "INSERT INTO pedidos (nome, email, usuario_desejado, motivo,"
@@ -238,6 +279,7 @@ class TestMeusPedidos(unittest.TestCase):
             con.execute("DELETE FROM pedidos WHERE id=?", (pid,))
             con.commit()
             con.close()
+            notif_limpar(marco)
 
 
 class TestBuscaBackup(unittest.TestCase):
@@ -255,12 +297,12 @@ class TestBuscaBackup(unittest.TestCase):
         self.assertIn("<b>", lista[0].get("nome_hl", ""))
 
     def test_backup_gera_arquivo(self):
-        import glob as _glob, os as _os
+        import os as _os
         st, corpo = api("POST", "/api/backup", token=self.tok)
         self.assertEqual(st, 200, corpo)
         arq = corpo.get("arquivo", "")
         self.assertTrue(arq.endswith(".db"))
-        caminho = "/home/enzo/Emprego/Projetos/diretorio-contatos-v2/backups/" + arq
+        caminho = os.path.join(BACKUPS, arq)
         try:
             self.assertTrue(_os.path.isfile(caminho))
             import urllib.request as _url
@@ -270,11 +312,10 @@ class TestBuscaBackup(unittest.TestCase):
                 self.assertEqual(r.status, 200)
                 self.assertTrue(r.read(16).startswith(b"SQLite format 3"))
         finally:
-            for f in _glob.glob("/home/enzo/Emprego/Projetos/diretorio-contatos-v2/backups/diretorio-*.db"):
-                try:
-                    _os.remove(f)
-                except OSError:
-                    pass
+            try:
+                _os.remove(caminho)
+            except OSError:
+                pass
 
     def test_login_faz_upgrade_para_pbkdf2(self):
         import hashlib as _hl

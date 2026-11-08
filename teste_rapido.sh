@@ -1,6 +1,7 @@
 #!/bin/bash
 # Verificação rápida do app (1 comando, sem dependências).
 # Sobe o servidor, testa o fluxo completo (incl. escopo por nível) e desliga.
+# Atenção: encerra qualquer processo na porta 8000 e recria contatos.db.
 set -u
 cd "$(dirname "$0")"
 rm -f contatos.db
@@ -21,24 +22,15 @@ echo "== paginas =="
 curl -s -o /dev/null -w "publica:%{http_code}\n" $B/
 curl -s -o /dev/null -w "admin:%{http_code}\n" $B/admin
 curl -s -o /dev/null -w "mapa.js:%{http_code}\n" $B/mapa.js
-echo "== comarcas =="; curl -s "$B/api/comarcas"; echo
-echo "== cadeia comarca 1 =="
-curl -s "$B/api/foruns?comarca_id=1" | head -c 200; echo
+echo "== comarcas =="; curl -s "$B/api/comarcas" | head -c 200; echo
+echo "== cadeia comarca M2 =="
+curl -s "$B/api/foruns?comarca_id=M2" | head -c 200; echo
 echo "== login admin =="
 TA=$(curl -s -X POST $B/api/login -H 'Content-Type: application/json' -d '{"usuario":"admin","senha":"admin123"}' | python3 -c "$TOK")
 echo "== me =="; curl -s "$B/api/me" -H "X-Admin-Token: $TA"; echo
 echo -n "login via email (200 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/login -H 'Content-Type: application/json' -d '{"email":"admin@exemplo.jus.br","senha":"admin123"}'
-echo "== pedido c/ comarca =="
-curl -s -X POST $B/api/pedidos -H 'Content-Type: application/json' -d '{"nome":"User VV","email":"u@exemplo.jus.br","usuario":"uservv","motivo":"teste","comarca_id":2}'; echo
-echo -n "pedido c/ email externo (400 esperado): "
-curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/pedidos -H 'Content-Type: application/json' -d '{"nome":"Fora","email":"f@gmail.com","usuario":"fora","comarca_id":2}'
-echo "== aprovar =="; curl -s -X POST $B/api/pedidos/1/aprovar -H "X-Admin-Token: $TA"; echo
-echo "== login uservv =="
-TV=$(curl -s -X POST $B/api/login -H 'Content-Type: application/json' -d '{"usuario":"uservv","senha":"bemvindo123"}' | python3 -c "$TOK")
-curl -s "$B/api/me" -H "X-Admin-Token: $TV"; echo
-# setor de Vila Velha (unidade da comarca 2) vs setor de Vitória (comarca 1)
-# primeiro setor com conteúdo de duas comarcas distintas (escopo do teste)
+# dois setores com conteúdo em comarcas distintas: a = comarca pedida, b = fora
 IDS=$(curl -s "$B/api/comarcas" | python3 -c "
 import json,sys,urllib.request
 base = 'http://localhost:8000'
@@ -47,9 +39,9 @@ def get(p):
 out = []
 for c in get('/api/comarcas'):
     achou = None
-    for f in get('/api/foruns?comarca_id=%d' % c['id']):
-        for u in get('/api/unidades?forum_id=%d' % f['id']):
-            ss = get('/api/setores?unidade_id=%d' % u['id'])
+    for f in get('/api/foruns?comarca_id=%s' % c['id']):
+        for u in get('/api/unidades?forum_id=%s' % f['id']):
+            ss = get('/api/setores?unidade_id=%s' % u['id'])
             if ss:
                 achou = (c['id'], f['id'], u['id'], ss[0]['id'])
                 break
@@ -61,36 +53,57 @@ for c in get('/api/comarcas'):
         break
 a, b = out[0], out[1]
 print(a[0], a[1], a[2], a[3], b[0], b[1], b[2], b[3])")
-# a = comarca do pedido (proprio); b = comarca estranha (fora)
 set -- $IDS; CIDVV=$1; FIDVV=$2; UIDVV=$3; SVV=$4; CIDVT=$5; FIDVT=$6; UIDVT=$7; SVT=$8
+echo "== fixture: usuário uservv (login local) =="
+python3 - <<'PY'
+import hashlib, sqlite3
+con = sqlite3.connect("contatos.db")
+con.execute("DELETE FROM usuarios WHERE usuario='uservv'")
+con.execute("INSERT INTO usuarios (usuario, senha_sha256, aprovado, email)"
+            " VALUES ('uservv', ?, 1, 'u@exemplo.jus.br')",
+            (hashlib.sha256(b"bemvindo123").hexdigest(),))
+con.commit(); con.close()
+PY
+TV=$(curl -s -X POST $B/api/login -H 'Content-Type: application/json' -d '{"usuario":"uservv","senha":"bemvindo123"}' | python3 -c "$TOK")
+echo "== pedido c/ comarca (pedido por quem está logado) =="
+PED=$(curl -s -X POST $B/api/pedidos -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d "{\"nome\":\"User VV\",\"usuario\":\"uservv\",\"motivo\":\"teste\",\"nivel\":\"comarca\",\"alvo_id\":\"$CIDVV\",\"comarca_id\":\"$CIDVV\"}")
+echo "$PED"
+PEDIDO=$(echo "$PED" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id', 0))")
+echo -n "pedido c/ email externo (400 esperado): "
+curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/pedidos -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d "{\"nome\":\"Fora\",\"email\":\"f@gmail.com\",\"usuario\":\"fora\",\"comarca_id\":\"$CIDVV\"}"
+echo -n "pedido sem login (401 esperado): "
+curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/pedidos -H 'Content-Type: application/json' -d "{\"nome\":\"Anonimo\",\"comarca_id\":\"$CIDVV\"}"
+echo "== aprovar =="; curl -s -X POST $B/api/pedidos/$PEDIDO/aprovar -H "X-Admin-Token: $TA"; echo
+echo "== me do uservv =="
+curl -s "$B/api/me" -H "X-Admin-Token: $TV"; echo
 echo -n "criar no proprio local (201 esperado): "
-curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/contatos -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d "{\"setor_id\":$SVV,\"nome\":\"QA VV\",\"telefone\":\"(27) 3333-0088\"}"
+curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/contatos -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d "{\"setor_id\":\"$SVV\",\"nome\":\"QA VV\",\"telefone\":\"(27) 3333-0088\"}"
 echo -n "criar fora do escopo (403 esperado): "
-curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/contatos -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d "{\"setor_id\":$SVT,\"nome\":\"QA VT\",\"telefone\":\"(27) 3333-0088\"}"
-echo -n "remover fora do escopo (403 esperado): "
-curl -s -o /dev/null -w "%{http_code}\n" -X DELETE $B/api/contatos/1 -H "X-Admin-Token: $TV"
+curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/contatos -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d "{\"setor_id\":\"$SVT\",\"nome\":\"QA VT\",\"telefone\":\"(27) 3333-0088\"}"
 CIDV=$(curl -s "$B/api/contatos?comarca_id=$CIDVV" | python3 -c "$SID")
 CIDT=$(curl -s "$B/api/contatos?comarca_id=$CIDVT" | python3 -c "$SID")
-if [ -z "$CIDT" ]; then CIDT=1; fi
+if [ -z "$CIDT" ]; then CIDT=0; fi
+echo -n "remover fora do escopo (403 esperado): "
+curl -s -o /dev/null -w "%{http_code}\n" -X DELETE $B/api/contatos/$CIDT -H "X-Admin-Token: $TV"
 echo -n "editar no proprio escopo (200 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X PUT $B/api/contatos/$CIDV -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d '{"nome":"QA VV editado"}'
 echo -n "editar fora do escopo (403 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X PUT $B/api/contatos/$CIDT -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d '{"nome":"invasao"}'
 echo "== pedido de unidade (heranca: forum cobre?) =="
-curl -s -X POST $B/api/pedidos -H 'Content-Type: application/json' -d "{\"nome\":\"User VV\",\"email\":\"u@exemplo.jus.br\",\"usuario\":\"uservv\",\"motivo\":\"mais uma unidade\",\"nivel\":\"unidade\",\"alvo_id\":$UIDVV}"; echo
+curl -s -X POST $B/api/pedidos -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d "{\"nome\":\"User VV\",\"usuario\":\"uservv\",\"motivo\":\"mais uma unidade\",\"nivel\":\"unidade\",\"alvo_id\":\"$UIDVV\"}"; echo
 echo "== pendentes com nivel =="; curl -s "$B/api/pedidos" -H "X-Admin-Token: $TA" | head -c 300; echo
 echo "== historico =="; curl -s "$B/api/historico" -H "X-Admin-Token: $TA" | head -c 150; echo
 echo "== resumo =="; curl -s "$B/api/resumo" -H "X-Admin-Token: $TA" | head -c 200; echo
 echo -n "resumo sem token (403 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" $B/api/resumo
+echo -n "resumo de visitante (403 esperado): "
+curl -s -o /dev/null -w "%{http_code}\n" "$B/api/resumo" -H "X-Admin-Token: $TV"
 echo -n "trocar senha curta (400 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/me/senha -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d '{"atual":"bemvindo123","nova":"123"}'
 echo -n "trocar senha (200 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/me/senha -H 'Content-Type: application/json' -H "X-Admin-Token: $TV" -d '{"atual":"bemvindo123","nova":"novasenha123"}'
 echo -n "login com nova senha (200 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/login -H 'Content-Type: application/json' -d '{"usuario":"uservv","senha":"novasenha123"}'
-echo "== pedido sem usuario (default = inicio do email) =="
-curl -s -X POST $B/api/pedidos -H 'Content-Type: application/json' -d '{"nome":"Sem User","email":"semuser@exemplo.jus.br","motivo":"t","comarca_id":1}'; echo
 echo "== notificacoes do admin (deve listar solicitacoes) =="
 curl -s "$B/api/notificacoes" -H "X-Admin-Token: $TA" | head -c 300; echo
 echo -n "notificacoes sem token (403 esperado): "
@@ -101,4 +114,4 @@ echo -n "marcar todas lidas (200 esperado): "
 curl -s -o /dev/null -w "%{http_code}\n" -X POST $B/api/notificacoes/lidas -H "X-Admin-Token: $TA"
 kill $PID 2>/dev/null
 rm -f contatos.db /tmp/contatos_test.log
-echo "OK"
+echo "fim: confira os códigos acima"

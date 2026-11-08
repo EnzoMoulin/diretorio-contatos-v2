@@ -32,15 +32,19 @@ function mostrarConsulta() {
   $('view-consulta').classList.remove('hidden');
 }
 function marcarMenu(v) {
-  document.querySelectorAll('.menu-item[data-view]').forEach(b =>
-    b.classList.toggle('active', b.dataset.view === v));
+  document.querySelectorAll('.menu-item[data-view]').forEach(b => {
+    const ativo = b.dataset.view === v;
+    b.classList.toggle('active', ativo);
+    // O menu rola quando a janela é baixa: garante que o item ativo apareça.
+    if (ativo && b.scrollIntoView) b.scrollIntoView({ block: 'nearest' });
+  });
 }
 document.querySelectorAll('.menu-item[data-view]').forEach(btn => {
   btn.onclick = () => {
     marcarMenu(btn.dataset.view);
     const v = btn.dataset.view;
     if (v === 'consulta') { mostrarConsulta(); renderInicio(); }
-    else if (v === 'tjes') { mostrarConsulta(); abrirSede(); }
+    else if (v === 'sede') { mostrarConsulta(); abrirSede(); }
     else if (v === 'uteis') { mostrarConsulta(); renderUteis(); }
     else if (v === 'favoritos') { renderFavoritos(); }
     else {
@@ -325,7 +329,7 @@ document.addEventListener('click', (e) => {
     const linkId = lk.getAttribute('data-link-id');
     if (linkId) {
       const linkUrl = String(window.location.href).split('?')[0] + '?contato=' + encodeURIComponent(linkId);
-      if (navigator.share) { navigator.share({ title: 'Contato — Diretório', url: linkUrl }).catch(() => {}); piscarBotao(lk); }
+      if (navigator.share) { navigator.share({ title: 'Contato — Diretório de Contatos', url: linkUrl }).catch(() => {}); piscarBotao(lk); }
       else { copiarTexto(linkUrl); piscarBotao(lk); }
     }
   }
@@ -725,7 +729,7 @@ function renderInicio() {
       badgeQuantidade(setores, 'Setor', 'Setores') +
       badgeQuantidade(m.qtdContatos, 'Contato', 'Contatos') + solBtn('comarca', m.id) + gestBtn('comarca', m.id) + '</div></div>';
   }).join('');
-  c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Contatos Gerais</h2>' +
+  c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Contatos da Sede</h2>' +
     '<p class="fc-subtitle fc-subtitle--intro">Consulte a estrutura completa por Comarca, Fórum, Unidade e Setor. Selecione uma Comarca no mapa, no menu suspenso ou na lista abaixo.</p></div></div>' +
     (comarcas.length ? '<div class="fc-catalog-counts">' +
       (totalComarcas ? '<span class="fc-pill fc-total-comarcas">' + esc(rotuloQuantidade(totalComarcas, 'Comarca', 'Comarcas')) + '</span>' : '') + '</div>' : '') +
@@ -823,7 +827,7 @@ function renderOrgao() {
 function abrirSede() {
   const orgao = (H.comarcas || []).filter(ehOrgao)[0];
   if (orgao) abrirComarca(orgao.id);
-  marcarMenu('tjes');
+  marcarMenu('sede');
 }
 function renderUteis() {
   const c = host();
@@ -833,7 +837,7 @@ function renderUteis() {
   esconderCreate();
   const uteis = H.uteis || [];
   c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Telefones Úteis</h2>' +
-    '<p class="fc-subtitle">Canais de atendimento e serviços de apoio do Diretório.</p></div></div>' +
+    '<p class="fc-subtitle">Canais de atendimento e serviços de apoio.</p></div></div>' +
     (uteis.length ? '<div class="fc-contatos">' + uteis.map(u => {
       const href = hrefContato(u.tipo, u.valor);
       const valorHtml = href ? '<a class="fc-contato-valor" href="' + esc(href) + '">' + esc(u.valor) + '</a>'
@@ -848,7 +852,7 @@ function renderUteis() {
     '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
     '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
   $('fc-print-uteis').onclick = () => {
-    abrirImpressao('Telefones Úteis — Diretório', '<ul>' + uteis.map(u =>
+    abrirImpressao('Telefones Úteis', '<ul>' + uteis.map(u =>
       contatoPrint({ tipo: u.tipo, descricao: u.nome, valor: u.valor })).join('') + '</ul>');
   };
   vincularAcoes();
@@ -911,7 +915,7 @@ function renderNo() {
     badgeQuantidade(qtdSetores(no.filhos || []), 'Setor', 'Setores') + solBtn(nivelNo, no.id) + gestBtn(nivelNo, no.id) + '</div>' +
     '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço:</strong> ' + linkEndereco(no.enderecoExibicao) +
     (no.cepExibicao ? ' • CEP ' + esc(no.cepExibicao) : '') +
-    (no.endereco ? '' : ' <span class="fc-muted">(' + (pai ? 'herdado da Unidade' : (ehOrgao(m) ? 'herdado do Sede' : 'herdado do Fórum')) + ')</span>') + '</div></div>' +
+    (no.endereco ? '' : ' <span class="fc-muted">(' + (pai ? 'herdado da Unidade' : (ehOrgao(m) ? 'herdado da Sede' : 'herdado do Fórum')) + ')</span>') + '</div></div>' +
     '<div class="fc-section"><div class="fc-section-title"><h3>Contatos ' + (tipoTela === 'Setor' ? 'deste Setor' : 'desta Unidade') + '</h3></div>' +
     contatosCards(no.contatos || [], ctxOk) + '</div>' +
     ((no.filhos || []).length
@@ -1168,7 +1172,7 @@ function imprimirForum() {
     : '<p class="muted">Sem contatos gerais.</p>';
   abrirImpressao('Contatos Gerais — ' + f.nome,
     '<section><h2>' + esc(f.nome) + '</h2>' +
-    '<p class="meta">' + esc(ehOrgao(m) ? 'Sede' : m.nome) + ' • ' +
+    '<p class="meta">' + esc(m.nome) + ' • ' +
     esc(f.endereco || 'Endereço não informado') +
     (f.cep ? ' • CEP ' + esc(f.cep) : '') + '</p>' + corpo + '</section>');
 }
@@ -1291,13 +1295,13 @@ async function refresh() {
     else { token = ''; localStorage.removeItem('contatos-token'); }
   }
   const dentro = logado();
-  $('menu-dash').classList.toggle('hidden', !dentro);
+  $('menu-dash').classList.toggle('hidden', !(dentro && me && me.admin));
   $('menu-notif').classList.toggle('hidden', !dentro);
-  $('menu-sol').classList.toggle('hidden', !dentro);
+  $('menu-sol').classList.toggle('hidden', !(dentro && me && me.admin));
   $('menu-meus').classList.toggle('hidden', !dentro);
   $('menu-usu').classList.toggle('hidden', !(dentro && me && me.admin));
   ligarBackup();
-  $('menu-reg').classList.toggle('hidden', !dentro);
+  $('menu-reg').classList.toggle('hidden', !(dentro && me && me.admin));
   $('who-mail').classList.toggle('hidden', !dentro);
   if (dentro) $('who-mail').innerHTML = ICON_PESSOA + ' ' + esc(me.email || me.usuario);
   $('who-line').innerHTML = dentro ? ICON_PESSOA + ' ' + esc(me.usuario) : 'Sem acesso administrativo';
@@ -1506,7 +1510,10 @@ async function abrirPedidoNovo(modo) {
   if (!(H.comarcas || []).length) { try { await recarregarHierarquia(true); } catch (e) {} }
   preencherLocais();
   $('bloco-locais').classList.remove('hidden');
-  $('bloco-admin').classList.remove('hidden');
+  // Caixa de Administrador só para o dono do ambiente (allowlist ADMIN_EMAILS).
+  const podeAdmin = !!(me && me.pode_admin);
+  $('bloco-admin').classList.toggle('hidden', !podeAdmin);
+  if (!podeAdmin) $('p-admin').checked = false;
 }
 function mostrarPedido() {
   VIEWS.forEach(v => { const s = $('view-' + v); if (s) s.classList.add('hidden'); });
@@ -1579,7 +1586,7 @@ $('p-enviar').onclick = async () => {
   let j = {};
   try { j = JSON.parse(txt); } catch (e) {}
   if (r.ok && j.auto_aprovado) {
-    $('p-status').textContent = 'Acesso liberado automaticamente (demonstração).';
+    $('p-status').textContent = 'Acesso liberado automaticamente (ambiente de avaliação).';
     try { me = await (await fetch('/api/me', { headers: auth() })).json(); } catch (e) {}
     setTimeout(() => voltarConsulta(), 900);
     return;
@@ -1593,24 +1600,29 @@ $('p-enviar').onclick = async () => {
 async function carregarDashboard() {
   if (!logado()) return;
   const r = await (await fetch('/api/resumo', { headers: auth() })).json();
+  if (!r || r.erro) return;  // sem permissão: só admin vê o painel
   const coms = (H.comarcas || []).filter(m => !ehOrgao(m));
   const comEdit = coms.filter(c => cobre('comarca', c.id));
   const totalEdit = comEdit.reduce((a, c) => a + (c.qtdContatos || 0), 0);
   const totalGeral = coms.reduce((a, c) => a + (c.qtdContatos || 0), 0);
+  // totalGeral soma só as comarcas; a estrutura central (sede, gabinetes,
+  // núcleos) não entra na conta. O total do banco vem em saude.total_contatos.
+  const totalTodos = Number((r.saude || {}).total_contatos || totalGeral);
+  const totalCentral = Math.max(0, totalTodos - totalGeral);
   $('dash-sub').textContent = me.escopo === 'all'
-    ? `Admin: ${totalGeral} contatos em ${coms.length} comarcas.`
-    : `Você edita ${totalEdit} de ${totalGeral} contatos (${comEdit.length} comarca(s) com cobertura total).`;
+    ? `Admin: ${totalTodos} contatos — ${totalGeral} em ${coms.length} comarcas e ${totalCentral} na estrutura central.`
+    : `Você edita ${totalEdit} de ${totalTodos} contatos (${comEdit.length} comarca(s) com cobertura total).`;
   $('dash-cards').innerHTML = [
     ['🏙️ Comarcas', coms.length],
     ['🏢 Fóruns', r.por_forum.length],
     ['🏬 Unidades', r.por_unidade.length],
     ['🗂️ Setores', r.por_setor.length],
-    ['👥 Contatos (total)', totalGeral],
-    ['✏️ Contatos editáveis', me.escopo === 'all' ? totalGeral : totalEdit],
+    ['👥 Contatos cadastrados', totalTodos],
+    ['✏️ Contatos editáveis', me.escopo === 'all' ? totalTodos : totalEdit],
     ['⏳ Solicitações pendentes', r.pendentes],
-    ['🔄 Alterações (30d)', (r.saude || {}).alteracoes_30d || 0],
-    ['⚠️ Sem alteração há 6m+', (r.saude || {}).obsoletos_180d || 0],
-  ].map(([t, v]) => `<div class="dash-card"><span>${v}</span>${t}</div>`).join('');
+    ['🔄 Alterações no registro (30d)', (r.saude || {}).alteracoes_30d || 0],
+    ['⚠️ Sem alteração registrada (6m+)', (r.saude || {}).obsoletos_180d || 0],
+  ].map(([t, v]) => `<div class="dash-card"><span>${Number(v)}</span>${esc(t)}</div>`).join('');
   const max = Math.max(1, ...coms.map(c => c.qtdContatos || 0));
   $('dash-mun').innerHTML = coms.map(c => {
     const w = Math.round(100 * (c.qtdContatos || 0) / max);
