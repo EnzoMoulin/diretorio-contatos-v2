@@ -47,7 +47,7 @@
     <div class="meta-grid">
       <div>Projeto<b>Diretório de Contatos v2</b></div>
       <div>Repositório<b>EnzoMoulin/diretorio-contatos-v2</b></div>
-      <div>Stack<b>Python 3.14 (stdlib) + SQLite + HTML/CSS/JS</b></div>
+      <div>Stack<b>Python 3.15 (stdlib) + SQLite + HTML/CSS/JS</b></div>
       <div>Hospedagem<b>Render — web service, plano free</b></div>
       <div>Login<b>Google OAuth 2.0 (somente e-mail e perfil)</b></div>
       <div>Versão da cartilha<b>08/11/2026</b></div>
@@ -68,7 +68,7 @@
     <tr><td><span class="mono">ADMIN_EMAILS</span></td><td>Define quem é administrador</td><td>O sistema abre, mas ninguém administra</td></tr>
     <tr><td><span class="mono">APP_BASE_URL</span></td><td>Monta links de e-mail e o retorno do login</td><td>Links apontam para <span class="mono">localhost</span></td></tr>
   </table>
-  <div class="callout"><b>O que já está pronto:</b> 25 testes automatizados passando (1 pulado sem SMTP), integração contínua verde no
+  <div class="callout"><b>O que já está pronto:</b> 27 testes automatizados passando, integração contínua verde no
   GitHub Actions, <span class="mono">render.yaml</span> versionado, banco mascarado para demonstração
   (<span class="mono">seed_mascarado.json</span>) e login local desligado em produção
   (<span class="mono">LOCAL_LOGIN=0</span>). Falta apenas a configuração de painel descrita aqui.</div>
@@ -146,8 +146,8 @@
 
   <div class="step"><div class="n">3</div><div class="b">
     <h4>Conferir as variáveis do arquivo</h4>
-    <p>Devem estar presentes, com estes valores: <span class="mono">PYTHON_VERSION=3.14.3</span> (versão suportada
-    pelo Render, que hoje distribui 3.14.10 por padrão), <span class="mono">INTRANET_ONLY=0</span>,
+    <p>Devem estar presentes, com estes valores: <span class="mono">PYTHON_VERSION=3.15.2</span> (release estável
+    atual; o Render aceita qualquer versão lançada a partir da 3.7.3), <span class="mono">INTRANET_ONLY=0</span>,
     <span class="mono">LOCAL_LOGIN=0</span> e <span class="mono">SIMULACAO_AUTO_APROVAR</span> conforme a decisão 2B.</p>
   </div></div>
 

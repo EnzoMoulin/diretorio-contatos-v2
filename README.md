@@ -1,6 +1,8 @@
 # Diretório de Contatos — evolução Python + SQLite
 
 [![Testes](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions/workflows/testes.yml/badge.svg)](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions)
+[![Python 3.15](https://img.shields.io/badge/Python-3.15-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
+<!-- Manutenção: ao subir o PYTHON_VERSION no render.yaml, trocar esta série (3.15) aqui e em docs/cartilha-deploy.html. -->
 
 > Case real de estágio em tribunal estadual: o MVP original (Google Apps Script + Google
 > Sheets) validou o fluxo a custo zero no ecossistema Workspace do tribunal;
@@ -30,7 +32,7 @@ são as mesmas; o que evolui é a fundação técnica:
 | Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
 | Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
 | Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 25 testes (`unittest`, banco temporário) + CI no GitHub Actions | Cobertura medida e testes de contrato da API |
+| Testes | Sem testes automatizados | 27 testes (`unittest`, banco temporário) + CI no GitHub Actions | Cobertura medida e testes de contrato da API |
 | Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Front estático (Cloudflare Pages) + API FastAPI separada: a página abre na hora, a API acorda sozinha |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
@@ -75,7 +77,7 @@ flowchart LR
 
 - **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
   mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
-  `lru_cache` com invalidação, 25 testes (`unittest`, banco temporário).
+  `lru_cache` com invalidação, 27 testes (`unittest`, banco temporário).
 - **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
   escopo por nível, UX das telas — a interface e as regras são as mesmas, propositalmente.
 - **Por que só stdlib:** zero dependências = deploy gratuito trivial e prova de que a
@@ -149,7 +151,8 @@ ranking de busca com tolerância a erro de digitação.
   Dashboard e Registro têm botão próprio; folha limpa em A4
 
 ## Stack
-- Backend: Python 3, somente biblioteca padrão (`http.server` + `sqlite3`) — zero dependências
+- Backend: Python **3.15.2** — versão exata do demo, fixada em `render.yaml` (`PYTHON_VERSION`) e
+  testada pelo CI —, somente biblioteca padrão (`http.server` + `sqlite3`) — zero dependências
 - Frontend: HTML + CSS + JS puro (sem framework); mapa com Leaflet via CDN
 - Banco: SQLite local (`contatos.db`, criado na primeira execução) com 1.807 contatos
   (1.521 nas 69 comarcas e 286 da estrutura central), vindos da base mascarada versionada
@@ -161,7 +164,7 @@ SIMULACAO_AUTO_APROVAR=1 ADMIN_EMAILS=seu@gmail.com python3 app.py
 # admin:   http://localhost:8000/admin   (login Google; admin só p/ e-mail em ADMIN_EMAILS)
 bash teste_rapido.sh   # imprime os códigos do fluxo completo (não é teste automatizado;
                        # atenção: encerra qualquer processo na porta 8000)
-python3 -m unittest discover -s tests -t . -v   # 25 testes (com o servidor no ar; 1 pulado sem SMTP)
+python3 -m unittest discover -s tests -t . -v   # 27 testes (servidor no ar + ADMIN_EMAILS na env; sem ela, 2 são pulados)
 ```
 Os testes batem na API por HTTP e assumem o modo de avaliação
 (`SIMULACAO_AUTO_APROVAR=1`), por isso o servidor precisa subir com a variável —
