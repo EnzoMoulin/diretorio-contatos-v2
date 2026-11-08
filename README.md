@@ -30,7 +30,8 @@ são as mesmas; o que evolui é a fundação técnica:
 | Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
 | Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
 | Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 24 testes (`unittest`, banco temporário) + CI no GitHub Actions | Cobertura medida e testes de contrato da API |
+| Testes | Sem testes automatizados | 25 testes (`unittest`, banco temporário) + CI no GitHub Actions | Cobertura medida e testes de contrato da API |
+| Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Front estático (Cloudflare Pages) + API FastAPI separada: a página abre na hora, a API acorda sozinha |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
 zero dentro do ecossistema onde os dados viviam; o v2 prova a mesma arquitetura
@@ -74,7 +75,7 @@ flowchart LR
 
 - **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
   mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
-  `lru_cache` com invalidação, 24 testes (`unittest`, banco temporário).
+  `lru_cache` com invalidação, 25 testes (`unittest`, banco temporário).
 - **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
   escopo por nível, UX das telas — a interface e as regras são as mesmas, propositalmente.
 - **Por que só stdlib:** zero dependências = deploy gratuito trivial e prova de que a
@@ -160,7 +161,7 @@ SIMULACAO_AUTO_APROVAR=1 ADMIN_EMAILS=seu@gmail.com python3 app.py
 # admin:   http://localhost:8000/admin   (login Google; admin só p/ e-mail em ADMIN_EMAILS)
 bash teste_rapido.sh   # imprime os códigos do fluxo completo (não é teste automatizado;
                        # atenção: encerra qualquer processo na porta 8000)
-python3 -m unittest discover -s tests -t . -v   # 24 testes (com o servidor no ar)
+python3 -m unittest discover -s tests -t . -v   # 25 testes (com o servidor no ar; 1 pulado sem SMTP)
 ```
 Os testes batem na API por HTTP e assumem o modo de avaliação
 (`SIMULACAO_AUTO_APROVAR=1`), por isso o servidor precisa subir com a variável —
@@ -169,11 +170,21 @@ Os testes batem na API por HTTP e assumem o modo de avaliação
 ## Hospedagem (pôr no ar)
 Só stdlib: sem `pip install`. No Render (gratuito): novo Web Service a partir
 do repo (`render.yaml` já traz `INTRANET_ONLY=0`, `LOCAL_LOGIN=0`,
-`SIMULACAO_AUTO_APROVAR=1`). `PORT` vem do ambiente. O banco é recriado do
+`SIMULACAO_AUTO_APROVAR=1`). `PORT` vem do ambiente. O health check do Render usa
+`/healthz`, que responde 200 sem tocar no banco: assim um seed lento não é lido como
+serviço morto (o que reiniciaria o processo e recriaria o banco). O banco é recriado do
 seed mascarado a cada boot limpo (disco efêmero) — os dados de avaliação voltam
 sozinhos; o que for criado em produção se perde no restart (esperado no plano
-gratuito). O plano free dorme por inatividade: o primeiro acesso pode levar
-~30–60 s.
+gratuito). O plano free dorme depois de 15 minutos sem tráfego e leva cerca de 1 minuto
+para acordar. A espera é **por serviço**: manter um único app no ar resolve a
+cota (750 h de instância por mês por workspace, e um serviço sempre ativo já
+consome ~730 h), não o cold start. Daí o aviso: o primeiro acesso pode levar um
+minuto — os seguintes são imediatos.
+
+> **Sucessor:** quando o v3 (FastAPI + Postgres, com o front estático separado
+> da API) entrar no ar, este serviço será **suspenso** — não apagado — e o v3
+> ocupa o lugar. Este repositório continua público, e este README passará a
+> apontar para o v3.
 
 `ADMIN_EMAILS` (definir no dashboard; é o e-mail Google que vira admin): sem
 ela ninguém é admin — o primeiro login **não** ganha gestão. O link para
@@ -301,4 +312,4 @@ frontend/style.css     tema (paleta, tipografia e componentes)
 
 ## Licença
 © Enzo Moulin — todos os direitos reservados. Projeto de portfólio: sem licença
-de uso, cópia ou redistribuição.
+de uso, cópia ou redistribuição. Os termos completos estão em [`LICENSE`](LICENSE).

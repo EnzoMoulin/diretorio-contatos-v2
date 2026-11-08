@@ -50,7 +50,7 @@
       <div>Stack<b>Python 3.14 (stdlib) + SQLite + HTML/CSS/JS</b></div>
       <div>Hospedagem<b>Render — web service, plano free</b></div>
       <div>Login<b>Google OAuth 2.0 (somente e-mail e perfil)</b></div>
-      <div>Versão da cartilha<b>06/11/2026</b></div>
+      <div>Versão da cartilha<b>08/11/2026</b></div>
     </div>
   </div>
 </section>
@@ -68,7 +68,7 @@
     <tr><td><span class="mono">ADMIN_EMAILS</span></td><td>Define quem é administrador</td><td>O sistema abre, mas ninguém administra</td></tr>
     <tr><td><span class="mono">APP_BASE_URL</span></td><td>Monta links de e-mail e o retorno do login</td><td>Links apontam para <span class="mono">localhost</span></td></tr>
   </table>
-  <div class="callout"><b>O que já está pronto:</b> 24 testes automatizados passando, integração contínua verde no
+  <div class="callout"><b>O que já está pronto:</b> 25 testes automatizados passando (1 pulado sem SMTP), integração contínua verde no
   GitHub Actions, <span class="mono">render.yaml</span> versionado, banco mascarado para demonstração
   (<span class="mono">seed_mascarado.json</span>) e login local desligado em produção
   (<span class="mono">LOCAL_LOGIN=0</span>). Falta apenas a configuração de painel descrita aqui.</div>
@@ -140,7 +140,7 @@
     <ul>
       <li><b>Runtime:</b> Python 3 · <b>Build command:</b> <span class="mono">echo ok</span></li>
       <li><b>Start command:</b> <span class="mono">HOST=0.0.0.0 python3 app.py</span></li>
-      <li><b>Health check path:</b> <span class="mono">/</span> · <b>Plano:</b> Free</li>
+      <li><b>Health check path:</b> <span class="mono">/healthz</span> · <b>Plano:</b> Free</li>
     </ul>
   </div></div>
 
@@ -213,7 +213,7 @@
   <table>
     <tr><th style="width:30%">Verificação</th><th style="width:40%">Como</th><th>Esperado</th></tr>
     <tr><td>Página pública</td><td>abrir <span class="mono">/</span> em janela anônima</td><td>carrega sem login, com comarcas no mapa e na lista</td></tr>
-    <tr><td>Saúde do serviço</td><td><span class="mono">/</span> responde ao health check</td><td>status 200 no painel do Render</td></tr>
+    <tr><td>Saúde do serviço</td><td><span class="mono">/healthz</span> responde ao health check (200 sem tocar no banco)</td><td>status 200 no painel do Render</td></tr>
     <tr><td>Admin bloqueado</td><td>abrir <span class="mono">/admin</span> sem login</td><td>não mostra gestão; oferece entrar com Google</td></tr>
     <tr><td>Login Google</td><td>entrar com a conta da allowlist</td><td>volta autenticado e o menu mostra o papel de admin</td></tr>
     <tr><td>Login de terceiro</td><td>entrar com outra conta</td><td>entra como comum e só vê o que foi liberado</td></tr>

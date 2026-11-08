@@ -5,7 +5,7 @@ services:
     plan: free
     buildCommand: "echo ok"
     startCommand: "HOST=0.0.0.0 python3 app.py"
-    healthCheckPath: /
+    healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
         value: 3.14.3

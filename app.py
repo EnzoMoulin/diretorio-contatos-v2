@@ -1130,6 +1130,11 @@ class Handler(BaseHTTPRequestHandler):
         u = urllib.parse.urlparse(self.path)
         q = urllib.parse.parse_qs(u.query)
         arg = lambda k: (q.get(k) or [""])[0].strip()
+        if u.path == "/healthz":
+            # Health check da hospedagem: responde antes de tocar em banco ou seed,
+            # para um seed lento não ser lido como serviço morto (que reinicia e
+            # recria o banco efêmero).
+            return self._json({"status": "ok"})
         if u.path in ("/", "/public.html"):
             return self._static("public.html", "text/html; charset=utf-8")
         if u.path == "/admin":

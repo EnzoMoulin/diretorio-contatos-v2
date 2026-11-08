@@ -110,3 +110,6 @@ ol.steps li:before{
 figure.keep img{max-height:118mm; object-fit:contain;}
 .avoid{break-inside:avoid;}
 .foot-note{font-size:8.3pt; color:var(--muted); margin-top:7pt; break-before:avoid;}
+
+/* Impressão: A4 fixo para o PDF da cartilha sair igual em qualquer máquina. */
+@page{ size:A4; margin:12mm 12mm 14mm; }
