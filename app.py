@@ -1310,22 +1310,31 @@ class Handler(BaseHTTPRequestHandler):
                 hierarquia_resposta(self)
                 return
             if u.path == "/api/comarcas":
+                # Unidade sem fórum (a estrutura central) entra pela comarca da
+                # própria unidade: por isso a contagem é por subconsulta, e não
+                # pelo JOIN em foruns, que somava zero na Sede.
                 rows = con.execute(
-                    "SELECT c.id, c.nome, COUNT(ct.id) AS total,"
-                    " COUNT(DISTINCT f.id) AS n_foruns,"
-                    " COUNT(DISTINCT CASE WHEN EXISTS"
-                    " (SELECT 1 FROM setores s2 JOIN contatos ct2"
-                    " ON ct2.setor_id=s2.id WHERE s2.unidade_id=u.id)"
-                    " THEN u.id END) AS n_unidades,"
-                    " COUNT(DISTINCT CASE WHEN EXISTS"
-                    " (SELECT 1 FROM contatos ct3 WHERE ct3.setor_id=s.id)"
-                    " THEN s.id END) AS n_setores"
-                    " FROM comarcas c"
-                    " LEFT JOIN foruns f ON f.comarca_id=c.id"
-                    " LEFT JOIN unidades u ON u.forum_id=f.id"
-                    " LEFT JOIN setores s ON s.unidade_id=u.id"
-                    " LEFT JOIN contatos ct ON ct.setor_id=s.id"
-                    " GROUP BY c.id ORDER BY (c.ordem_num IS NULL),"
+                    "SELECT c.id, c.nome,"
+                    " (SELECT COUNT(*) FROM contatos ct"
+                    "   JOIN setores s ON s.id=ct.setor_id"
+                    "   JOIN unidades u ON u.id=s.unidade_id"
+                    "   LEFT JOIN foruns f ON f.id=u.forum_id"
+                    "  WHERE COALESCE(f.comarca_id, u.comarca_id)=c.id) AS total,"
+                    " (SELECT COUNT(*) FROM foruns f2 WHERE f2.comarca_id=c.id)"
+                    " AS n_foruns,"
+                    " (SELECT COUNT(DISTINCT u.id) FROM unidades u"
+                    "   LEFT JOIN foruns f ON f.id=u.forum_id"
+                    "  WHERE COALESCE(f.comarca_id, u.comarca_id)=c.id"
+                    "    AND EXISTS (SELECT 1 FROM setores s JOIN contatos ct2"
+                    "                 ON ct2.setor_id=s.id WHERE s.unidade_id=u.id))"
+                    " AS n_unidades,"
+                    " (SELECT COUNT(DISTINCT s.id) FROM setores s"
+                    "   JOIN unidades u ON u.id=s.unidade_id"
+                    "   LEFT JOIN foruns f ON f.id=u.forum_id"
+                    "  WHERE COALESCE(f.comarca_id, u.comarca_id)=c.id"
+                    "    AND EXISTS (SELECT 1 FROM contatos ct3 WHERE ct3.setor_id=s.id))"
+                    " AS n_setores"
+                    " FROM comarcas c ORDER BY (c.ordem_num IS NULL),"
                     " c.ordem_num, c.ordem_idx").fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/foruns":

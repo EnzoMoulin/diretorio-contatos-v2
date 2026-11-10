@@ -175,18 +175,8 @@ class TestHeranca(unittest.TestCase):
                              "LIMIT 1", (u2,)).fetchone()[0]
             con.execute("INSERT INTO acessos (usuario_id, nivel, alvo_id) "
                         "VALUES (?, 'unidade', ?)", (uid, u2))
-            import sys
-            sys.path.insert(0, RAIZ)
-            import types
-            src = open(os.path.join(RAIZ,
-                       "app.py"), encoding="utf-8").read().replace(
-                           'if __name__ == "__main__":', "if False:")
-            g = {"__name__": "x", "__file__": "app.py"}
-            exec(compile(src, "app.py", "exec"), g)  # noqa: S102
             con.row_factory = sqlite3.Row
-            h = types.SimpleNamespace()
-            for m in ("_user", "_escopo", "_pais", "_cobre"):
-                setattr(h, m, g["Handler"].__dict__[m].__get__(h, type(h)))
+            h = handler_regras()
             self.assertTrue(h._cobre(con, uid, "setor", s1))
             self.assertTrue(h._cobre(con, uid, "unidade", u2))
             self.assertFalse(h._cobre(con, uid, "unidade", u3))
@@ -196,6 +186,123 @@ class TestHeranca(unittest.TestCase):
             con.execute("DELETE FROM usuarios WHERE id=?", (uid,))
             con.commit()
             con.close()
+
+
+def handler_regras():
+    """Instância mínima do Handler para exercitar _cadeia/_pais/_cobre sem HTTP."""
+    import sys
+    import types
+    sys.path.insert(0, RAIZ)
+    src = open(os.path.join(RAIZ, "app.py"), encoding="utf-8").read().replace(
+        'if __name__ == "__main__":', "if False:")
+    g = {"__name__": "x", "__file__": "app.py"}
+    exec(compile(src, "app.py", "exec"), g)  # noqa: S102
+    h = types.SimpleNamespace()
+    for m in ("_user", "_escopo", "_pais", "_cobre", "_cadeia"):
+        setattr(h, m, g["Handler"].__dict__[m].__get__(h, type(h)))
+    return h
+
+
+class TestHerancaSede(unittest.TestCase):
+    """Unidade sem fórum (estrutura central) também herda acesso.
+
+    O caso com fórum está em TestHeranca; este é o que faltava: o INNER JOIN
+    em foruns fazia `_cadeia` e `_pais` devolverem vazio e o contato da Sede
+    só abria para admin.
+    """
+
+    def setUp(self):
+        self.con = sqlite3.connect(DB)
+        self.con.execute("DELETE FROM usuarios WHERE usuario='t_sede'")
+        self.con.execute(
+            "INSERT INTO usuarios (usuario, senha_sha256, aprovado, admin, email)"
+            " VALUES ('t_sede','x',1,0,'t-sede@exemplo.jus.br')")
+        self.uid = self.con.execute(
+            "SELECT id FROM usuarios WHERE usuario='t_sede'").fetchone()[0]
+        self.con.commit()
+        self.con.row_factory = sqlite3.Row
+        self.h = handler_regras()
+
+    def tearDown(self):
+        self.con.execute("DELETE FROM acessos WHERE usuario_id=?", (self.uid,))
+        self.con.execute("DELETE FROM usuarios WHERE id=?", (self.uid,))
+        self.con.commit()
+        self.con.close()
+
+    def _setor(self):
+        r = self.con.execute(
+            "SELECT s.id AS s, u.id AS u, COALESCE(u.comarca_id,'') AS c"
+            " FROM setores s JOIN unidades u ON u.id=s.unidade_id"
+            " JOIN contatos ct ON ct.setor_id=s.id"
+            " WHERE u.forum_id IS NULL ORDER BY s.id LIMIT 1").fetchone()
+        self.assertIsNotNone(r, "a base precisa ter unidade sem fórum")
+        return r
+
+    def test_cadeia_do_setor_sem_forum_vem_da_unidade(self):
+        r = self._setor()
+        c, f, u, s = self.h._cadeia(self.con, setor_id=r["s"])
+        self.assertIsNone(f, "unidade sem fórum não empresta fórum para a cadeia")
+        self.assertEqual((u, s), (r["u"], r["s"]))
+        self.assertEqual(c, r["c"], "a comarca tem de vir da própria unidade")
+
+    def test_acesso_na_unidade_sem_forum_cobre_o_setor(self):
+        r = self._setor()
+        self.con.execute(
+            "INSERT INTO acessos (usuario_id, nivel, alvo_id)"
+            " VALUES (?,'unidade',?)", (self.uid, r["u"]))
+        self.con.commit()
+        self.assertTrue(self.h._cobre(self.con, self.uid, "setor", r["s"]))
+        outro = self.con.execute(
+            "SELECT id FROM setores WHERE unidade_id != ? LIMIT 1",
+            (r["u"],)).fetchone()[0]
+        self.assertFalse(self.h._cobre(self.con, self.uid, "setor", outro),
+                         "acesso numa unidade não pode valer para outra")
+
+
+class TestContagens(unittest.TestCase):
+    """Lista plana, árvore e banco têm de contar a mesma coisa.
+
+    Foi essa divergência que escondeu os 286 contatos da estrutura central
+    fora da `/api/contatos`.
+    """
+
+    def test_lista_plana_soma_a_arvore_e_o_banco(self):
+        st, hier = api("GET", "/api/hierarquia")
+        self.assertEqual(st, 200)
+        arvore = sum(m["qtdContatos"] for m in hier["comarcas"])
+        st, lista = api("GET", "/api/contatos")
+        self.assertEqual(st, 200)
+        con = sqlite3.connect(DB)
+        try:
+            banco = con.execute("SELECT COUNT(*) FROM contatos").fetchone()[0]
+        finally:
+            con.close()
+        self.assertEqual(len(lista), arvore,
+                         "a lista plana tem de somar o mesmo que a árvore")
+        self.assertEqual(len(lista), banco,
+                         "a lista plana tem de trazer todos os contatos do banco")
+        self.assertEqual(len({c["id"] for c in lista}), len(lista),
+                         "id repetido na lista plana")
+
+    def test_lista_plana_sem_contato_sem_comarca(self):
+        st, lista = api("GET", "/api/contatos")
+        self.assertEqual(st, 200)
+        orfaos = [c["id"] for c in lista
+                  if not c.get("comarca") or not c.get("comarca_id")]
+        self.assertEqual(orfaos, [],
+                         "contato da lista plana sem comarca: o COALESCE caiu")
+
+    def test_comarcas_bate_com_a_lista(self):
+        st, comarcas = api("GET", "/api/comarcas")
+        self.assertEqual(st, 200)
+        st, lista = api("GET", "/api/contatos")
+        self.assertEqual(st, 200)
+        por_comarca = {}
+        for c in lista:
+            por_comarca[c["comarca_id"]] = por_comarca.get(c["comarca_id"], 0) + 1
+        for m in comarcas:
+            self.assertEqual(m["total"], por_comarca.get(m["id"], 0),
+                             f"comarca {m['id']} ({m['nome']}) fora de sincronia")
 
 
 class TestRecusa(unittest.TestCase):
