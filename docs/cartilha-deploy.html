@@ -84,8 +84,9 @@
     <div class="card"><h4>Endereço</h4><p><span class="mono">https://diretorio-contatos-v2.onrender.com</span>, se o nome estiver livre.</p></div>
   </div>
   <div class="callout warn"><b>Atenção ao disco:</b> o plano free não tem disco persistente. Cada novo deploy ou
-  reinício recria o <span class="mono">contatos.db</span> a partir do seed — o que mantém o demo sempre limpo, mas
-  <strong>descarta edições</strong> feitas por visitantes. Isso é esperado nesta vitrine, não um defeito.</div>
+  reinício recria o <span class="mono">contatos.db</span> a partir do seed — o que mantém o demo sempre limpo. Como o
+  ambiente é somente leitura, não há edição de visitante a perder; o que não sobrevive ao reinício são contas,
+  pedidos e aprovações. Isso é esperado nesta vitrine, não um defeito.</div>
 </section>
 
 <!-- ================= 2 ================= -->
@@ -103,12 +104,15 @@
   </div></div>
 
   <div class="step"><div class="n">B</div><div class="b">
-    <h4>Aprovação automática de acesso</h4>
-    <p>Com <span class="mono">SIMULACAO_AUTO_APROVAR=1</span>, quem pede acesso a uma comarca é aprovado na hora e
-    recebe permissão de <strong>edição</strong> naquela comarca. É o que torna a vitrine avaliável em segundos por um
-    recrutador, ao custo de qualquer visitante poder editar os dados mascarados do demo.</p>
-    <p><b>Alternativa mais fechada:</b> deixar <span class="mono">0</span> e aprovar manualmente em
-    <span class="mono">/admin → Solicitações</span>, exigindo um admin logado para liberar cada pedido.</p>
+    <h4>Aprovação de acesso — decisão adotada: <span class="mono">0</span></h4>
+    <p>O demo público sobe com <span class="mono">SIMULACAO_AUTO_APROVAR=0</span>: é <strong>somente leitura</strong>
+    para quem visita. Um pedido de acesso fica pendente e só o dono aprova, em
+    <span class="mono">/admin → Solicitações</span>, exatamente como em produção.</p>
+    <p><b>Por quê:</b> com <span class="mono">1</span> qualquer conta Google que pedisse acesso recebia permissão de
+    edição, e o demo ficava vulnerável a alteração dos dados por terceiros — quem visita não precisa disso para
+    avaliar o sistema, e a edição continua documentada no README e nas capturas do painel.</p>
+    <p><b>Onde o <span class="mono">1</span> continua valendo:</b> execução local e os testes automatizados, onde
+    a aprovação automática é sinalizada na tela; é o modo que a suíte assume.</p>
   </div></div>
 
   <div class="step"><div class="n">C</div><div class="b">
@@ -148,7 +152,8 @@
     <h4>Conferir as variáveis do arquivo</h4>
     <p>Devem estar presentes, com estes valores: <span class="mono">PYTHON_VERSION=3.15.2</span> (release estável
     atual; o Render aceita qualquer versão lançada a partir da 3.7.3), <span class="mono">INTRANET_ONLY=0</span>,
-    <span class="mono">LOCAL_LOGIN=0</span> e <span class="mono">SIMULACAO_AUTO_APROVAR</span> conforme a decisão 2B.</p>
+    <span class="mono">LOCAL_LOGIN=0</span> e <span class="mono">SIMULACAO_AUTO_APROVAR=0</span> (decisão 2B: demo
+    somente leitura).</p>
   </div></div>
 
   <div class="step"><div class="n">4</div><div class="b">
@@ -193,9 +198,11 @@
   </div></div>
 
   <div class="step"><div class="n">4</div><div class="b">
-    <h4>Publicar a tela de consentimento</h4>
-    <p>Em <b>Tela de permissão OAuth</b>, o status precisa ser <b>Em produção</b>. Em <b>Teste</b>, só os e-mails
-    cadastrados como testadores conseguem entrar — e um recrutador externo trava na tela do Google.</p>
+    <h4>Tela de consentimento — pode ficar em <b>Teste</b></h4>
+    <p>Com o demo somente leitura, o visitante não precisa entrar: a página pública <span class="mono">/</span> abre
+    sem login. Mantendo a tela em <b>Teste</b>, só as contas cadastradas como testadores conseguem fazer login — na
+    prática, só o dono do ambiente. Publique (<b>Em produção</b>) apenas se quiser que terceiros entrem, o que só é
+    necessário se a aprovação automática for ligada.</p>
     <p>Os escopos usados (<span class="mono">openid</span>, <span class="mono">userinfo.email</span>,
     <span class="mono">userinfo.profile</span>) são não sensíveis: a publicação não exige verificação do Google.</p>
   </div></div>
@@ -255,7 +262,7 @@
     <tr><td class="l">Commit publicado</td><td><span class="blank"></span></td></tr>
     <tr><td class="l">URL pública</td><td><span class="blank"></span></td></tr>
     <tr><td class="l">Admin da allowlist</td><td><span class="blank"></span></td></tr>
-    <tr><td class="l">Aprovação automática</td><td><span class="blank"></span></td></tr>
+    <tr><td class="l">Aprovação de acesso (0 = manual)</td><td><span class="blank"></span></td></tr>
     <tr><td class="l">SMTP configurado</td><td><span class="blank"></span></td></tr>
     <tr><td class="l">Checklist da seção 05</td><td><span class="blank"></span></td></tr>
     <tr><td class="l">Observações</td><td><span class="blank"></span><br><span class="blank"></span></td></tr>
@@ -272,7 +279,7 @@
     <tr><td class="mono">GOOGLE_CLIENT_JSON</td><td>painel Render (segredo)</td><td>sim</td><td>credencial OAuth tipo web</td></tr>
     <tr><td class="mono">LOCAL_LOGIN</td><td>render.yaml</td><td>sim (0)</td><td>desliga usuário/senha local em produção</td></tr>
     <tr><td class="mono">INTRANET_ONLY</td><td>render.yaml</td><td>sim (0)</td><td>0 libera acesso fora da rede local</td></tr>
-    <tr><td class="mono">SIMULACAO_AUTO_APROVAR</td><td>render.yaml</td><td>decisão 2B</td><td>aprova pedidos automaticamente</td></tr>
+    <tr><td class="mono">SIMULACAO_AUTO_APROVAR</td><td>render.yaml</td><td>sim (0 — somente leitura)</td><td>1 aprova pedidos na hora; 0 exige aprovação do admin</td></tr>
     <tr><td class="mono">PYTHON_VERSION</td><td>render.yaml</td><td>sim</td><td>fixa a versão do Python do runtime</td></tr>
     <tr><td class="mono">NOTIFY_EMAILS</td><td>painel Render</td><td>não</td><td>destinatários de avisos internos</td></tr>
     <tr><td class="mono">GOOGLE_TEST_EMAILS</td><td>painel Render</td><td>não</td><td>contas liberadas em modo de teste local</td></tr>

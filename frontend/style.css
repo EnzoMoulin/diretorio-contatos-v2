@@ -228,6 +228,21 @@ body[data-theme="dark"] footer{color:#64748b}
 body[data-theme="dark"] code{background:#0f172a}
 /* ================= original: sidebar ================= */
 :root{--bg-panel:#fff;--text-secondary:#64748b}
+
+/* pedido enviado, aguardando decisão: parece estado, não botão */
+.fc-access.pendente{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;
+  cursor:default;font-weight:600}
+.fc-access.pendente::before{content:"⏳ ";opacity:.7}
+
+/* ---- aviso flutuante (substitui o alert nativo) ---- */
+.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,14px);z-index:9999;
+  max-width:min(92vw,540px);padding:12px 18px;border-radius:12px;background:#0f172a;color:#f8fafc;
+  font-size:14px;line-height:1.4;box-shadow:0 14px 34px rgba(15,23,42,.3);
+  opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+.toast.aberto{opacity:1;transform:translate(-50%,0)}
+.toast.ok{border-left:3px solid #22c55e}
+.toast.erro{border-left:3px solid #ef4444}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
 .sidebar-header{display:flex;flex-direction:row;align-items:center;gap:10px;padding:22px 18px 18px;flex:none;border-bottom:1px solid rgba(255,255,255,.08)}
 .sidebar-logo{height:56px;width:56px;flex:0 0 auto}
 .sidebar-brand-copy{min-width:0;margin-left:0}

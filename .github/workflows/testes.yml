@@ -12,6 +12,11 @@ jobs:
       ADMIN_EMAILS: "dono@exemplo.jus.br"
     steps:
       - uses: actions/checkout@v4
+      - name: Conferir o hash do screencast
+        # O .sha256 é a prova de que o vídeo commitado é o vídeo conferido:
+        # sem este passo, regravar docs/demo-fluxo.mp4 e esquecer o hash passa
+        # verde e o README aponta para um arquivo que não é o hashado.
+        run: sha256sum -c docs/demo-fluxo.sha256
       - uses: actions/setup-python@v5
         with:
           python-version: '3.15'
