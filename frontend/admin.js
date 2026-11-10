@@ -1286,6 +1286,21 @@ $('salvar').onclick = async () => {
   } else $('save-status').textContent = 'Erro: ' + await r.text();
 };
 
+/* Texto do aviso de acesso: o demo público sobe somente leitura (=0) e o
+   ambiente local/testes usa a aprovação automática (=1). A frase vem do
+   /api/me para a interface nunca prometer o que o servidor não vai fazer. */
+function aplicarAvisoAcesso() {
+  const auto = !!(me && me.aprovacao_automatica);
+  const dica = $('ped-dica');
+  if (dica) dica.textContent = auto
+    ? 'Ambiente de avaliação: a aprovação é automática (sinalizada como automática).'
+    : 'Ambiente de avaliação: este ambiente é somente leitura — o pedido fica pendente e a aprovação é feita por um Administrador.';
+  const man = $('manual-acesso-txt');
+  if (man) man.textContent = auto
+    ? 'Sem cadastro a visão é só consulta; com cadastro, gestão no seu escopo. Neste ambiente de avaliação a aprovação é automática e sinalizada como tal.'
+    : 'Sem cadastro a visão é só consulta; com cadastro, gestão no seu escopo. Neste ambiente a aprovação é feita por um Administrador (o demo público é somente leitura).';
+}
+
 /* ---- acesso: entrar / pedir / sair ---- */
 async function refresh() {
   me = null;
@@ -1338,6 +1353,7 @@ async function refresh() {
     ? ICON_PESSOA + ' ' + esc(me.usuario)
     : '<i>●</i> Visitante';
   if (dentro) carregarPedidos();
+  aplicarAvisoAcesso();
   if (dentro) notifBadge(); else $('notif-count').textContent = '';
   mostrarConsulta();
   marcarMenu('consulta');

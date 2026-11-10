@@ -96,8 +96,9 @@ ranking de busca com tolerância a erro de digitação.
 - **Portão de acesso (para avaliação)**: login por conta Google; qualquer conta
   entra como visitante, e o `/admin` pode ser restrito à rede local com
   `INTRANET_ONLY=1` (no demo público fica `0`, e o portão é o login).
-  Para avaliação, a aprovação é automática (`SIMULACAO_AUTO_APROVAR=1`,
-  sinalizada como automática); produção = aprovação manual.
+  O demo público é **somente leitura** (`SIMULACAO_AUTO_APROVAR=0`): pedido de
+  acesso fica pendente e só o dono aprova. Rodando localmente com
+  `SIMULACAO_AUTO_APROVAR=1` a aprovação é automática, sinalizada na tela.
 - **Tabela de usuários decide permissões**: sem cadastro, mesmo no interno a
   visão seria só consulta; com cadastro, edita os locais do seu escopo
   (`acessos`, com herança comarca > fórum > unidade > setor); admin edita tudo
@@ -132,8 +133,9 @@ ranking de busca com tolerância a erro de digitação.
   Admin aprova e a cobertura amplia. Servidor barra tudo fora do escopo (403).
 - **Solicitação de acesso**: página em dois modos — primeiro acesso (só
   identidade) e locais (árvore comarca > fórum > unidade > setor); nome e motivo
-  opcional → um pedido por local → aprovação automática para avaliação
-  (sinalizada na tela) ou manual pelo admin; o acesso libera na conta
+  opcional → um pedido por local → aprovação pelo administrador (no demo
+  público é manual, porque o ambiente é somente leitura) ou automática, quando
+  o servidor roda com `SIMULACAO_AUTO_APROVAR=1`; o acesso libera na conta
   Google do solicitante. Servidor barra duplicata, excesso de pendentes e tudo
   fora do escopo (403).
 - **Registro de alterações**: criar / editar / remover / pedidos / aprovações
@@ -173,12 +175,12 @@ Os testes batem na API por HTTP e assumem o modo de avaliação
 ## Hospedagem (pôr no ar)
 Só stdlib: sem `pip install`. No Render (gratuito): novo Web Service a partir
 do repo (`render.yaml` já traz `INTRANET_ONLY=0`, `LOCAL_LOGIN=0`,
-`SIMULACAO_AUTO_APROVAR=1`). `PORT` vem do ambiente. O health check do Render usa
+`SIMULACAO_AUTO_APROVAR=0` — somente leitura). `PORT` vem do ambiente. O health check do Render usa
 `/healthz`, que responde 200 sem tocar no banco: assim um seed lento não é lido como
 serviço morto (o que reiniciaria o processo e recriaria o banco). O banco é recriado do
-seed mascarado a cada boot limpo (disco efêmero) — os dados de avaliação voltam
-sozinhos; o que for criado em produção se perde no restart (esperado no plano
-gratuito). O plano free dorme depois de 15 minutos sem tráfego e leva cerca de 1 minuto
+seed mascarado a cada boot limpo (disco efêmero, sem como persistir no plano
+gratuito) — como o demo é somente leitura, a vitrine sempre abre íntegra; só
+usuários, pedidos e aprovações não sobrevivem ao restart. O plano free dorme depois de 15 minutos sem tráfego e leva cerca de 1 minuto
 para acordar. A espera é **por serviço**: manter um único app no ar resolve a
 cota (750 h de instância por mês por workspace, e um serviço sempre ativo já
 consome ~730 h), não o cold start. Daí o aviso: o primeiro acesso pode levar um
@@ -196,11 +198,14 @@ com a tela de consentimento OAuth em "Testing", só entram os usuários de teste
 cadastrados no projeto do Google Cloud.
 
 ### Postura do demo público
-- `SIMULACAO_AUTO_APROVAR=1` só no demo: concede escopos de consulta/edição a
-  quem pedir, e a interface avisa que a aprovação é automática. Em produção, `0`.
+- `SIMULACAO_AUTO_APROVAR=0` no demo: o ambiente é **somente leitura** — pedido
+  de acesso fica pendente e só o dono aprova, em `/admin → Solicitações`. O `1`
+  existe para rodar localmente e para os testes, onde aprova na hora e a tela
+  sinaliza que foi automático.
 - Admin nunca vem de "primeiro login": só da allowlist `ADMIN_EMAILS`.
-- Banco efêmero: edição de visitante desaparece no restart; a página pública é
-  recriada do seed a cada boot.
+- Banco efêmero: `contatos.db` nasce do seed a cada boot e usuários/aprovações
+  não sobrevivem ao restart. No plano gratuito não há disco para persistir, e um
+  banco externo exigiria driver fora da biblioteca padrão.
 
 Login com Google em produção precisa de um client OAuth tipo **Web**:
 1. No [Google Cloud Console](https://console.cloud.google.com/) crie um ID do
@@ -212,10 +217,10 @@ Login com Google em produção precisa de um client OAuth tipo **Web**:
    Tela de consentimento não verificada mostra aviso do Google — esperado fora de produção.
 
 ## Como avaliar (2 minutos)
-1. Abra a página pública `/` (sem login): clique no mapa ou use a busca.
-2. Para testar edição, abra `/admin` e entre com uma conta Google: você entra como visitante.
-3. Peça acesso em **Solicitar acesso** e depois locais em **Solicitar locais**: a aprovação é automática no demo (sinalizada na tela) e libera edição nos locais pedidos.
-4. A área administrativa (painel, solicitações, registro, usuários, backup) é restrita ao dono do demo; veja as capturas abaixo ou me chame no LinkedIn ([linkedin.com/in/enzodadaltomoulin](https://linkedin.com/in/enzodadaltomoulin)) para ver ao vivo.
+1. Abra a página pública `/` (sem login): clique no mapa, use a busca, favorite e imprima um contato.
+2. Navegue comarca → fórum → unidade → setor: a consulta é o produto, e a árvore abre no nível que você clicar.
+3. O `/admin` (login Google) é restrito ao dono e o demo é **somente leitura**: um pedido de acesso fica pendente, esperando aprovação manual, como em produção. As telas de gestão — painel, solicitações com pedido pendente, registro de alterações, usuários — estão nas capturas abaixo.
+4. Para ver o fluxo ao vivo (login, aprovação, edição com registro), me chame no LinkedIn ([linkedin.com/in/enzodadaltomoulin](https://linkedin.com/in/enzodadaltomoulin)).
 
 Privacidade: o demo guarda o e-mail e o nome da sua conta Google só enquanto o servidor estiver ativo; o banco é recriado do seed a cada boot limpo, então esses dados somem no reinício.
 
@@ -285,10 +290,10 @@ técnico está documentado acima, em
 ![Painel](docs/img/admin-painel.png)
 ![Solicitações de acesso](docs/img/admin-solicitacoes.png)
 <sub>Captura de **Solicitações de acesso** com um pedido fictício
-(`camila.prado@exemplo.jus.br`, nível unidade) criado com
-`SIMULACAO_AUTO_APROVAR=0`: com a aprovação automática ligada — o padrão do demo
-público — o mesmo pedido seria aprovado na hora e não ficaria pendente. A imagem
-foi feita em ambiente local, com o login `admin` de teste.</sub>
+(`camila.prado@exemplo.jus.br`, nível unidade) pendente — é o comportamento do
+demo público, que sobe com `SIMULACAO_AUTO_APROVAR=0`: o pedido espera a
+aprovação do dono, e só a aprovação concede edição. A imagem foi feita em
+ambiente local, com o login `admin` de teste.</sub>
 
 ![Registro de alterações](docs/img/admin-registro.png)
 
