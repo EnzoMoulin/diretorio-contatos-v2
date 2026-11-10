@@ -11,7 +11,9 @@ import unittest
 import urllib.error
 import urllib.request
 
-BASE = "http://localhost:8000"
+# BASE_API permite rodar a suíte contra outra porta sem derrubar o servidor
+# que já estiver na 8000 (por exemplo, o demo local aberto pelo dono).
+BASE = os.environ.get("BASE_API", "http://localhost:8000")
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB = os.path.join(RAIZ, "contatos.db")
 BACKUPS = os.path.join(RAIZ, "backups")
@@ -313,7 +315,7 @@ class TestBuscaBackup(unittest.TestCase):
         try:
             self.assertTrue(_os.path.isfile(caminho))
             import urllib.request as _url
-            req = _url.Request("http://localhost:8000/api/backup/" + arq,
+            req = _url.Request(BASE + "/api/backup/" + arq,
                                headers={"X-Admin-Token": self.tok})
             with _url.urlopen(req) as r:
                 self.assertEqual(r.status, 200)
@@ -392,6 +394,60 @@ class TestUsuarios(unittest.TestCase):
             con.execute("DELETE FROM usuarios WHERE id=?", (uid,))
             con.commit()
             con.close()
+
+
+class TestHistoricoAutor(unittest.TestCase):
+    """Auditoria sem autor não serve: o registro tem de dizer quem fez."""
+
+    @classmethod
+    def setUpClass(cls):
+        st, corpo = api("POST", "/api/login",
+                        {"usuario": "admin", "senha": "admin123"})
+        assert st == 200, corpo
+        cls.tok = corpo["token"]
+
+    def test_autor_registrado_na_criacao(self):
+        con = sqlite3.connect(DB)
+        setor = con.execute("SELECT id FROM setores ORDER BY id LIMIT 1"
+                            ).fetchone()[0]
+        admin_id = con.execute(
+            "SELECT id FROM usuarios WHERE usuario='admin'").fetchone()[0]
+        con.close()
+        marco = notif_marco()
+        st, corpo = api("POST", "/api/contatos",
+                        {"nome": "Teste Autor", "setor_id": setor},
+                        token=self.tok)
+        self.assertEqual(st, 201, corpo)
+        cid = corpo["id"]
+        try:
+            con = sqlite3.connect(DB)
+            con.row_factory = sqlite3.Row
+            linhas = con.execute(
+                "SELECT acao, usuario_id, autor_nome FROM historico"
+                " WHERE contato_id=?", (cid,)).fetchall()
+            self.assertEqual([r["acao"] for r in linhas], ["criar"])
+            self.assertEqual(linhas[0]["usuario_id"], admin_id)
+            self.assertEqual(linhas[0]["autor_nome"], "admin")
+            autor = con.execute(
+                "SELECT u.usuario FROM historico h JOIN usuarios u"
+                " ON u.id=h.usuario_id WHERE h.contato_id=?", (cid,)
+            ).fetchone()
+            self.assertEqual(autor[0], "admin")
+            con.close()
+            st, hist = api("GET", "/api/historico", token=self.tok)
+            self.assertEqual(st, 200)
+            item = [h for h in hist if h.get("contato_id") == cid]
+            self.assertTrue(item, "a criação não apareceu no histórico")
+            self.assertEqual(item[0]["autor"], "admin")
+        finally:
+            api("DELETE", "/api/contatos/" + cid, token=self.tok)
+            # Limpeza cirúrgica: só as linhas de auditoria deste contato de
+            # teste (o histórico real é append-only e não se toca).
+            con = sqlite3.connect(DB)
+            con.execute("DELETE FROM historico WHERE contato_id=?", (cid,))
+            con.commit()
+            con.close()
+            notif_limpar(marco)
 
 
 if __name__ == "__main__":

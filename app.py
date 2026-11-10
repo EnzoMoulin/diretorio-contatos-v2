@@ -141,9 +141,13 @@ GOOGLE_TEST_EMAILS = {
 }
 
 
-def aprovar_pedido(con, pid, automatico=False):
+def aprovar_pedido(con, pid, automatico=False, autor_id=None):
     """Efetiva a aprovação de um pedido: cria/libera o usuário e concede o
-    escopo pedido. Não fecha a conexão. Retorna (ok, payload, status)."""
+    escopo pedido. Não fecha a conexão. Retorna (ok, payload, status).
+
+    `autor_id` é quem aprovou (o admin da sessão). Fica None na aprovação
+    automática da simulação, que não tem pessoa por trás.
+    """
     ped = con.execute("SELECT * FROM pedidos WHERE id=?", (pid,)).fetchone()
     if not ped or ped["status"] != "pendente":
         return False, {"erro": "pedido não encontrado"}, 404
@@ -200,7 +204,7 @@ def aprovar_pedido(con, pid, automatico=False):
     nome_final = con.execute("SELECT usuario FROM usuarios WHERE id=?",
                              (uid_novo,)).fetchone()["usuario"]
     marca = " (aprovação automática — avaliação)" if automatico else ""
-    log(con, "aprovar", None, f"acesso aprovado: {nome_final}{marca}")
+    log(con, "aprovar", None, f"acesso aprovado: {nome_final}{marca}", autor_id)
     texto_aprov = ("Seu acesso foi aprovado. Entre com sua conta Google." +
                    (" (Aprovação automática para avaliação.)" if automatico else ""))
     notify(con, uid_novo, "aprovada", texto_aprov)
@@ -212,7 +216,7 @@ def aprovar_pedido(con, pid, automatico=False):
     return True, {"ok": True, "usuario": nome_final}, 200
 
 
-def recusar_pedido(con, pid, motivo):
+def recusar_pedido(con, pid, motivo, autor_id=None):
     """Recusa um pedido com motivo obrigatório; notifica se o e-mail já é usuário."""
     motivo = (motivo or "").strip()[:500]
     if not motivo:
@@ -221,7 +225,8 @@ def recusar_pedido(con, pid, motivo):
     if not ped or ped["status"] != "pendente":
         return False, {"erro": "pedido não encontrado"}, 404
     con.execute("UPDATE pedidos SET status='recusado', motivo_recusa=? WHERE id=?", (motivo, pid))
-    log(con, "recusar", None, f"pedido recusado: {ped['usuario_desejado']} — {motivo}")
+    log(con, "recusar", None, f"pedido recusado: {ped['usuario_desejado']} — {motivo}",
+        autor_id)
     row = con.execute("SELECT id FROM usuarios WHERE lower(email)=?", (str(ped["email"]).lower(),)).fetchone()
     if row:
         notify(con, row["id"], "recusada",
@@ -290,6 +295,8 @@ CREATE TABLE IF NOT EXISTS uteis (
 CREATE TABLE IF NOT EXISTS historico (
     id INTEGER PRIMARY KEY AUTOINCREMENT, acao TEXT NOT NULL,
     contato_id TEXT, detalhe TEXT NOT NULL DEFAULT '',
+    usuario_id INTEGER REFERENCES usuarios(id),  -- autor; NULL = sem gente
+    autor_nome TEXT NOT NULL DEFAULT '',        -- retrato do nome na hora
     data TEXT NOT NULL DEFAULT (datetime('now')));
 CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT, usuario TEXT NOT NULL UNIQUE,
@@ -912,6 +919,8 @@ def init_db():
         ("usuarios", "ultimo_login", "ALTER TABLE usuarios ADD COLUMN ultimo_login TEXT NOT NULL DEFAULT ''"),
         ("usuarios", "ativo", "ALTER TABLE usuarios ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1"),
         ("pedidos", "usuario_id", "ALTER TABLE pedidos ADD COLUMN usuario_id INTEGER"),
+        ("historico", "usuario_id", "ALTER TABLE historico ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id)"),
+        ("historico", "autor_nome", "ALTER TABLE historico ADD COLUMN autor_nome TEXT NOT NULL DEFAULT ''"),
     ]:
         try:
             nomes = {r[1] for r in con.execute(f"PRAGMA table_info({_tbl})").fetchall()}
@@ -972,10 +981,23 @@ def eh_admin(con, uid):
     return bool(linha and linha[0])
 
 
-def log(con, acao, contato_id=None, detalhe=""):
+def log(con, acao, contato_id=None, detalhe="", usuario_id=None):
+    """Registra auditoria. `usuario_id` é quem fez a ação; None quando não há
+    pessoa por trás (base inicial, aprovação automática da simulação).
+
+    Grava também o nome do autor no momento da ação: apagar o usuário depois
+    não pode apagar a história de quem fez o quê.
+    """
+    autor_nome = ""
+    if usuario_id:
+        linha = con.execute(
+            "SELECT usuario FROM usuarios WHERE id=?", (usuario_id,)).fetchone()
+        if linha:
+            autor_nome = linha["usuario"]
     con.execute(
-        "INSERT INTO historico (acao, contato_id, detalhe) VALUES (?,?,?)",
-        (acao, contato_id, detalhe))
+        "INSERT INTO historico (acao, contato_id, detalhe, usuario_id, autor_nome)"
+        " VALUES (?,?,?,?,?)",
+        (acao, contato_id, detalhe, usuario_id, autor_nome))
 
 def notify(con, usuario_id, tipo, texto):
     con.execute(
@@ -1503,7 +1525,10 @@ class Handler(BaseHTTPRequestHandler):
                                    (uid,)).fetchone()[0]:
                     return self._json({"erro": "sem permissão"}, 403)
                 rows = con.execute(
-                    "SELECT * FROM historico ORDER BY id DESC LIMIT 50").fetchall()
+                    "SELECT h.*, COALESCE(NULLIF(h.autor_nome,''), u.usuario)"
+                    " AS autor FROM historico h"
+                    " LEFT JOIN usuarios u ON u.id=h.usuario_id"
+                    " ORDER BY h.id DESC LIMIT 50").fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/me":
                 uid = self._uid()
@@ -1743,7 +1768,8 @@ class Handler(BaseHTTPRequestHandler):
                                 f"Analise em Solicitações de Acesso: {APP_BASE_URL}/admin")
             log(con, "pedido", None,
                 f"solicitação de acesso: {data.get('nome')} ({usuario})" +
-                (" (aprovada automaticamente para avaliação)" if auto else ""))
+                (" (aprovada automaticamente para avaliação)" if auto else ""),
+                uid_post)
             con.commit()
             con.close()
             return self._json({"ok": True, "id": primeiro_id, "auto_aprovado": auto}, 201)
@@ -1761,7 +1787,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 if not eh_admin(con, uid):
                     return self._json({"erro": "sem permissão"}, 403)
-                ok, payload, st = aprovar_pedido(con, pid)
+                ok, payload, st = aprovar_pedido(con, pid, autor_id=uid)
             finally:
                 con.close()
             return self._json(payload, st)
@@ -1782,7 +1808,8 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 if not eh_admin(con, uid):
                     return self._json({"erro": "sem permissão"}, 403)
-                ok, payload, st = recusar_pedido(con, pid, (corpo or {}).get("motivo"))
+                ok, payload, st = recusar_pedido(con, pid, (corpo or {}).get("motivo"),
+                                                 autor_id=uid)
             finally:
                 con.close()
             return self._json(payload, st)
@@ -1799,7 +1826,7 @@ class Handler(BaseHTTPRequestHandler):
                 nome = "diretorio-" + _dt.datetime.now().strftime("%Y%m%d-%H%M%S") + ".db"
                 alvo = ("backups/" + nome).replace("'", "''")
                 con.execute(f"VACUUM INTO '{alvo}'")
-                log(con, "backup", None, f"backup gerado: {nome}")
+                log(con, "backup", None, f"backup gerado: {nome}", uid)
                 con.commit()
                 kb = _os.path.getsize("backups/" + nome) // 1024
                 return self._json({"ok": True, "arquivo": nome, "kb": kb})
@@ -1823,7 +1850,7 @@ class Handler(BaseHTTPRequestHandler):
                 corpo = self._body()
                 ativo = 1 if (corpo or {}).get("ativo") else 0
                 con.execute("UPDATE usuarios SET ativo=? WHERE id=?", (ativo, alvo))
-                log(con, "ativo", None, f"usuário {alvo} -> ativo={ativo}")
+                log(con, "ativo", None, f"usuário {alvo} -> ativo={ativo}", uid)
                 con.commit()
                 return self._json({"ok": True})
             finally:
@@ -1894,7 +1921,7 @@ class Handler(BaseHTTPRequestHandler):
                 " VALUES (?,?,?,?,?,?)",
                 (nid, data.get("setor_id"), data.get("nome"), data.get("cargo", ""),
                  data.get("telefone", ""), data.get("email", "")))
-            log(con, "criar", nid, f"criado: {data.get('nome')}")
+            log(con, "criar", nid, f"criado: {data.get('nome')}", uid)
             for aid in admin_ids(con):
                 notify(con, aid, "contato",
                        f"Contato criado: {data.get('nome')}")
@@ -1937,7 +1964,7 @@ class Handler(BaseHTTPRequestHandler):
                     " WHERE id=?",
                     (data.get("nome"), data.get("cargo", ""),
                      data.get("telefone", ""), data.get("email", ""), cid))
-                log(con, "editar", cid, f"editado: {data.get('nome')}")
+                log(con, "editar", cid, f"editado: {data.get('nome')}", uid)
                 for aid in admin_ids(con):
                     notify(con, aid, "contato",
                            f"Contato editado: {data.get('nome')}")
@@ -1948,7 +1975,7 @@ class Handler(BaseHTTPRequestHandler):
                 con.close()
                 return self._json(dict(row))
             con.execute("DELETE FROM contatos WHERE id=?", (cid,))
-            log(con, "remover", cid, f"removido: {row['nome']}")
+            log(con, "remover", cid, f"removido: {row['nome']}", uid)
             for aid in admin_ids(con):
                 notify(con, aid, "contato",
                        f"Contato removido: {row['nome']}")

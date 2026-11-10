@@ -1966,7 +1966,9 @@ async function carregarHistorico() {
   if (!logado()) return;
   const h = await (await fetch('/api/historico', { headers: auth() })).json();
   $('hist').innerHTML = (Array.isArray(h) ? h : []).map(x =>
-    `<li><b>${esc(x.acao)}</b> — ${esc(x.detalhe)} <i>${esc(x.data)}</i></li>`
+    `<li><b>${esc(x.acao)}</b> — ${esc(x.detalhe)}` +
+    (x.autor ? ` · por ${esc(x.autor)}` : '') +
+    ` <i>${esc(x.data)}</i></li>`
   ).join('') || '<li>Sem registros.</li>';
 }
 
