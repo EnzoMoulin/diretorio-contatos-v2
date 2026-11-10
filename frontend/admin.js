@@ -6,6 +6,7 @@
 const $ = id => document.getElementById(id);
 let token = localStorage.getItem('contatos-token') || '';
 let me = null;            // {id, usuario, admin, escopo: 'all' | [{nivel, alvo_id}]}
+const pedPendentes = new Set(); // alvo_id com pedido aguardando aprovação (o card mostra "Pedido pendente")
 let H = { comarcas: [], uteis: [] };  // espelho de /api/hierarquia
 let estado = { comarcaId: '', forumId: '', noId: '' };
 let mapForumComarca = {};   // forumId -> comarcaId
@@ -24,6 +25,22 @@ function esc(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 const auth = () => ({ 'Content-Type': 'application/json', 'X-Admin-Token': token });
+
+/* Aviso flutuante: substitui o alert() nativo, que trava a página e aparece
+   com a moldura do navegador. Um por vez, some sozinho em 3,2 s.
+   Chama-se mostrarToast porque o código antigo já tinha chamadas guardadas por
+   `typeof mostrarToast === 'function'` — elas passam a funcionar. */
+function mostrarToast(txt, tipo) {
+  const classe = tipo === 'erro' || tipo === 'error' ? 'erro'
+    : tipo === 'success' || tipo === 'ok' ? 'ok' : '';
+  let el = document.querySelector('.toast');
+  if (!el) { el = document.createElement('div'); el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite'); document.body.appendChild(el); }
+  el.className = 'toast aberto' + (classe ? ' ' + classe : '');
+  el.textContent = txt;
+  clearTimeout(mostrarToast._t);
+  mostrarToast._t = setTimeout(() => el.classList.remove('aberto'), 3200);
+}
+const toast = mostrarToast;
 const logado = () => !!me;
 
 const VIEWS = ['consulta', 'dashboard', 'solicitacoes', 'meus-pedidos', 'usuarios', 'registro', 'config', 'notificacoes', 'pedido'];
@@ -461,6 +478,11 @@ function covMark(nivel, id) {
 }
 function solBtn(nivel, id) {
   if (cobre(nivel, id)) return '';
+  // Pedido já enviado e ainda não decidido: não oferece de novo nem deixa
+  // o visitante achar que o clique anterior não funcionou.
+  if (logado() && pedPendentes.has(String(id)))
+    return '<button type="button" class="fc-access pendente" disabled ' +
+      'title="Pedido aguardando aprovação do administrador">Pedido pendente</button>';
   if (!logado()) return '<button type="button" class="fc-access" data-solloc="' + esc(nivel) +
     '" data-id="' + esc(id) + '">Solicitar este local</button>';
   return '<button type="button" class="fc-access" data-sol="' + esc(nivel) +
@@ -1251,8 +1273,8 @@ async function fullContatos() {
 async function abrirEdicao(id) {
   const todos = await fullContatos();
   const c = todos[id];
-  if (!c) { alert('Contato não encontrado.'); return; }
-  editId = Number(id);
+  if (!c) { toast('Contato não encontrado.', 'erro'); return; }
+  editId = id; // ids de contato são texto (C1, C669): Number() os transformava em NaN
   $('e-nome').value = c.nome || c.descricao || '';
   $('e-cargo').value = c.cargo || c.tipo || '';
   $('e-tel').value = c.telefone || '';
@@ -1271,7 +1293,7 @@ $('e-salvar').onclick = async () => {
 async function excluirContato(id) {
   if (!confirm('Remover este contato?')) return;
   const r = await fetch('/api/contatos/' + id, { method: 'DELETE', headers: auth() });
-  if (!r.ok) alert('Erro: ' + await r.text());
+  if (!r.ok) toast('Erro: ' + await r.text(), 'erro');
   await recarregarHierarquia(true);
 }
 $('salvar').onclick = async () => {
@@ -1310,6 +1332,7 @@ async function refresh() {
     else { token = ''; localStorage.removeItem('contatos-token'); }
   }
   const dentro = logado();
+  await carregarPendentes();
   $('menu-dash').classList.toggle('hidden', !(dentro && me && me.admin));
   $('menu-notif').classList.toggle('hidden', !dentro);
   $('menu-sol').classList.toggle('hidden', !(dentro && me && me.admin));
@@ -1549,6 +1572,7 @@ $('p-cancel').onclick = () => {
 $('ped-voltar').onclick = () => voltarConsulta();
 
 /* ---- confirmação dinâmica de solicitação por nível (via hierarquia) ---- */
+const plur = (n, um, muitos) => `${n} ${n === 1 ? um : muitos}`;
 async function abrirConf(nivel, id, nome) {
   confPed = { nivel, alvo_id: id };
   $('c-status').textContent = '';
@@ -1557,17 +1581,20 @@ async function abrirConf(nivel, id, nome) {
   if (nivel === 'comarca') {
     const m = encontrarComarca(id);
     texto = `Solicitar acesso à comarca <b>${esc(nome || (m && m.nome) || id)}</b> inteira — ` +
-            `todos os ${m ? m.qtdForuns : 0} fóruns, ${m ? m.qtdUnidades : 0} unidades e seus setores?`;
+            `abrange ${plur(m ? m.qtdForuns : 0, 'fórum', 'fóruns')} e ` +
+            `${plur(m ? m.qtdUnidades : 0, 'unidade', 'unidades')}` +
+            `${(m && m.qtdUnidades) ? ' — com os setores de cada uma' : ''}?`;
   } else if (nivel === 'forum') {
     const f = encontrarForum(id);
     const nSet = f ? qtdSetores(f.nos || []) : 0;
     texto = `Solicitar acesso ao fórum <b>${esc(nome || (f && f.nome) || id)}</b> inteiro — ` +
-            `todas as ${(f ? f.nos : []).length} unidades e seus ${nSet} setores?`;
+            `abrange ${plur((f ? f.nos : []).length, 'unidade', 'unidades')} e ` +
+            `${plur(nSet, 'setor', 'setores')}?`;
   } else if (nivel === 'unidade') {
     const ach = acharUnidade(id);
     const nSet = ach ? (ach.no.filhos || []).length : 0;
     texto = `Solicitar acesso à unidade <b>${esc(nome || (ach && ach.no.nome) || id)}</b> inteira — ` +
-            `todos os ${nSet} setor(es)?`;
+            `abrange ${plur(nSet, 'setor', 'setores')}?`;
   } else {
     texto = `Solicitar acesso ao setor <b>${esc(nome || id)}</b>?`;
   }
@@ -1580,10 +1607,20 @@ $('c-enviar').onclick = async () => {
                   motivo: $('c-motivo').value.trim(),
                   nivel: confPed.nivel, alvo_id: confPed.alvo_id };
   const r = await fetch('/api/pedidos', { method: 'POST',
-    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
-  $('c-status').textContent = r.ok
-    ? 'Pedido enviado. Aguarde a aprovação do administrador.'
-    : 'Erro: ' + await r.text();
+    headers: auth(), body: JSON.stringify(corpo) });
+  if (!r.ok) { $('c-status').textContent = 'Erro: ' + await r.text(); return; }
+  $('c-status').textContent = 'Pedido enviado. Aguarde a aprovação do administrador.';
+  // Depois de enviar, o formulário sai de cena: sem botão que parece clicável
+  // e sem dar a impressão de que dá para pedir duas vezes.
+  $('c-enviar').disabled = true;
+  pedPendentes.add(String(confPed.alvo_id));
+  if (typeof renderInicio === 'function') { try { renderInicio(); } catch (e) {} }
+  setTimeout(() => {
+    $('modal-conf').classList.add('hidden');
+    $('c-enviar').disabled = false;
+    $('c-status').textContent = '';
+    $('c-motivo').value = '';
+  }, 2600);
 };
 $('p-enviar').onclick = async () => {
   const corpo = { nome: $('p-nome').value.trim(),
@@ -1597,7 +1634,7 @@ $('p-enviar').onclick = async () => {
                   }) };
   if (!corpo.nome) { $('p-status').textContent = 'Informe seu nome.'; return; }
   const r = await fetch('/api/pedidos', { method: 'POST',
-    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+    headers: auth(), body: JSON.stringify(corpo) });
   const txt = await r.text();
   let j = {};
   try { j = JSON.parse(txt); } catch (e) {}
@@ -1709,6 +1746,20 @@ async function carregarMeusPedidos() {
     `</li>`
   ).join('') || '<li>Você ainda não fez pedidos.</li>';
 }
+/* ---- pedidos pendentes do próprio usuário ---- */
+async function carregarPendentes() {
+  pedPendentes.clear();
+  if (!logado()) return;
+  try {
+    const r = await fetch('/api/meus-pedidos', { headers: auth() });
+    const lista = r.ok ? await r.json() : [];
+    (Array.isArray(lista) ? lista : []).forEach(p => {
+      if (String(p.status || '').toLowerCase().startsWith('pend') && p.alvo_id)
+        pedPendentes.add(String(p.alvo_id));
+    });
+  } catch (e) {}
+}
+
 /* ---- backup ---- */
 function ligarBackup(){
   const b = $('btn-backup');
@@ -1811,7 +1862,7 @@ function renderPedidos(){
       const r = await fetch('/api/pedidos/' + b.dataset.id + '/aprovar',
         { method: 'POST', headers: auth() });
       const j = await r.json();
-      alert(r.ok ? `Aprovado: ${j.usuario} (entra com a conta Google)` : 'Erro: ' + (j.erro || ''));
+      toast(r.ok ? `Aprovado: ${j.usuario} — acesso liberado` : 'Erro: ' + (j.erro || ''), r.ok ? 'ok' : 'erro');
       carregarPedidos();
     };
   });
@@ -1895,7 +1946,7 @@ function pedLigarBarra(){
         const r = await fetch('/api/pedidos/' + id + '/aprovar', { method: 'POST', headers: auth() });
         r.ok ? ok++ : falhas++;
       }
-      alert(`Lote concluído: ${ok} aprovada(s)` + (falhas ? `, ${falhas} falha(s)` : '') + '.');
+      toast(`Lote concluído: ${ok} aprovada(s)` + (falhas ? `, ${falhas} falha(s)` : '') + '.', falhas ? 'erro' : 'ok');
       carregarPedidos();
     };
   }
