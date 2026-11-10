@@ -480,9 +480,15 @@ function solBtn(nivel, id) {
   if (cobre(nivel, id)) return '';
   // Pedido já enviado e ainda não decidido: não oferece de novo nem deixa
   // o visitante achar que o clique anterior não funcionou.
-  if (logado() && pedPendentes.has(String(id)))
+  // No ambiente somente leitura (=0 no servidor) a aprovação não vem sozinha:
+  // o title diz isso, senão o visitante espera um aval que ninguém vai dar.
+  if (logado() && pedPendentes.has(String(id))) {
+    const aviso = me && me.aprovacao_automatica === false
+      ? 'Pedido registrado em ambiente de avaliação somente leitura: a aprovação é feita por um Administrador.'
+      : 'Pedido aguardando aprovação do administrador';
     return '<button type="button" class="fc-access pendente" disabled ' +
-      'title="Pedido aguardando aprovação do administrador">Pedido pendente</button>';
+      'title="' + esc(aviso) + '" aria-label="Pedido pendente. ' + esc(aviso) + '">Pedido pendente</button>';
+  }
   if (!logado()) return '<button type="button" class="fc-access" data-solloc="' + esc(nivel) +
     '" data-id="' + esc(id) + '">Solicitar este local</button>';
   return '<button type="button" class="fc-access" data-sol="' + esc(nivel) +
