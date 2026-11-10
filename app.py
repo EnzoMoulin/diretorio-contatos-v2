@@ -1346,8 +1346,11 @@ class Handler(BaseHTTPRequestHandler):
                        " c.nome AS comarca, c.id AS comarca_id"
                        " FROM contatos ct JOIN setores s ON s.id=ct.setor_id"
                        " JOIN unidades u ON u.id=s.unidade_id"
-                       " JOIN foruns f ON f.id=u.forum_id"
-                       " JOIN comarcas c ON c.id=f.comarca_id WHERE 1=1")
+                       # Unidade sem fórum (a estrutura central) não tem
+                       # comarca pelo fórum: cai na comarca da própria unidade.
+                       " LEFT JOIN foruns f ON f.id=u.forum_id"
+                       " LEFT JOIN comarcas c"
+                       " ON c.id=COALESCE(f.comarca_id, u.comarca_id) WHERE 1=1")
                 params = []
                 for key, col in (("setor_id", "ct.setor_id"),
                                  ("unidade_id", "u.id"),
