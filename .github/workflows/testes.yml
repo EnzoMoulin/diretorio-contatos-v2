@@ -5,10 +5,19 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      # Duas pernas: o modo de avaliação (1) e o modo do demo publicado (0).
+      # Sem a perna 0 nada automático olha o modo somente leitura, e texto ou
+      # comportamento desse modo envelhece sem ninguém perceber. As duas rodam
+      # até o fim mesmo se uma falhar — a comparação entre elas é o dado.
+      fail-fast: false
+      matrix:
+        modo: ["1", "0"]
+    name: testes (SIMULACAO_AUTO_APROVAR=${{ matrix.modo }})
     env:
-      # Os testes assumem o modo de avaliação; ADMIN_EMAILS dá ao teste da
-      # allowlist o mesmo valor que o servidor enxerga.
-      SIMULACAO_AUTO_APROVAR: "1"
+      # O mesmo valor vai para o servidor e para quem roda os testes: a suíte
+      # lê a flag do próprio ambiente, não do processo que está servindo.
+      SIMULACAO_AUTO_APROVAR: ${{ matrix.modo }}
       ADMIN_EMAILS: "dono@exemplo.jus.br"
     steps:
       - uses: actions/checkout@v4
