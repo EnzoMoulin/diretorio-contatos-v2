@@ -41,11 +41,16 @@ sem dependência de fornecedor; o v3 endurece para escala.
 
 ## Estudo de caso: v1 → v2 → v3
 
-O v1 foi o MVP cuja proposta e entrega foram avaliadas e aprovadas no órgão;
-o piloto foi então lançado para testes internos (Google Apps Script +
-Sheets, repositório privado por ser código institucional). O v2 é a reescrita
-do backend em Python, com a mesma modelagem e a mesma experiência. O que segue
-é o arco técnico: decisões, o que mudou e por quê.
+O v1 nasceu como proposta de estágio no Laboratório de Inovação e IA do
+Tribunal de Justiça do Estado do Espírito Santo (TJES): a proposta e o MVP
+foram apresentados e aprovados, e o piloto entrou em testes internos (Google
+Apps Script + Sheets, repositório privado por ser código institucional; lá o
+sistema atendia pelo nome PJES, sigla que deu nome ao arquivo de seed até a
+limpeza do histórico, quando ele virou `seed_legado.json`).
+O v2 é a reescrita do backend em Python, com a mesma modelagem e a mesma
+experiência: produto próprio, sem marca institucional, sem nome de pessoa e
+com dados fictícios. O que segue é o arco técnico: decisões, o que mudou e
+por quê.
 
 ### Fase 1 — MVP no ecossistema (Apps Script + Sheets)
 
