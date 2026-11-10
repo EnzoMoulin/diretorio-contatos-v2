@@ -107,6 +107,13 @@ class TestPedido(unittest.TestCase):
         self.assertEqual(st, 400)
 
     def test_cadeia_completa_com_limpeza(self):
+        # Este teste verifica a aprovação automática do pedido; no modo
+        # somente leitura (SIMULACAO_AUTO_APROVAR=0) o pedido fica pendente
+        # por projeto, então ele não se aplica.
+        if os.environ.get("SIMULACAO_AUTO_APROVAR") != "1":
+            raise unittest.SkipTest(
+                "roda com o servidor em SIMULACAO_AUTO_APROVAR=1 "
+                "(modo de avaliação)")
         pid = None
         marco = notif_marco()
         st, corpo = api(

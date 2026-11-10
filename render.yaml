@@ -14,7 +14,7 @@ services:
       - key: LOCAL_LOGIN
         value: 0
       - key: SIMULACAO_AUTO_APROVAR
-        value: 1
+        value: 0
       # E-mail Google que vira admin no primeiro login. Sem ela ninguém é admin.
       - key: ADMIN_EMAILS
         sync: false

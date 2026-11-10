@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
-<link rel="stylesheet" href="style.css?v=53">
+<link rel="stylesheet" href="style.css?v=54">
 </head>
 <body>
 <div class="app-container">
@@ -96,7 +96,7 @@
           <p id="ped-hint">Identidade via conta Google. Localidades liberadas por aprovação.</p>
         </div>
         <div class="fa-body">
-          <p class="fa-dica" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:10px 14px;margin:0 0 16px">Ambiente de avaliação: a aprovação é automática (sinalizada como automática). No projeto real, um Administrador aprova manualmente.</p>
+          <p id="ped-dica" class="fa-dica" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:10px 14px;margin:0 0 16px">Ambiente de avaliação: este ambiente é somente leitura — o pedido fica pendente e a aprovação é feita por um Administrador.</p>
           <div class="fa-grid">
             <div class="fa-field"><label for="p-nome">Nome completo *</label><input id="p-nome" autocomplete="name"></div>
             <div class="fa-field"><label for="p-email">E-mail</label><input id="p-email" autocomplete="email"></div>
@@ -295,7 +295,7 @@
           <div class="manual-tip"><span>💡</span><div><strong>Dica:</strong> digite no campo de busca para filtrar contatos instantaneamente — não precisa apertar Enter.</div></div>
         </section>
         <section id="m-acesso" class="panel manual-section">
-          <div class="manual-section-head"><div><h3>🔑 03 — Acesso e solicitação</h3><p>Sem cadastro a visão é só consulta; com cadastro, gestão no seu escopo. Neste ambiente de avaliação a aprovação é automática e sinalizada como tal.</p></div></div>
+          <div class="manual-section-head"><div><h3>🔑 03 — Acesso e solicitação</h3><p id="manual-acesso-txt">Sem cadastro a visão é só consulta; com cadastro, gestão no seu escopo. Neste ambiente a aprovação é feita por um Administrador (o demo público é somente leitura).</p></div></div>
           <ol class="manual-steps">
             <li><span class="manual-step-num">1</span><div><strong>Sem cadastro: Solicitar acesso</strong><p>Na barra lateral, <code>📝 Solicitar acesso</code> abre o pedido só com identidade (é preciso estar logado com o Google — se não estiver, o sistema pede para entrar primeiro).</p></div></li>
             <li><span class="manual-step-num">2</span><div><strong>Com cadastro: Solicitar locais</strong><p>O botão <code>📍 Solicitar locais</code> abre a árvore comarca &gt; fórum &gt; unidade &gt; setor. Marcar um nível inclui tudo abaixo. O perfil de Administrador não é pedido por aqui: ele vem só da allowlist do dono do ambiente.</p></div></li>
@@ -362,7 +362,7 @@
     <div class="fa-card">
       <div class="fa-head fa-head--login">
         <h2>Acesso administrativo</h2>
-        <p>Entre com sua conta Google. O primeiro acesso entra como visitante; locais e gestão são liberados por aprovação (automática para avaliação).</p>
+        <p>Entre com sua conta Google. O primeiro acesso entra como visitante; locais e gestão são liberados pela aprovação de um Administrador.</p>
       </div>
       <div class="fa-body">
         <a class="fa-google-btn" href="/oauth/login">
@@ -418,6 +418,6 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="mapa.js?v=22"></script>
-<script src="admin.js?v=56"></script>
+<script src="admin.js?v=67"></script>
 </body>
 </html>

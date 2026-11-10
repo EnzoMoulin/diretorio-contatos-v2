@@ -15,8 +15,9 @@ Como rodar:
 
 Autenticação: identidade via Google OAuth (sem senha, como o privado do v1).
 Entrada aberta: qualquer conta Google vira visitante; locais e gestão saem
-por aprovação — automática para avaliação (SIMULACAO_AUTO_APROVAR=1),
-sinalizada como automática. Admin vem só da allowlist ADMIN_EMAILS (vazia =
+por aprovação do administrador. SIMULACAO_AUTO_APROVAR=1 aprova o pedido na
+hora (é o modo da execução local e dos testes); o demo público sobe com 0, ou
+seja, somente leitura. Admin vem só da allowlist ADMIN_EMAILS (vazia =
 ninguém é admin). Intranet representada: /admin só abre de localhost/rede local
 (INTRANET_ONLY=1). Credencial em GOOGLE_CLIENT_FILE
 (padrão: ~/.hermes/google_client_secret.json).
@@ -1519,6 +1520,9 @@ class Handler(BaseHTTPRequestHandler):
                 me["email_ok"] = bool(os.environ.get("SMTP_HOST", ""))
                 # Só o dono do ambiente (allowlist) vê a caixa de Administrador.
                 me["pode_admin"] = str(row["email"] or "").strip().lower() in ADMIN_EMAILS
+                # A interface usa isto para não prometer aprovação automática
+                # quando o ambiente é somente leitura (demo público).
+                me["aprovacao_automatica"] = SIMULACAO_AUTO_APROVAR
                 return self._json(me)
             if u.path == "/api/pedidos":
                 uid = self._uid()

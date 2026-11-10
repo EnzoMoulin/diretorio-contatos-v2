@@ -32,7 +32,7 @@ são as mesmas; o que evolui é a fundação técnica:
 | Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
 | Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
 | Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 27 testes (`unittest`, banco temporário) + CI no GitHub Actions | Cobertura medida e testes de contrato da API |
+| Testes | Sem testes automatizados | 30 casos (`unittest`, banco temporário) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
 | Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Front estático (Cloudflare Pages) + API FastAPI separada: a página abre na hora, a API acorda sozinha |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
@@ -41,11 +41,17 @@ sem dependência de fornecedor; o v3 endurece para escala.
 
 ## Estudo de caso: v1 → v2 → v3
 
-O v1 foi o MVP cuja proposta e entrega foram avaliadas e aprovadas no órgão;
-o piloto foi então lançado para testes internos (Google Apps Script +
-Sheets, repositório privado por ser código institucional). O v2 é a reescrita
-do backend em Python, com a mesma modelagem e a mesma experiência. O que segue
-é o arco técnico: decisões, o que mudou e por quê.
+O v1 nasceu como proposta de estágio no Laboratório de Inovação e IA do
+Tribunal de Justiça do Estado do Espírito Santo (TJES): a proposta e o MVP
+foram apresentados e aprovados, e o piloto entrou em testes internos (Google
+Apps Script + Sheets, repositório privado por ser código institucional; lá o
+sistema atendia pelo nome PJES, sigla que deu nome ao arquivo de seed até a
+limpeza do histórico, quando ele virou `seed_legado.json`).
+O v2 é a reescrita do backend em Python, com a mesma modelagem e a mesma
+experiência: projeto pessoal, sem marca institucional, sem nome de pessoa e
+com dados fictícios. As duas interfaces, a pública e a de gestão (`/admin`),
+partem das telas do v1; o `/admin` é a mesma aplicação, com as telas de gestão
+a mais. O que segue é o arco técnico: decisões, o que mudou e por quê.
 
 ### Fase 1 — MVP no ecossistema (Apps Script + Sheets)
 
@@ -77,7 +83,7 @@ flowchart LR
 
 - **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
   mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
-  `lru_cache` com invalidação, 27 testes (`unittest`, banco temporário).
+  `lru_cache` com invalidação, 30 casos de teste (`unittest`, banco temporário).
 - **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
   escopo por nível, UX das telas — a interface e as regras são as mesmas, propositalmente.
 - **Por que só stdlib:** zero dependências = deploy gratuito trivial e prova de que a
@@ -96,8 +102,9 @@ ranking de busca com tolerância a erro de digitação.
 - **Portão de acesso (para avaliação)**: login por conta Google; qualquer conta
   entra como visitante, e o `/admin` pode ser restrito à rede local com
   `INTRANET_ONLY=1` (no demo público fica `0`, e o portão é o login).
-  Para avaliação, a aprovação é automática (`SIMULACAO_AUTO_APROVAR=1`,
-  sinalizada como automática); produção = aprovação manual.
+  O demo público é **somente leitura** (`SIMULACAO_AUTO_APROVAR=0`): pedido de
+  acesso fica pendente e só o dono aprova. Rodando localmente com
+  `SIMULACAO_AUTO_APROVAR=1` a aprovação é automática, sinalizada na tela.
 - **Tabela de usuários decide permissões**: sem cadastro, mesmo no interno a
   visão seria só consulta; com cadastro, edita os locais do seu escopo
   (`acessos`, com herança comarca > fórum > unidade > setor); admin edita tudo
@@ -132,8 +139,9 @@ ranking de busca com tolerância a erro de digitação.
   Admin aprova e a cobertura amplia. Servidor barra tudo fora do escopo (403).
 - **Solicitação de acesso**: página em dois modos — primeiro acesso (só
   identidade) e locais (árvore comarca > fórum > unidade > setor); nome e motivo
-  opcional → um pedido por local → aprovação automática para avaliação
-  (sinalizada na tela) ou manual pelo admin; o acesso libera na conta
+  opcional → um pedido por local → aprovação pelo administrador (no demo
+  público é manual, porque o ambiente é somente leitura) ou automática, quando
+  o servidor roda com `SIMULACAO_AUTO_APROVAR=1`; o acesso libera na conta
   Google do solicitante. Servidor barra duplicata, excesso de pendentes e tudo
   fora do escopo (403).
 - **Registro de alterações**: criar / editar / remover / pedidos / aprovações
@@ -164,21 +172,35 @@ SIMULACAO_AUTO_APROVAR=1 ADMIN_EMAILS=seu@gmail.com python3 app.py
 # admin:   http://localhost:8000/admin   (login Google; admin só p/ e-mail em ADMIN_EMAILS)
 bash teste_rapido.sh   # imprime os códigos do fluxo completo (não é teste automatizado;
                        # atenção: encerra qualquer processo na porta 8000)
-python3 -m unittest discover -s tests -t . -v   # 27 testes (servidor no ar + ADMIN_EMAILS na env; sem ela, 2 são pulados)
+python3 -m unittest discover -s tests -t . -v   # servidor no ar; ver a tabela de pulados abaixo
 ```
-Os testes batem na API por HTTP e assumem o modo de avaliação
-(`SIMULACAO_AUTO_APROVAR=1`), por isso o servidor precisa subir com a variável —
-é o mesmo env que o CI usa.
+Os testes batem na API por HTTP. Quem roda a suíte precisa exportar **as mesmas**
+variáveis que o servidor: `SIMULACAO_AUTO_APROVAR` e `ADMIN_EMAILS` são lidas do
+ambiente de quem executa o `unittest`, não do processo que está servindo. São 30
+casos no total, medidos com Python 3.15.2:
+
+| Ambiente de quem roda | Resultado |
+|---|---|
+| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 27 rodando, 1 pulado (a classe `TestSomenteLeitura`, que só vale no modo 0) |
+| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 27 rodando, 2 pulados (a classe acima e `test_admin_na_allowlist_recebe_admin`) |
+| `SIMULACAO_AUTO_APROVAR=0` | 28 rodando, 2 pulados (`test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist`) |
+
+No modo 0 pulam `test_cadeia_completa_com_limpeza` e a classe
+`TestAdminPorAllowlist` inteira — **mesmo com `ADMIN_EMAILS` exportado**, porque
+a causa é a flag, não a allowlist. O `unittest` conta a classe pulada como **um**
+skip, embora ela tenha mais de um teste: por isso o `Ran N` não bate com a soma
+dos casos e `skipped=2` no modo 0 não quer dizer "dois testes pulados". O CI roda
+as duas pernas (modo 1 e modo 0) em paralelo.
 
 ## Hospedagem (pôr no ar)
 Só stdlib: sem `pip install`. No Render (gratuito): novo Web Service a partir
 do repo (`render.yaml` já traz `INTRANET_ONLY=0`, `LOCAL_LOGIN=0`,
-`SIMULACAO_AUTO_APROVAR=1`). `PORT` vem do ambiente. O health check do Render usa
+`SIMULACAO_AUTO_APROVAR=0` — somente leitura). `PORT` vem do ambiente. O health check do Render usa
 `/healthz`, que responde 200 sem tocar no banco: assim um seed lento não é lido como
 serviço morto (o que reiniciaria o processo e recriaria o banco). O banco é recriado do
-seed mascarado a cada boot limpo (disco efêmero) — os dados de avaliação voltam
-sozinhos; o que for criado em produção se perde no restart (esperado no plano
-gratuito). O plano free dorme depois de 15 minutos sem tráfego e leva cerca de 1 minuto
+seed mascarado a cada boot limpo (disco efêmero, sem como persistir no plano
+gratuito) — como o demo é somente leitura, a vitrine sempre abre íntegra; só
+usuários, pedidos e aprovações não sobrevivem ao restart. O plano free dorme depois de 15 minutos sem tráfego e leva cerca de 1 minuto
 para acordar. A espera é **por serviço**: manter um único app no ar resolve a
 cota (750 h de instância por mês por workspace, e um serviço sempre ativo já
 consome ~730 h), não o cold start. Daí o aviso: o primeiro acesso pode levar um
@@ -196,11 +218,14 @@ com a tela de consentimento OAuth em "Testing", só entram os usuários de teste
 cadastrados no projeto do Google Cloud.
 
 ### Postura do demo público
-- `SIMULACAO_AUTO_APROVAR=1` só no demo: concede escopos de consulta/edição a
-  quem pedir, e a interface avisa que a aprovação é automática. Em produção, `0`.
+- `SIMULACAO_AUTO_APROVAR=0` no demo: o ambiente é **somente leitura** — pedido
+  de acesso fica pendente e só o dono aprova, em `/admin → Solicitações`. O `1`
+  existe para rodar localmente e para os testes, onde aprova na hora e a tela
+  sinaliza que foi automático.
 - Admin nunca vem de "primeiro login": só da allowlist `ADMIN_EMAILS`.
-- Banco efêmero: edição de visitante desaparece no restart; a página pública é
-  recriada do seed a cada boot.
+- Banco efêmero: `contatos.db` nasce do seed a cada boot e usuários/aprovações
+  não sobrevivem ao restart. No plano gratuito não há disco para persistir, e um
+  banco externo exigiria driver fora da biblioteca padrão.
 
 Login com Google em produção precisa de um client OAuth tipo **Web**:
 1. No [Google Cloud Console](https://console.cloud.google.com/) crie um ID do
@@ -212,10 +237,11 @@ Login com Google em produção precisa de um client OAuth tipo **Web**:
    Tela de consentimento não verificada mostra aviso do Google — esperado fora de produção.
 
 ## Como avaliar (2 minutos)
-1. Abra a página pública `/` (sem login): clique no mapa ou use a busca.
-2. Para testar edição, abra `/admin` e entre com uma conta Google: você entra como visitante.
-3. Peça acesso em **Solicitar acesso** e depois locais em **Solicitar locais**: a aprovação é automática no demo (sinalizada na tela) e libera edição nos locais pedidos.
-4. A área administrativa (painel, solicitações, registro, usuários, backup) é restrita ao dono do demo; veja as capturas abaixo ou me chame no LinkedIn ([linkedin.com/in/enzodadaltomoulin](https://linkedin.com/in/enzodadaltomoulin)) para ver ao vivo.
+1. Abra a página pública `/` (sem login): clique no mapa, use a busca, favorite e imprima um contato.
+2. Navegue comarca → fórum → unidade → setor: a consulta é o produto, e a árvore abre no nível que você clicar.
+3. O `/admin` exige login Google, mas a gestão (painel, solicitações, usuários, registro) é restrita ao dono, e o demo é **somente leitura**: um pedido de acesso fica pendente, esperando aprovação manual, como em produção. As telas de gestão — painel, solicitações com pedido pendente, registro de alterações, usuários — estão nas capturas abaixo.
+4. Quer ver o fluxo inteiro em 43 segundos? O screencast silencioso, com legendas e gravado da aplicação rodando, está em [`docs/demo-fluxo.mp4`](docs/demo-fluxo.mp4): pedido do visitante → aprovação do dono → edição liberada → registro da alteração. Não é montagem de capturas: cada quadro é a tela real durante os cliques. O arquivo é conferível: na raiz do repositório, `sha256sum -c docs/demo-fluxo.sha256` responde `docs/demo-fluxo.mp4: OK` — `SUCESSO` se o sistema estiver em português. Qualquer outra resposta significa que o arquivo não é o que foi gravado.
+5. Para ver o fluxo ao vivo (login, aprovação, edição com registro), me chame no LinkedIn ([linkedin.com/in/enzodadaltomoulin](https://linkedin.com/in/enzodadaltomoulin)).
 
 Privacidade: o demo guarda o e-mail e o nome da sua conta Google só enquanto o servidor estiver ativo; o banco é recriado do seed a cada boot limpo, então esses dados somem no reinício.
 
@@ -285,10 +311,10 @@ técnico está documentado acima, em
 ![Painel](docs/img/admin-painel.png)
 ![Solicitações de acesso](docs/img/admin-solicitacoes.png)
 <sub>Captura de **Solicitações de acesso** com um pedido fictício
-(`camila.prado@exemplo.jus.br`, nível unidade) criado com
-`SIMULACAO_AUTO_APROVAR=0`: com a aprovação automática ligada — o padrão do demo
-público — o mesmo pedido seria aprovado na hora e não ficaria pendente. A imagem
-foi feita em ambiente local, com o login `admin` de teste.</sub>
+(`camila.prado@exemplo.jus.br`, nível unidade) pendente — é o comportamento do
+demo público, que sobe com `SIMULACAO_AUTO_APROVAR=0`: o pedido espera a
+aprovação do dono, e só a aprovação concede edição. A imagem foi feita em
+ambiente local, com o login `admin` de teste.</sub>
 
 ![Registro de alterações](docs/img/admin-registro.png)
 
