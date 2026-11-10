@@ -224,7 +224,7 @@ Login com Google em produção precisa de um client OAuth tipo **Web**:
 ## Como avaliar (2 minutos)
 1. Abra a página pública `/` (sem login): clique no mapa, use a busca, favorite e imprima um contato.
 2. Navegue comarca → fórum → unidade → setor: a consulta é o produto, e a árvore abre no nível que você clicar.
-3. O `/admin` (login Google) é restrito ao dono e o demo é **somente leitura**: um pedido de acesso fica pendente, esperando aprovação manual, como em produção. As telas de gestão — painel, solicitações com pedido pendente, registro de alterações, usuários — estão nas capturas abaixo.
+3. O `/admin` exige login Google, mas a gestão (painel, solicitações, usuários, registro) é restrita ao dono, e o demo é **somente leitura**: um pedido de acesso fica pendente, esperando aprovação manual, como em produção. As telas de gestão — painel, solicitações com pedido pendente, registro de alterações, usuários — estão nas capturas abaixo.
 4. Para ver o fluxo ao vivo (login, aprovação, edição com registro), me chame no LinkedIn ([linkedin.com/in/enzodadaltomoulin](https://linkedin.com/in/enzodadaltomoulin)).
 
 Privacidade: o demo guarda o e-mail e o nome da sua conta Google só enquanto o servidor estiver ativo; o banco é recriado do seed a cada boot limpo, então esses dados somem no reinício.
