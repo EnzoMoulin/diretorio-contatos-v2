@@ -5,10 +5,11 @@ Roda contra o servidor local: python3 -m unittest tests.test_saude
 Exige o servidor no ar (http://localhost:8000).
 """
 import json
+import os
 import unittest
 import urllib.request
 
-BASE = "http://localhost:8000"
+BASE = os.environ.get("BASE_API", "http://localhost:8000")
 
 
 class Saude(unittest.TestCase):

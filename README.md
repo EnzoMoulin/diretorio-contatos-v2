@@ -32,7 +32,7 @@ são as mesmas; o que evolui é a fundação técnica:
 | Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
 | Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
 | Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 30 casos (`unittest`, banco temporário) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
+| Testes | Sem testes automatizados | 36 casos (`unittest`, banco temporário) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
 | Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Front estático (Cloudflare Pages) + API FastAPI separada: a página abre na hora, a API acorda sozinha |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
@@ -83,7 +83,7 @@ flowchart LR
 
 - **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
   mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
-  `lru_cache` com invalidação, 30 casos de teste (`unittest`, banco temporário).
+  `lru_cache` com invalidação, 36 casos de teste (`unittest`, banco temporário).
 - **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
   escopo por nível, UX das telas — a interface e as regras são as mesmas, propositalmente.
 - **Por que só stdlib:** zero dependências = deploy gratuito trivial e prova de que a
@@ -176,14 +176,14 @@ python3 -m unittest discover -s tests -t . -v   # servidor no ar; ver a tabela d
 ```
 Os testes batem na API por HTTP. Quem roda a suíte precisa exportar **as mesmas**
 variáveis que o servidor: `SIMULACAO_AUTO_APROVAR` e `ADMIN_EMAILS` são lidas do
-ambiente de quem executa o `unittest`, não do processo que está servindo. São 30
+ambiente de quem executa o `unittest`, não do processo que está servindo. São 36
 casos no total, medidos com Python 3.15.2:
 
 | Ambiente de quem roda | Resultado |
 |---|---|
-| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 27 rodando, 1 pulado (a classe `TestSomenteLeitura`, que só vale no modo 0) |
-| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 27 rodando, 2 pulados (a classe acima e `test_admin_na_allowlist_recebe_admin`) |
-| `SIMULACAO_AUTO_APROVAR=0` | 28 rodando, 2 pulados (`test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist`) |
+| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 32 rodando, 1 pulado (a classe `TestSomenteLeitura`, que só vale no modo 0) |
+| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 31 rodando, 2 pulados (a classe acima e `test_admin_na_allowlist_recebe_admin`) |
+| `SIMULACAO_AUTO_APROVAR=0` | 32 rodando, 2 pulados (`test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist`) |
 
 No modo 0 pulam `test_cadeia_completa_com_limpeza` e a classe
 `TestAdminPorAllowlist` inteira — **mesmo com `ADMIN_EMAILS` exportado**, porque
@@ -268,18 +268,21 @@ com salt; hashes sha256 legados são convertidos no primeiro login.
 ## Endpoints
 | Método | Rota | Auth | Descrição |
 |---|---|---|---|
+| GET | `/api/hierarquia` | não | árvore completa (comarca → fórum → unidade → setor → contato) |
 | GET | `/api/comarcas` | não | comarcas + contagens |
 | GET | `/api/foruns?comarca_id=` | não | fóruns da comarca |
 | GET | `/api/unidades?forum_id=` | não | unidades do fórum |
 | GET | `/api/setores?unidade_id=` | não | setores da unidade |
 | GET | `/api/contatos?q=&setor_id=&unidade_id=&forum_id=&comarca_id=` | não | lista/busca com escopo |
+| GET | `/api/contatos/<id>` | `X-Admin-Token` | um contato, com o caminho até a comarca (só no seu escopo) |
 | GET | `/api/me` | `X-Admin-Token` | usuário + flag admin + escopo |
-| GET | `/api/historico` | `X-Admin-Token` (admin) | últimas 50 alterações |
+| GET | `/api/historico` | `X-Admin-Token` (admin) | últimas 50 alterações, com o autor de cada uma |
 | GET | `/oauth/login` | não | inicia login com Google |
 | GET | `/oauth/callback` | não | retorno do Google → sessão |
 | POST | `/api/logout` | token | encerra a sessão |
 | POST | `/api/login` | não | dev/testes `{usuario, senha}` → `{token}` (só `LOCAL_LOGIN=1`) |
 | POST | `/api/contatos` | `X-Admin-Token` | cria (só no seu escopo) |
+| PUT | `/api/contatos/<id>` | `X-Admin-Token` | edita nome, cargo, telefone e e-mail (só no seu escopo) |
 | DELETE | `/api/contatos/<id>` | `X-Admin-Token` | remove (só no seu escopo) |
 | POST | `/api/pedidos` | token | solicita acesso (com local) |
 | GET | `/api/pedidos` | `X-Admin-Token` (admin) | pendentes (com local pedido) |

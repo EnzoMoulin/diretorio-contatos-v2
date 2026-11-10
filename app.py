@@ -31,6 +31,7 @@ Endpoints (JSON):
     GET  /api/unidades?forum_id=N
     GET  /api/setores?unidade_id=N
     GET  /api/contatos?q=&setor_id=&unidade_id=&forum_id=&comarca_id=
+    GET  /api/contatos/<id>                   um contato (token, no seu escopo)
     GET  /api/historico                       requer token
     GET  /api/me                              requer token -> {usuario}
     POST /api/login                           {usuario, senha} -> {token}
@@ -141,9 +142,13 @@ GOOGLE_TEST_EMAILS = {
 }
 
 
-def aprovar_pedido(con, pid, automatico=False):
+def aprovar_pedido(con, pid, automatico=False, autor_id=None):
     """Efetiva a aprovação de um pedido: cria/libera o usuário e concede o
-    escopo pedido. Não fecha a conexão. Retorna (ok, payload, status)."""
+    escopo pedido. Não fecha a conexão. Retorna (ok, payload, status).
+
+    `autor_id` é quem aprovou (o admin da sessão). Fica None na aprovação
+    automática da simulação, que não tem pessoa por trás.
+    """
     ped = con.execute("SELECT * FROM pedidos WHERE id=?", (pid,)).fetchone()
     if not ped or ped["status"] != "pendente":
         return False, {"erro": "pedido não encontrado"}, 404
@@ -200,7 +205,7 @@ def aprovar_pedido(con, pid, automatico=False):
     nome_final = con.execute("SELECT usuario FROM usuarios WHERE id=?",
                              (uid_novo,)).fetchone()["usuario"]
     marca = " (aprovação automática — avaliação)" if automatico else ""
-    log(con, "aprovar", None, f"acesso aprovado: {nome_final}{marca}")
+    log(con, "aprovar", None, f"acesso aprovado: {nome_final}{marca}", autor_id)
     texto_aprov = ("Seu acesso foi aprovado. Entre com sua conta Google." +
                    (" (Aprovação automática para avaliação.)" if automatico else ""))
     notify(con, uid_novo, "aprovada", texto_aprov)
@@ -212,7 +217,7 @@ def aprovar_pedido(con, pid, automatico=False):
     return True, {"ok": True, "usuario": nome_final}, 200
 
 
-def recusar_pedido(con, pid, motivo):
+def recusar_pedido(con, pid, motivo, autor_id=None):
     """Recusa um pedido com motivo obrigatório; notifica se o e-mail já é usuário."""
     motivo = (motivo or "").strip()[:500]
     if not motivo:
@@ -221,7 +226,8 @@ def recusar_pedido(con, pid, motivo):
     if not ped or ped["status"] != "pendente":
         return False, {"erro": "pedido não encontrado"}, 404
     con.execute("UPDATE pedidos SET status='recusado', motivo_recusa=? WHERE id=?", (motivo, pid))
-    log(con, "recusar", None, f"pedido recusado: {ped['usuario_desejado']} — {motivo}")
+    log(con, "recusar", None, f"pedido recusado: {ped['usuario_desejado']} — {motivo}",
+        autor_id)
     row = con.execute("SELECT id FROM usuarios WHERE lower(email)=?", (str(ped["email"]).lower(),)).fetchone()
     if row:
         notify(con, row["id"], "recusada",
@@ -290,6 +296,8 @@ CREATE TABLE IF NOT EXISTS uteis (
 CREATE TABLE IF NOT EXISTS historico (
     id INTEGER PRIMARY KEY AUTOINCREMENT, acao TEXT NOT NULL,
     contato_id TEXT, detalhe TEXT NOT NULL DEFAULT '',
+    usuario_id INTEGER REFERENCES usuarios(id),  -- autor; NULL = sem gente
+    autor_nome TEXT NOT NULL DEFAULT '',        -- retrato do nome na hora
     data TEXT NOT NULL DEFAULT (datetime('now')));
 CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT, usuario TEXT NOT NULL UNIQUE,
@@ -912,6 +920,8 @@ def init_db():
         ("usuarios", "ultimo_login", "ALTER TABLE usuarios ADD COLUMN ultimo_login TEXT NOT NULL DEFAULT ''"),
         ("usuarios", "ativo", "ALTER TABLE usuarios ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1"),
         ("pedidos", "usuario_id", "ALTER TABLE pedidos ADD COLUMN usuario_id INTEGER"),
+        ("historico", "usuario_id", "ALTER TABLE historico ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id)"),
+        ("historico", "autor_nome", "ALTER TABLE historico ADD COLUMN autor_nome TEXT NOT NULL DEFAULT ''"),
     ]:
         try:
             nomes = {r[1] for r in con.execute(f"PRAGMA table_info({_tbl})").fetchall()}
@@ -972,10 +982,23 @@ def eh_admin(con, uid):
     return bool(linha and linha[0])
 
 
-def log(con, acao, contato_id=None, detalhe=""):
+def log(con, acao, contato_id=None, detalhe="", usuario_id=None):
+    """Registra auditoria. `usuario_id` é quem fez a ação; None quando não há
+    pessoa por trás (base inicial, aprovação automática da simulação).
+
+    Grava também o nome do autor no momento da ação: apagar o usuário depois
+    não pode apagar a história de quem fez o quê.
+    """
+    autor_nome = ""
+    if usuario_id:
+        linha = con.execute(
+            "SELECT usuario FROM usuarios WHERE id=?", (usuario_id,)).fetchone()
+        if linha:
+            autor_nome = linha["usuario"]
     con.execute(
-        "INSERT INTO historico (acao, contato_id, detalhe) VALUES (?,?,?)",
-        (acao, contato_id, detalhe))
+        "INSERT INTO historico (acao, contato_id, detalhe, usuario_id, autor_nome)"
+        " VALUES (?,?,?,?,?)",
+        (acao, contato_id, detalhe, usuario_id, autor_nome))
 
 def notify(con, usuario_id, tipo, texto):
     con.execute(
@@ -985,6 +1008,22 @@ def notify(con, usuario_id, tipo, texto):
 def admin_ids(con):
     return [r["id"] for r in con.execute(
         "SELECT id FROM usuarios WHERE admin=1 AND aprovado=1").fetchall()]
+
+
+# Uma linha por contato com o caminho até a comarca — base da lista plana
+# (/api/contatos) e da busca de um contato só (/api/contatos/<id>).
+# A unidade sem fórum (a estrutura central) não tem comarca vinda do fórum:
+# o COALESCE cai na comarca da própria unidade, senão esses contatos somem.
+CAMPOS_CONTATO = (
+    "SELECT ct.id, ct.nome, ct.cargo, ct.telefone, ct.email,"
+    " s.nome AS setor, s.id AS setor_id, s.virtual AS setor_virtual,"
+    " u.nome AS unidade, u.id AS unidade_id, u.virtual AS unidade_virtual,"
+    " f.nome AS forum, f.id AS forum_id,"
+    " c.nome AS comarca, c.id AS comarca_id"
+    " FROM contatos ct JOIN setores s ON s.id=ct.setor_id"
+    " JOIN unidades u ON u.id=s.unidade_id"
+    " LEFT JOIN foruns f ON f.id=u.forum_id"
+    " LEFT JOIN comarcas c ON c.id=COALESCE(f.comarca_id, u.comarca_id)")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -1071,11 +1110,16 @@ class Handler(BaseHTTPRequestHandler):
         return [dict(r) for r in rows]
 
     def _cadeia(self, con, setor_id=None, contato_id=None):
-        """Resolve (comarca, forum, unidade, setor) de um setor ou contato."""
+        """Resolve (comarca, forum, unidade, setor) de um setor ou contato.
+
+        Unidade sem fórum (a estrutura central) não tem fórum nem comarca
+        vindos do fórum: o caminho continua pela comarca da própria unidade.
+        """
         base = ("SELECT c.id AS c, f.id AS f, u.id AS u, s.id AS s"
-                " FROM comarcas c JOIN foruns f ON f.comarca_id=c.id"
-                " JOIN unidades u ON u.forum_id=f.id"
-                " JOIN setores s ON s.unidade_id=u.id")
+                " FROM setores s JOIN unidades u ON u.id=s.unidade_id"
+                " LEFT JOIN foruns f ON f.id=u.forum_id"
+                " LEFT JOIN comarcas c"
+                " ON c.id=COALESCE(f.comarca_id, u.comarca_id)")
         if contato_id is not None:
             r = con.execute(
                 base + " JOIN contatos ct ON ct.setor_id=s.id WHERE ct.id=?",
@@ -1097,23 +1141,31 @@ class Handler(BaseHTTPRequestHandler):
             return out
         if nivel == "unidade":
             r = con.execute(
-                "SELECT f.id AS f, f.comarca_id AS c FROM unidades u"
-                " JOIN foruns f ON f.id=u.forum_id WHERE u.id=?",
+                "SELECT f.id AS f,"
+                " COALESCE(f.comarca_id, u.comarca_id) AS c FROM unidades u"
+                " LEFT JOIN foruns f ON f.id=u.forum_id WHERE u.id=?",
                 (alvo_id,)).fetchone()
             out = [("unidade", alvo_id)]
             if r:
-                out += [("forum", r["f"]), ("comarca", r["c"])]
+                if r["f"]:
+                    out.append(("forum", r["f"]))
+                if r["c"]:
+                    out.append(("comarca", r["c"]))
             return out
         if nivel == "setor":
             r = con.execute(
-                "SELECT u.id AS u, f.id AS f, f.comarca_id AS c FROM setores s"
+                "SELECT u.id AS u, f.id AS f,"
+                " COALESCE(f.comarca_id, u.comarca_id) AS c FROM setores s"
                 " JOIN unidades u ON u.id=s.unidade_id"
-                " JOIN foruns f ON f.id=u.forum_id WHERE s.id=?",
+                " LEFT JOIN foruns f ON f.id=u.forum_id WHERE s.id=?",
                 (alvo_id,)).fetchone()
             out = [("setor", alvo_id)]
             if r:
-                out += [("unidade", r["u"]), ("forum", r["f"]),
-                        ("comarca", r["c"])]
+                out.append(("unidade", r["u"]))
+                if r["f"]:
+                    out.append(("forum", r["f"]))
+                if r["c"]:
+                    out.append(("comarca", r["c"]))
             return out
         return []
 
@@ -1258,22 +1310,31 @@ class Handler(BaseHTTPRequestHandler):
                 hierarquia_resposta(self)
                 return
             if u.path == "/api/comarcas":
+                # Unidade sem fórum (a estrutura central) entra pela comarca da
+                # própria unidade: por isso a contagem é por subconsulta, e não
+                # pelo JOIN em foruns, que somava zero na Sede.
                 rows = con.execute(
-                    "SELECT c.id, c.nome, COUNT(ct.id) AS total,"
-                    " COUNT(DISTINCT f.id) AS n_foruns,"
-                    " COUNT(DISTINCT CASE WHEN EXISTS"
-                    " (SELECT 1 FROM setores s2 JOIN contatos ct2"
-                    " ON ct2.setor_id=s2.id WHERE s2.unidade_id=u.id)"
-                    " THEN u.id END) AS n_unidades,"
-                    " COUNT(DISTINCT CASE WHEN EXISTS"
-                    " (SELECT 1 FROM contatos ct3 WHERE ct3.setor_id=s.id)"
-                    " THEN s.id END) AS n_setores"
-                    " FROM comarcas c"
-                    " LEFT JOIN foruns f ON f.comarca_id=c.id"
-                    " LEFT JOIN unidades u ON u.forum_id=f.id"
-                    " LEFT JOIN setores s ON s.unidade_id=u.id"
-                    " LEFT JOIN contatos ct ON ct.setor_id=s.id"
-                    " GROUP BY c.id ORDER BY (c.ordem_num IS NULL),"
+                    "SELECT c.id, c.nome,"
+                    " (SELECT COUNT(*) FROM contatos ct"
+                    "   JOIN setores s ON s.id=ct.setor_id"
+                    "   JOIN unidades u ON u.id=s.unidade_id"
+                    "   LEFT JOIN foruns f ON f.id=u.forum_id"
+                    "  WHERE COALESCE(f.comarca_id, u.comarca_id)=c.id) AS total,"
+                    " (SELECT COUNT(*) FROM foruns f2 WHERE f2.comarca_id=c.id)"
+                    " AS n_foruns,"
+                    " (SELECT COUNT(DISTINCT u.id) FROM unidades u"
+                    "   LEFT JOIN foruns f ON f.id=u.forum_id"
+                    "  WHERE COALESCE(f.comarca_id, u.comarca_id)=c.id"
+                    "    AND EXISTS (SELECT 1 FROM setores s JOIN contatos ct2"
+                    "                 ON ct2.setor_id=s.id WHERE s.unidade_id=u.id))"
+                    " AS n_unidades,"
+                    " (SELECT COUNT(DISTINCT s.id) FROM setores s"
+                    "   JOIN unidades u ON u.id=s.unidade_id"
+                    "   LEFT JOIN foruns f ON f.id=u.forum_id"
+                    "  WHERE COALESCE(f.comarca_id, u.comarca_id)=c.id"
+                    "    AND EXISTS (SELECT 1 FROM contatos ct3 WHERE ct3.setor_id=s.id))"
+                    " AS n_setores"
+                    " FROM comarcas c ORDER BY (c.ordem_num IS NULL),"
                     " c.ordem_num, c.ordem_idx").fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/foruns":
@@ -1317,15 +1378,7 @@ class Handler(BaseHTTPRequestHandler):
                     (arg("unidade_id"),)).fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/contatos":
-                sql = ("SELECT ct.id, ct.nome, ct.cargo, ct.telefone, ct.email,"
-                       " s.nome AS setor, s.id AS setor_id, s.virtual AS setor_virtual,"
-                       " u.nome AS unidade, u.id AS unidade_id, u.virtual AS unidade_virtual,"
-                       " f.nome AS forum, f.id AS forum_id,"
-                       " c.nome AS comarca, c.id AS comarca_id"
-                       " FROM contatos ct JOIN setores s ON s.id=ct.setor_id"
-                       " JOIN unidades u ON u.id=s.unidade_id"
-                       " JOIN foruns f ON f.id=u.forum_id"
-                       " JOIN comarcas c ON c.id=f.comarca_id WHERE 1=1")
+                sql = CAMPOS_CONTATO + " WHERE 1=1"
                 params = []
                 for key, col in (("setor_id", "ct.setor_id"),
                                  ("unidade_id", "u.id"),
@@ -1406,6 +1459,27 @@ class Handler(BaseHTTPRequestHandler):
                 finally:
                     con.close()
             parts = u.path.rstrip("/").split("/")
+            if len(parts) == 4 and parts[1] == "api" and parts[2] == "contatos":
+                # Um contato só: a edição do /admin cai aqui quando o contato
+                # não está na lista plana já carregada.
+                uid = self._uid()
+                if not uid:
+                    return self._json({"erro": "não autenticado"}, 403)
+                cid = urllib.parse.unquote(parts[3]).strip()
+                if not cid:
+                    return self._json({"erro": "id inválido"}, 400)
+                con = get_db()
+                try:
+                    row = con.execute(
+                        CAMPOS_CONTATO + " WHERE ct.id=?", (cid,)).fetchone()
+                    if not row:
+                        return self._json({"erro": "não encontrado"}, 404)
+                    if not self._cobre(con, uid, "setor",
+                                       self._cadeia(con, contato_id=cid)[3] or 0):
+                        return self._json({"erro": "sem acesso a este local"}, 403)
+                    return self._json(dict(row))
+                finally:
+                    con.close()
             if len(parts) == 4 and parts[1] == "api" and parts[2] == "backup":
                 uid = self._uid()
                 if not uid:
@@ -1503,7 +1577,10 @@ class Handler(BaseHTTPRequestHandler):
                                    (uid,)).fetchone()[0]:
                     return self._json({"erro": "sem permissão"}, 403)
                 rows = con.execute(
-                    "SELECT * FROM historico ORDER BY id DESC LIMIT 50").fetchall()
+                    "SELECT h.*, COALESCE(NULLIF(h.autor_nome,''), u.usuario)"
+                    " AS autor FROM historico h"
+                    " LEFT JOIN usuarios u ON u.id=h.usuario_id"
+                    " ORDER BY h.id DESC LIMIT 50").fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/me":
                 uid = self._uid()
@@ -1743,7 +1820,8 @@ class Handler(BaseHTTPRequestHandler):
                                 f"Analise em Solicitações de Acesso: {APP_BASE_URL}/admin")
             log(con, "pedido", None,
                 f"solicitação de acesso: {data.get('nome')} ({usuario})" +
-                (" (aprovada automaticamente para avaliação)" if auto else ""))
+                (" (aprovada automaticamente para avaliação)" if auto else ""),
+                uid_post)
             con.commit()
             con.close()
             return self._json({"ok": True, "id": primeiro_id, "auto_aprovado": auto}, 201)
@@ -1761,7 +1839,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 if not eh_admin(con, uid):
                     return self._json({"erro": "sem permissão"}, 403)
-                ok, payload, st = aprovar_pedido(con, pid)
+                ok, payload, st = aprovar_pedido(con, pid, autor_id=uid)
             finally:
                 con.close()
             return self._json(payload, st)
@@ -1782,7 +1860,8 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 if not eh_admin(con, uid):
                     return self._json({"erro": "sem permissão"}, 403)
-                ok, payload, st = recusar_pedido(con, pid, (corpo or {}).get("motivo"))
+                ok, payload, st = recusar_pedido(con, pid, (corpo or {}).get("motivo"),
+                                                 autor_id=uid)
             finally:
                 con.close()
             return self._json(payload, st)
@@ -1799,7 +1878,7 @@ class Handler(BaseHTTPRequestHandler):
                 nome = "diretorio-" + _dt.datetime.now().strftime("%Y%m%d-%H%M%S") + ".db"
                 alvo = ("backups/" + nome).replace("'", "''")
                 con.execute(f"VACUUM INTO '{alvo}'")
-                log(con, "backup", None, f"backup gerado: {nome}")
+                log(con, "backup", None, f"backup gerado: {nome}", uid)
                 con.commit()
                 kb = _os.path.getsize("backups/" + nome) // 1024
                 return self._json({"ok": True, "arquivo": nome, "kb": kb})
@@ -1823,7 +1902,7 @@ class Handler(BaseHTTPRequestHandler):
                 corpo = self._body()
                 ativo = 1 if (corpo or {}).get("ativo") else 0
                 con.execute("UPDATE usuarios SET ativo=? WHERE id=?", (ativo, alvo))
-                log(con, "ativo", None, f"usuário {alvo} -> ativo={ativo}")
+                log(con, "ativo", None, f"usuário {alvo} -> ativo={ativo}", uid)
                 con.commit()
                 return self._json({"ok": True})
             finally:
@@ -1894,7 +1973,7 @@ class Handler(BaseHTTPRequestHandler):
                 " VALUES (?,?,?,?,?,?)",
                 (nid, data.get("setor_id"), data.get("nome"), data.get("cargo", ""),
                  data.get("telefone", ""), data.get("email", "")))
-            log(con, "criar", nid, f"criado: {data.get('nome')}")
+            log(con, "criar", nid, f"criado: {data.get('nome')}", uid)
             for aid in admin_ids(con):
                 notify(con, aid, "contato",
                        f"Contato criado: {data.get('nome')}")
@@ -1937,7 +2016,7 @@ class Handler(BaseHTTPRequestHandler):
                     " WHERE id=?",
                     (data.get("nome"), data.get("cargo", ""),
                      data.get("telefone", ""), data.get("email", ""), cid))
-                log(con, "editar", cid, f"editado: {data.get('nome')}")
+                log(con, "editar", cid, f"editado: {data.get('nome')}", uid)
                 for aid in admin_ids(con):
                     notify(con, aid, "contato",
                            f"Contato editado: {data.get('nome')}")
@@ -1948,7 +2027,7 @@ class Handler(BaseHTTPRequestHandler):
                 con.close()
                 return self._json(dict(row))
             con.execute("DELETE FROM contatos WHERE id=?", (cid,))
-            log(con, "remover", cid, f"removido: {row['nome']}")
+            log(con, "remover", cid, f"removido: {row['nome']}", uid)
             for aid in admin_ids(con):
                 notify(con, aid, "contato",
                        f"Contato removido: {row['nome']}")

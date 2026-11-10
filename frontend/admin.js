@@ -1283,7 +1283,13 @@ async function fullContatos() {
 /* ---- gestão: editar / remover / criar ---- */
 async function abrirEdicao(id) {
   const todos = await fullContatos();
-  const c = todos[id];
+  let c = todos[id];
+  if (!c) {
+    // Fora da lista plana já carregada (contato recém-criado, cache antigo):
+    // busca o registro sozinho antes de dizer que ele não existe.
+    const r = await fetch('/api/contatos/' + encodeURIComponent(id), { headers: auth() });
+    if (r.ok) { c = await r.json(); todos[id] = c; }
+  }
   if (!c) { toast('Contato não encontrado.', 'erro'); return; }
   editId = id; // ids de contato são texto (C1, C669): Number() os transformava em NaN
   $('e-nome').value = c.nome || c.descricao || '';
@@ -1966,7 +1972,9 @@ async function carregarHistorico() {
   if (!logado()) return;
   const h = await (await fetch('/api/historico', { headers: auth() })).json();
   $('hist').innerHTML = (Array.isArray(h) ? h : []).map(x =>
-    `<li><b>${esc(x.acao)}</b> — ${esc(x.detalhe)} <i>${esc(x.data)}</i></li>`
+    `<li><b>${esc(x.acao)}</b> — ${esc(x.detalhe)}` +
+    (x.autor ? ` · por ${esc(x.autor)}` : '') +
+    ` <i>${esc(x.data)}</i></li>`
   ).join('') || '<li>Sem registros.</li>';
 }
 

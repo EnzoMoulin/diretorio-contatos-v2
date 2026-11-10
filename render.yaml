@@ -18,8 +18,11 @@ services:
       # E-mail Google que vira admin no primeiro login. Sem ela ninguém é admin.
       - key: ADMIN_EMAILS
         sync: false
-      # Preencher após o primeiro deploy (URL pública + OAuth):
-      # - key: APP_BASE_URL
-      #   value: https://diretorio-contatos-v2.onrender.com
-      # - key: GOOGLE_CLIENT_JSON
-      #   sync: false  # JSON do client OAuth tipo "web", via dashboard (segredo)
+      # URL pública: destrava os links dos e-mails e o redirect do OAuth.
+      # Valor fixo porque o nome do serviço (e portanto a URL) é fixo.
+      - key: APP_BASE_URL
+        value: https://diretorio-contatos-v2.onrender.com
+      # JSON do client OAuth tipo "web" — segredo, só no painel.
+      # Sem ele não há login Google e o admin fica inacessível no demo.
+      - key: GOOGLE_CLIENT_JSON
+        sync: false
