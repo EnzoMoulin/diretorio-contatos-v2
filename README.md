@@ -69,6 +69,7 @@ telas de gestão a mais:
 | `Notificacoes.html` + `NotificacoesJS.html` | Notificações |
 | `RegistroAlteracoes.html` + `RegistroAlteracoesJS.html` | Registro de alterações |
 | `Layout.html` (bloco Configurações) + `abrirConfiguracoes()` | Configurações |
+| `Manual.html` | seção Manual, no fim da aba Configurações |
 | `ContatoGestaoJS.html`, `ModalTelefone.html` | modal Editar contato, incluindo telefones |
 | `FormularioAcesso.html`, `Login.html` | páginas Solicitar acesso e Acesso administrativo |
 
