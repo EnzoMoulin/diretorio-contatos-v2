@@ -31,6 +31,7 @@ Endpoints (JSON):
     GET  /api/unidades?forum_id=N
     GET  /api/setores?unidade_id=N
     GET  /api/contatos?q=&setor_id=&unidade_id=&forum_id=&comarca_id=
+    GET  /api/contatos/<id>                   um contato (token, no seu escopo)
     GET  /api/historico                       requer token
     GET  /api/me                              requer token -> {usuario}
     POST /api/login                           {usuario, senha} -> {token}
@@ -1009,6 +1010,22 @@ def admin_ids(con):
         "SELECT id FROM usuarios WHERE admin=1 AND aprovado=1").fetchall()]
 
 
+# Uma linha por contato com o caminho até a comarca — base da lista plana
+# (/api/contatos) e da busca de um contato só (/api/contatos/<id>).
+# A unidade sem fórum (a estrutura central) não tem comarca vinda do fórum:
+# o COALESCE cai na comarca da própria unidade, senão esses contatos somem.
+CAMPOS_CONTATO = (
+    "SELECT ct.id, ct.nome, ct.cargo, ct.telefone, ct.email,"
+    " s.nome AS setor, s.id AS setor_id, s.virtual AS setor_virtual,"
+    " u.nome AS unidade, u.id AS unidade_id, u.virtual AS unidade_virtual,"
+    " f.nome AS forum, f.id AS forum_id,"
+    " c.nome AS comarca, c.id AS comarca_id"
+    " FROM contatos ct JOIN setores s ON s.id=ct.setor_id"
+    " JOIN unidades u ON u.id=s.unidade_id"
+    " LEFT JOIN foruns f ON f.id=u.forum_id"
+    " LEFT JOIN comarcas c ON c.id=COALESCE(f.comarca_id, u.comarca_id)")
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "DiretorioContatos/3.0"
 
@@ -1093,11 +1110,16 @@ class Handler(BaseHTTPRequestHandler):
         return [dict(r) for r in rows]
 
     def _cadeia(self, con, setor_id=None, contato_id=None):
-        """Resolve (comarca, forum, unidade, setor) de um setor ou contato."""
+        """Resolve (comarca, forum, unidade, setor) de um setor ou contato.
+
+        Unidade sem fórum (a estrutura central) não tem fórum nem comarca
+        vindos do fórum: o caminho continua pela comarca da própria unidade.
+        """
         base = ("SELECT c.id AS c, f.id AS f, u.id AS u, s.id AS s"
-                " FROM comarcas c JOIN foruns f ON f.comarca_id=c.id"
-                " JOIN unidades u ON u.forum_id=f.id"
-                " JOIN setores s ON s.unidade_id=u.id")
+                " FROM setores s JOIN unidades u ON u.id=s.unidade_id"
+                " LEFT JOIN foruns f ON f.id=u.forum_id"
+                " LEFT JOIN comarcas c"
+                " ON c.id=COALESCE(f.comarca_id, u.comarca_id)")
         if contato_id is not None:
             r = con.execute(
                 base + " JOIN contatos ct ON ct.setor_id=s.id WHERE ct.id=?",
@@ -1119,23 +1141,31 @@ class Handler(BaseHTTPRequestHandler):
             return out
         if nivel == "unidade":
             r = con.execute(
-                "SELECT f.id AS f, f.comarca_id AS c FROM unidades u"
-                " JOIN foruns f ON f.id=u.forum_id WHERE u.id=?",
+                "SELECT f.id AS f,"
+                " COALESCE(f.comarca_id, u.comarca_id) AS c FROM unidades u"
+                " LEFT JOIN foruns f ON f.id=u.forum_id WHERE u.id=?",
                 (alvo_id,)).fetchone()
             out = [("unidade", alvo_id)]
             if r:
-                out += [("forum", r["f"]), ("comarca", r["c"])]
+                if r["f"]:
+                    out.append(("forum", r["f"]))
+                if r["c"]:
+                    out.append(("comarca", r["c"]))
             return out
         if nivel == "setor":
             r = con.execute(
-                "SELECT u.id AS u, f.id AS f, f.comarca_id AS c FROM setores s"
+                "SELECT u.id AS u, f.id AS f,"
+                " COALESCE(f.comarca_id, u.comarca_id) AS c FROM setores s"
                 " JOIN unidades u ON u.id=s.unidade_id"
-                " JOIN foruns f ON f.id=u.forum_id WHERE s.id=?",
+                " LEFT JOIN foruns f ON f.id=u.forum_id WHERE s.id=?",
                 (alvo_id,)).fetchone()
             out = [("setor", alvo_id)]
             if r:
-                out += [("unidade", r["u"]), ("forum", r["f"]),
-                        ("comarca", r["c"])]
+                out.append(("unidade", r["u"]))
+                if r["f"]:
+                    out.append(("forum", r["f"]))
+                if r["c"]:
+                    out.append(("comarca", r["c"]))
             return out
         return []
 
@@ -1339,18 +1369,7 @@ class Handler(BaseHTTPRequestHandler):
                     (arg("unidade_id"),)).fetchall()
                 return self._json([dict(r) for r in rows])
             if u.path == "/api/contatos":
-                sql = ("SELECT ct.id, ct.nome, ct.cargo, ct.telefone, ct.email,"
-                       " s.nome AS setor, s.id AS setor_id, s.virtual AS setor_virtual,"
-                       " u.nome AS unidade, u.id AS unidade_id, u.virtual AS unidade_virtual,"
-                       " f.nome AS forum, f.id AS forum_id,"
-                       " c.nome AS comarca, c.id AS comarca_id"
-                       " FROM contatos ct JOIN setores s ON s.id=ct.setor_id"
-                       " JOIN unidades u ON u.id=s.unidade_id"
-                       # Unidade sem fórum (a estrutura central) não tem
-                       # comarca pelo fórum: cai na comarca da própria unidade.
-                       " LEFT JOIN foruns f ON f.id=u.forum_id"
-                       " LEFT JOIN comarcas c"
-                       " ON c.id=COALESCE(f.comarca_id, u.comarca_id) WHERE 1=1")
+                sql = CAMPOS_CONTATO + " WHERE 1=1"
                 params = []
                 for key, col in (("setor_id", "ct.setor_id"),
                                  ("unidade_id", "u.id"),
@@ -1431,6 +1450,27 @@ class Handler(BaseHTTPRequestHandler):
                 finally:
                     con.close()
             parts = u.path.rstrip("/").split("/")
+            if len(parts) == 4 and parts[1] == "api" and parts[2] == "contatos":
+                # Um contato só: a edição do /admin cai aqui quando o contato
+                # não está na lista plana já carregada.
+                uid = self._uid()
+                if not uid:
+                    return self._json({"erro": "não autenticado"}, 403)
+                cid = urllib.parse.unquote(parts[3]).strip()
+                if not cid:
+                    return self._json({"erro": "id inválido"}, 400)
+                con = get_db()
+                try:
+                    row = con.execute(
+                        CAMPOS_CONTATO + " WHERE ct.id=?", (cid,)).fetchone()
+                    if not row:
+                        return self._json({"erro": "não encontrado"}, 404)
+                    if not self._cobre(con, uid, "setor",
+                                       self._cadeia(con, contato_id=cid)[3] or 0):
+                        return self._json({"erro": "sem acesso a este local"}, 403)
+                    return self._json(dict(row))
+                finally:
+                    con.close()
             if len(parts) == 4 and parts[1] == "api" and parts[2] == "backup":
                 uid = self._uid()
                 if not uid:
