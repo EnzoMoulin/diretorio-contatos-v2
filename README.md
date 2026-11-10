@@ -274,7 +274,7 @@ com salt; hashes sha256 legados são convertidos no primeiro login.
 | GET | `/api/setores?unidade_id=` | não | setores da unidade |
 | GET | `/api/contatos?q=&setor_id=&unidade_id=&forum_id=&comarca_id=` | não | lista/busca com escopo |
 | GET | `/api/me` | `X-Admin-Token` | usuário + flag admin + escopo |
-| GET | `/api/historico` | `X-Admin-Token` (admin) | últimas 50 alterações |
+| GET | `/api/historico` | `X-Admin-Token` (admin) | últimas 50 alterações, com o autor de cada uma |
 | GET | `/oauth/login` | não | inicia login com Google |
 | GET | `/oauth/callback` | não | retorno do Google → sessão |
 | POST | `/api/logout` | token | encerra a sessão |
