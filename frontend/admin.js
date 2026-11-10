@@ -481,13 +481,18 @@ function solBtn(nivel, id) {
   // Pedido já enviado e ainda não decidido: não oferece de novo nem deixa
   // o visitante achar que o clique anterior não funcionou.
   // No ambiente somente leitura (=0 no servidor) a aprovação não vem sozinha:
-  // o title diz isso, senão o visitante espera um aval que ninguém vai dar.
+  // o rótulo e o title dizem isso, senão o visitante espera um aval que
+  // ninguém vai dar. Title sozinho não bastava (só aparece no hover e não
+  // chega a leitor de tela), por isso o aria-label repete a frase.
   if (logado() && pedPendentes.has(String(id))) {
-    const aviso = me && me.aprovacao_automatica === false
-      ? 'Pedido registrado em ambiente de avaliação somente leitura: a aprovação é feita por um Administrador.'
-      : 'Pedido aguardando aprovação do administrador';
+    const auto = !!(me && me.aprovacao_automatica);
+    const rotulo = auto ? 'Pedido pendente' : 'Aguardando Administrador';
+    const aviso = auto
+      ? 'Pedido aguardando aprovação do administrador'
+      : 'Pedido registrado em ambiente de avaliação somente leitura: a aprovação é feita por um Administrador.';
     return '<button type="button" class="fc-access pendente" disabled ' +
-      'title="' + esc(aviso) + '" aria-label="Pedido pendente. ' + esc(aviso) + '">Pedido pendente</button>';
+      'title="' + esc(aviso) + '" aria-label="' + esc(rotulo + '. ' + aviso) + '">' +
+      esc(rotulo) + '</button>';
   }
   if (!logado()) return '<button type="button" class="fc-access" data-solloc="' + esc(nivel) +
     '" data-id="' + esc(id) + '">Solicitar este local</button>';
