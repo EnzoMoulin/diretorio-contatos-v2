@@ -48,9 +48,10 @@ Apps Script + Sheets, repositório privado por ser código institucional; lá o
 sistema atendia pelo nome PJES, sigla que deu nome ao arquivo de seed até a
 limpeza do histórico, quando ele virou `seed_legado.json`).
 O v2 é a reescrita do backend em Python, com a mesma modelagem e a mesma
-experiência: produto próprio, sem marca institucional, sem nome de pessoa e
-com dados fictícios. O que segue é o arco técnico: decisões, o que mudou e
-por quê.
+experiência: projeto pessoal, sem marca institucional, sem nome de pessoa e
+com dados fictícios. A interface pública parte da do v1; a de gestão
+(`/admin`) foi escrita para o v2. O que segue é o arco técnico: decisões,
+o que mudou e por quê.
 
 ### Fase 1 — MVP no ecossistema (Apps Script + Sheets)
 
@@ -171,11 +172,24 @@ SIMULACAO_AUTO_APROVAR=1 ADMIN_EMAILS=seu@gmail.com python3 app.py
 # admin:   http://localhost:8000/admin   (login Google; admin só p/ e-mail em ADMIN_EMAILS)
 bash teste_rapido.sh   # imprime os códigos do fluxo completo (não é teste automatizado;
                        # atenção: encerra qualquer processo na porta 8000)
-python3 -m unittest discover -s tests -t . -v   # 27 testes (servidor no ar + ADMIN_EMAILS na env; sem ela, 2 são pulados)
+python3 -m unittest discover -s tests -t . -v   # servidor no ar; ver a tabela de pulados abaixo
 ```
-Os testes batem na API por HTTP e assumem o modo de avaliação
-(`SIMULACAO_AUTO_APROVAR=1`), por isso o servidor precisa subir com a variável —
-é o mesmo env que o CI usa.
+Os testes batem na API por HTTP. Quem roda a suíte precisa exportar **as mesmas**
+variáveis que o servidor: `SIMULACAO_AUTO_APROVAR` e `ADMIN_EMAILS` são lidas do
+ambiente de quem executa o `unittest`, não do processo que está servindo. Medido
+com Python 3.15.2:
+
+| Ambiente de quem roda | Resultado |
+|---|---|
+| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 27 testes, nenhum pulado |
+| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 27 testes, 1 pulado (`test_admin_na_allowlist_recebe_admin`) |
+| `SIMULACAO_AUTO_APROVAR=0` | 25 testes, `OK (skipped=2)` |
+
+No modo 0 pulam `test_cadeia_completa_com_limpeza` e a classe
+`TestAdminPorAllowlist` inteira — **mesmo com `ADMIN_EMAILS` exportado**, porque
+a causa é a flag, não a allowlist. O `unittest` conta a classe pulada como **um**
+skip, embora ela tenha dois testes: por isso `skipped=2` no modo 0 não quer dizer
+"dois testes pulados".
 
 ## Hospedagem (pôr no ar)
 Só stdlib: sem `pip install`. No Render (gratuito): novo Web Service a partir
