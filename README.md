@@ -49,9 +49,11 @@ sistema atendia pelo nome PJES, sigla que deu nome ao arquivo de seed até a
 limpeza do histórico, quando ele virou `seed_legado.json`).
 O v2 é a reescrita do backend em Python, com a mesma modelagem e a mesma
 experiência: projeto pessoal, sem marca institucional, sem nome de pessoa e
-com dados fictícios. A interface pública parte da do v1; a de gestão
-(`/admin`) foi escrita para o v2. O que segue é o arco técnico: decisões,
-o que mudou e por quê.
+com dados fictícios. As duas interfaces vêm do v1, que já tinha uma pública e
+uma de gestão (`/admin`): o porte foi deliberado, tela por tela — Dashboard,
+Solicitações, Usuários, Meus pedidos, Registro de alterações —, com o código
+reescrito para o v2. O que segue é o arco técnico: decisões, o que mudou e
+por quê.
 
 ### Fase 1 — MVP no ecossistema (Apps Script + Sheets)
 
