@@ -268,6 +268,7 @@ com salt; hashes sha256 legados são convertidos no primeiro login.
 ## Endpoints
 | Método | Rota | Auth | Descrição |
 |---|---|---|---|
+| GET | `/api/hierarquia` | não | árvore completa (comarca → fórum → unidade → setor → contato) |
 | GET | `/api/comarcas` | não | comarcas + contagens |
 | GET | `/api/foruns?comarca_id=` | não | fóruns da comarca |
 | GET | `/api/unidades?forum_id=` | não | unidades do fórum |
@@ -281,6 +282,7 @@ com salt; hashes sha256 legados são convertidos no primeiro login.
 | POST | `/api/logout` | token | encerra a sessão |
 | POST | `/api/login` | não | dev/testes `{usuario, senha}` → `{token}` (só `LOCAL_LOGIN=1`) |
 | POST | `/api/contatos` | `X-Admin-Token` | cria (só no seu escopo) |
+| PUT | `/api/contatos/<id>` | `X-Admin-Token` | edita nome, cargo, telefone e e-mail (só no seu escopo) |
 | DELETE | `/api/contatos/<id>` | `X-Admin-Token` | remove (só no seu escopo) |
 | POST | `/api/pedidos` | token | solicita acesso (com local) |
 | GET | `/api/pedidos` | `X-Admin-Token` (admin) | pendentes (com local pedido) |
