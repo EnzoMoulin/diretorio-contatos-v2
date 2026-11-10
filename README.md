@@ -55,6 +55,23 @@ Solicitações, Usuários, Meus pedidos, Registro de alterações —, com o có
 reescrito para o v2. O que segue é o arco técnico: decisões, o que mudou e
 por quê.
 
+Cada tela do v1 tem uma aba no v2 — o `/admin` é a mesma aplicação, com as
+telas de gestão a mais:
+
+| v1 (`src/frontend/`) | v2 |
+| :--- | :--- |
+| `index.html`, `Layout.html`, `Sidebar.html` | casca: cabeçalho e menu lateral |
+| `ConsultarJS.html`, `ConsultarTelefones.html`, `ForumNavigationJS.html` | Comarcas, Sede, Telefones Úteis, Favoritos |
+| `Dashboard.html` + `DashboardJS.html` | Dashboard |
+| `Solicitacoes.html` + `SolicitacoesJS.html` | Solicitações de acesso |
+| `Usuarios.html` + `UsuariosJS.html` | Usuários |
+| `MeusPedidos.html` + `MeusPedidosJS.html` | Meus pedidos |
+| `Notificacoes.html` + `NotificacoesJS.html` | Notificações |
+| `RegistroAlteracoes.html` + `RegistroAlteracoesJS.html` | Registro de alterações |
+| `Layout.html` (bloco Configurações) + `abrirConfiguracoes()` | Configurações |
+| `ContatoGestaoJS.html`, `ModalTelefone.html` | modal Editar contato, incluindo telefones |
+| `FormularioAcesso.html`, `Login.html` | páginas Solicitar acesso e Acesso administrativo |
+
 ### Fase 1 — MVP no ecossistema (Apps Script + Sheets)
 
 ```mermaid
