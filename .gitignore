@@ -5,4 +5,5 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+tests/fumaca/node_modules/
 .hermes/cache/

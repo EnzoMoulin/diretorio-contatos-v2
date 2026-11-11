@@ -32,7 +32,7 @@ são as mesmas; o que evolui é a fundação técnica:
 | Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
 | Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
 | Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 48 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
+| Testes | Sem testes automatizados | 56 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
 | Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Front estático (Cloudflare Pages) + API FastAPI separada: a página abre na hora, a API acorda sozinha |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
@@ -83,7 +83,7 @@ flowchart LR
 
 - **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
   mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
-  `lru_cache` com invalidação, 48 casos de teste (`unittest`, banco temporário) e
+  `lru_cache` com invalidação, 56 casos de teste (`unittest`, banco temporário) e
   um teste de fumaça do admin que abre o Chromium e clica no fluxo.
 - **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
   escopo por nível, UX das telas — a interface e as regras são as mesmas, propositalmente.
@@ -156,7 +156,12 @@ ranking de busca com tolerância a erro de digitação.
   o servidor roda com `SIMULACAO_AUTO_APROVAR=1`; o acesso libera na conta
   Google do solicitante. Servidor barra duplicata, excesso de pendentes e tudo
   fora do escopo (403).
-- **Registro de alterações**: criar / editar / remover / pedidos / aprovações
+- **Registro de alterações**: criar / editar / remover / pedidos / aprovações, com
+  **gráfico de alterações por mês** (12 meses, SVG desenhado pelo DOM, mês vazio como zero)
+  e a lista das últimas 50 com o autor de cada uma. No ambiente público o banco renasce a
+  cada boot, então a trilha nasce com registros **fictícios de demonstração** — o servidor
+  manda a flag `demonstracao` e o card declara isso no rodapé; base já existente nunca
+  ganha linha inventada
 - **Dashboard** (só admin): cards (comarcas, fóruns, unidades, setores, contatos,
   editáveis, pendências), barras por comarca com ✓ de cobertura e últimas
   alterações — tudo recortado pelo seu escopo
@@ -190,14 +195,14 @@ cd tests/fumaca && node smoke.mjs
 ```
 Os testes batem na API por HTTP. Quem roda a suíte precisa exportar **as mesmas**
 variáveis que o servidor: `SIMULACAO_AUTO_APROVAR` e `ADMIN_EMAILS` são lidas do
-ambiente de quem executa o `unittest`, não do processo que está servindo. São 48
+ambiente de quem executa o `unittest`, não do processo que está servindo. São 56
 casos rodando em cada perna, medidos com Python 3.15.2:
 
 | Ambiente de quem roda | Resultado |
 |---|---|
-| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 48 rodando, 1 pulado (a classe `TestSomenteLeitura`, que só vale no modo 0) |
-| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 47 rodando, 2 pulados (a classe acima e `test_admin_na_allowlist_recebe_admin`) |
-| `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 48 rodando, 2 pulados (`test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist`) |
+| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 56 rodando, 1 pulado (a classe `TestSomenteLeitura`, que só vale no modo 0) |
+| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 55 rodando, 2 pulados (a classe acima e `test_admin_na_allowlist_recebe_admin`) |
+| `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 56 rodando, 2 pulados (`test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist`) |
 
 No modo 0 pulam `test_cadeia_completa_com_limpeza` e a classe
 `TestAdminPorAllowlist` inteira — **mesmo com `ADMIN_EMAILS` exportado**, porque
@@ -250,6 +255,10 @@ cadastrados no projeto do Google Cloud.
   existe para rodar localmente e para os testes, onde aprova na hora e a tela
   sinaliza que foi automático.
 - Admin nunca vem de "primeiro login": só da allowlist `ADMIN_EMAILS`.
+- Privacidade é teste, não promessa: `tests/test_sem_telefone_real.py` varre o
+  seed e os arquivos versionados e falha o CI se aparecer telefone fora da
+  máscara `XXXX` (ou do bloco fictício `3333-00NN`) — a limpeza do repositório
+  se confere sozinha a cada push, em vez de depender de alguém lembrar.
 - Banco efêmero: `contatos.db` nasce do seed a cada boot e usuários/aprovações
   não sobrevivem ao restart. No plano gratuito não há disco para persistir, e um
   banco externo exigiria driver fora da biblioteca padrão.
