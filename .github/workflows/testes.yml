@@ -63,7 +63,13 @@ jobs:
         run: |
           cd tests/fumaca
           npm ci
-          npx playwright install --with-deps chromium
+          # O apt do runner às vezes não resolve o mirror do Ubuntu. Isso é
+          # falha de infraestrutura, não do teste — e um CI vermelho por causa
+          # dela mente sobre o código. Tenta com as libs de sistema; se o apt
+          # falhar, instala só o navegador e segue: se faltar biblioteca, o
+          # teste de fumaça é quem acusa, com erro de verdade.
+          npx playwright install --with-deps chromium \
+            || npx playwright install chromium
       - name: Rodar o teste de fumaça
         run: cd tests/fumaca && node smoke.mjs
       - name: Guardar a tela da falha
