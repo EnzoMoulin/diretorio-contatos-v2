@@ -42,3 +42,34 @@ jobs:
       - name: Log do servidor (só em falha)
         if: failure()
         run: cat /tmp/servidor.log || true
+
+  fumaca:
+    # O `test` acima prova a API e o HTML servido; ninguém ali aperta um botão.
+    # Este job abre o /admin num Chromium de verdade e percorre o caminho do
+    # admin: login, Reconfirmar, primeira linha da fila e o gráfico mensal.
+    runs-on: ubuntu-latest
+    name: fumaça do admin (navegador real)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.15'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/fumaca/package-lock.json
+      - name: Instalar Playwright e o Chromium
+        run: |
+          cd tests/fumaca
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Rodar o teste de fumaça
+        run: cd tests/fumaca && node smoke.mjs
+      - name: Guardar a tela da falha
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fumaca-evidencia
+          path: /tmp/dc2-fumaca-*/registro.png
+          if-no-files-found: ignore
