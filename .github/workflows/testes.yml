@@ -1,6 +1,13 @@
 name: Testes
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  # Rodar sem commit (reconferir infra, por exemplo): botão "Run workflow" na
+  # aba Actions ou `gh workflow run testes.yml` de dentro do repo. Sem isso, a
+  # única forma de ver o CI responder é empurrar um commit — e um commit só
+  # para disparar CI suja o histórico com um SHA que não muda nada.
+  workflow_dispatch:
 
 jobs:
   test:
@@ -59,17 +66,16 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: tests/fumaca/package-lock.json
-      - name: Instalar Playwright e o Chromium
+      - name: Instalar o Chromium (sem apt)
+        # `--with-deps` chama apt-get para instalar bibliotecas de sistema. No
+        # runner 26.04 o mirror do Ubuntu não resolve por DNS e o passo passa
+        # ~9 min em timeout antes de desistir — o teste em si leva 8 s.
+        # `--only-shell` baixa só o headless shell (é ele que roda em modo
+        # headless) e não toca no apt: de ~10 min para ~20 s por push (medido: 10m35s -> 22s).
         run: |
           cd tests/fumaca
           npm ci
-          # O apt do runner às vezes não resolve o mirror do Ubuntu. Isso é
-          # falha de infraestrutura, não do teste — e um CI vermelho por causa
-          # dela mente sobre o código. Tenta com as libs de sistema; se o apt
-          # falhar, instala só o navegador e segue: se faltar biblioteca, o
-          # teste de fumaça é quem acusa, com erro de verdade.
-          npx playwright install --with-deps chromium \
-            || npx playwright install chromium
+          npx playwright install --only-shell chromium
       - name: Rodar o teste de fumaça
         run: cd tests/fumaca && node smoke.mjs
       - name: Guardar a tela da falha
