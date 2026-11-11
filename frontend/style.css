@@ -192,6 +192,12 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 .fc-contato-main{min-width:0}
 .fc-contato h4{margin:4px 0 0;font-size:14px;color:#0f172a}
 .fc-contato-tipo{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#475569}
+/* procedência do dado: fonte + vigência, discreta sob o contato */
+.fc-contato-fonte{margin:3px 0 0;font-size:11px;line-height:1.35;color:#64748b}
+.fc-contato-fonte-data{color:#94a3b8}
+.fc-contato-fonte-data::before{content:"·";margin:0 4px}
+body[data-theme="dark"] .fc-contato-fonte{color:#94a3b8}
+body[data-theme="dark"] .fc-contato-fonte-data{color:#64748b}
 .fc-contato-side{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .fc-contato-valor{color:#1d4ed8;font-size:14px;font-weight:700;text-decoration:none;overflow-wrap:anywhere}
 .fc-contato-actions{display:flex;gap:5px}

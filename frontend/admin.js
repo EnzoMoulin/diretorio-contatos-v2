@@ -26,6 +26,18 @@ function esc(s) {
 }
 const auth = () => ({ 'Content-Type': 'application/json', 'X-Admin-Token': token });
 
+/* Procedência do dado: fonte (de onde veio) e vigência (de quando é). */
+function htmlVigencia(c) {
+  const fonte = String((c && c.fonte) || '').trim();
+  if (!fonte) return '';
+  const vig = String((c && c.vigente_desde) || '').trim();
+  const data = /^\d{4}-\d{2}/.test(vig)
+    ? '<span class="fc-contato-fonte-data" title="Vigente desde ' + esc(vig) + '">desde ' +
+      vig.slice(5, 7) + '/' + vig.slice(0, 4) + '</span>'
+    : '';
+  return '<p class="fc-contato-fonte">' + esc(fonte) + data + '</p>';
+}
+
 /* Aviso flutuante: substitui o alert() nativo, que trava a página e aparece
    com a moldura do navegador. Um por vez, some sozinho em 3,2 s.
    Chama-se mostrarToast porque o código antigo já tinha chamadas guardadas por
@@ -579,7 +591,7 @@ function contatosCards(contatos, ctxOk) {
       ? '<p class="fc-contato-observacao' + (/contato provis[oó]rio/i.test(observacao) ? ' fc-contato-observacao--provisoria' : '') + '">' + esc(observacao) + '</p>'
       : '';
     return '<article class="fc-contato" data-contato="' + esc(c.id) + '">' +
-      '<div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(tipo) + '</span>' + descricaoHtml + observacaoHtml + '</div>' +
+      '<div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(tipo) + '</span>' + descricaoHtml + observacaoHtml + htmlVigencia(c) + '</div>' +
       '<div class="fc-contato-side">' + valorHtml + '<div class="fc-contato-actions">' + acoes + '</div></div></article>';
   }).join('') + '</div>';
 }

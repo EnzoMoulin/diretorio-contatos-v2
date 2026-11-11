@@ -113,6 +113,13 @@ ranking de busca com tolerância a erro de digitação.
   com `tel:` + `mailto:`; Criar/Editar/Remover só onde há cobertura
 
 ## O que faz
+- **Procedência de cada contato**: todo contato carrega **de onde veio** (`fonte`) e **de quando é**
+  (`vigente_desde`) — `ofício 432/2024 — diretoria do foro` desde 03/2024, `catálogo de ramais —
+  agosto/2026` desde 08/2026, ou `base do sistema (sem documento declarado)` quando não há documento.
+  Aparece discreto sob o contato, no público e no interno. Antes disso, a única pista era o texto livre
+  "Contato provisório — validar vigência." na observação, que não filtrava, não ordenava e não expirava.
+  Editar telefone ou e-mail marca o contato como `edição manual`, com a data do dia — é a confirmação
+  humana do dado, e é ela que responde "esse ramal ainda vale?".
 - **Consulta pública** (`/`): **mapa clicável à esquerda como porta de entrada**
   (Leaflet + GeoJSON público do IBGE filtra por comarca) + **painel à direita**
   com busca global (alcança todos os níveis: nome, cargo, telefone, e-mail,

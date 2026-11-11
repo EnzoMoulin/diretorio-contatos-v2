@@ -27,6 +27,18 @@
     });
   }
 
+  /* Procedência do dado: fonte (de onde veio) e vigência (de quando é).
+     "2024-03-01" sai como "03/2024" — o dia não é o que importa aqui. */
+  function htmlVigencia(c) {
+    var fonte = String((c && c.fonte) || "").trim();
+    if (!fonte) return "";
+    var vig = String((c && c.vigente_desde) || "").trim();
+    var data = /^\d{4}-\d{2}/.test(vig)
+      ? '<span class="fc-contato-fonte-data" title="Vigente desde ' + esc(vig) + '">desde ' + vig.slice(5, 7) + "/" + vig.slice(0, 4) + "</span>"
+      : "";
+    return '<p class="fc-contato-fonte">' + esc(fonte) + data + "</p>";
+  }
+
   function fmtTipoContato(tipo) {
     var t = String(tipo || "").trim().toUpperCase();
     if (t === "E_MAIL" || t === "EMAIL" || t === "E-MAIL") return "E-mail";
@@ -665,8 +677,9 @@
       var observacaoHtml = observacao
         ? '<p class="fc-contato-observacao' + (/contato provis[oó]rio/i.test(observacao) ? " fc-contato-observacao--provisoria" : "") + '">' + esc(observacao) + "</p>"
         : "";
+      var vigenciaHtml = htmlVigencia(c);
       return '<article class="fc-contato" data-contato="' + esc(c.id) + '">' +
-        '<div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(tipo) + "</span>" + descricaoHtml + observacaoHtml + "</div>" +
+        '<div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(tipo) + "</span>" + descricaoHtml + observacaoHtml + vigenciaHtml + "</div>" +
         '<div class="fc-contato-side">' + valorHtml + acoes + "</div></article>";
     }).join("") + "</div>";
   }
