@@ -33,6 +33,7 @@ Endpoints (JSON):
     GET  /api/contatos?q=&setor_id=&unidade_id=&forum_id=&comarca_id=
     GET  /api/contatos/<id>                   um contato (token, no seu escopo)
     GET  /api/historico                       requer token
+    GET  /api/historico/mensal                requer token de admin -> {meses, acoes}
     GET  /api/me                              requer token -> {usuario}
     POST /api/login                           {usuario, senha} -> {token}
     POST /api/contatos                        cria (token, no seu escopo)
@@ -287,6 +288,11 @@ CREATE TABLE IF NOT EXISTS contatos (
     telefone TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '',
     descricao TEXT NOT NULL DEFAULT '',
     observacao TEXT NOT NULL DEFAULT '',
+    -- procedência do dado: qual documento trouxe o valor e de quando ele é.
+    -- No v1/v2 isso vivia como texto livre em `observacao` ("Contato provisório
+    -- — validar vigência."), que não filtra, não ordena e não expira.
+    fonte TEXT NOT NULL DEFAULT '',
+    vigente_desde TEXT NOT NULL DEFAULT '',
     ordem_num REAL, ordem_idx INTEGER NOT NULL DEFAULT 0,
     atualizado_em TEXT NOT NULL DEFAULT (datetime('now')));
 CREATE TABLE IF NOT EXISTS uteis (
@@ -568,6 +574,40 @@ def _carregar_seed_legado(con, seed):
 
 
 
+# Procedência do contato: o que o documento de origem diz, em rótulo curto e data.
+# No seed a única pista é a observação em texto livre; aqui ela vira campo.
+PROCEDENCIA = (
+    ("agosto/2026", "catálogo de ramais — agosto/2026", "2026-08-28"),
+    ("provis", "ofício 432/2024 — diretoria do foro", "2024-03-01"),
+)
+
+
+def _procedencia(obs):
+    """(fonte, vigente_desde) a partir da observação livre do seed."""
+    o = (obs or "").lower()
+    for marca, rotulo, data in PROCEDENCIA:
+        if marca in o:
+            return rotulo, data
+    return "", ""
+
+
+def _procedencia_preencher(con):
+    """Preenche fonte/vigente_desde vazias. Idempotente e não destrutiva.
+
+    Roda a cada boot: só toca linha com `fonte` vazio, então edição manual
+    (que grava `edição manual`) nunca é sobrescrita. Linha sem observação de
+    documento recebe o rótulo neutro — não se inventa data de vigência.
+    """
+    for marca, rotulo, data in PROCEDENCIA:
+        con.execute(
+            "UPDATE contatos SET fonte=?, vigente_desde=?"
+            " WHERE COALESCE(fonte,'')='' AND lower(COALESCE(observacao,'')) LIKE ?",
+            (rotulo, data, f"%{marca}%"))
+    con.execute(
+        "UPDATE contatos SET fonte='base do sistema (sem documento declarado)'"
+        " WHERE COALESCE(fonte,'')=''")
+
+
 def _carregar_seed_json(con):
     """Seed a partir da base mascarada (seed_mascarado.json). Devolve True se usou."""
     pj = BASE / "seed_mascarado.json"
@@ -693,14 +733,16 @@ def _carregar_seed_json(con):
         col = TIPO_COL.get(tnorm, "telefone")
         valor = ct.get("valor", "")
         nome = ct.get("desc", "") or valor
+        fonte, vigente = _procedencia(ct.get("obs", ""))
         con.execute(
             "INSERT INTO contatos (id, setor_id, nome, cargo, telefone, email,"
-            " descricao, observacao, ordem_num, ordem_idx)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?)",
+            " descricao, observacao, fonte, vigente_desde, ordem_num, ordem_idx)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
             (novo_id(con, "contatos", "C"), sid, nome, str(ct.get("tipo", "")),
              valor if col == "telefone" else "",
              valor if col == "email" else "", ct.get("desc", ""),
-             ct.get("obs", ""), ct.get("ordem"), i))
+             ct.get("obs", ""), fonte or "base do sistema (sem documento declarado)",
+             vigente, ct.get("ordem"), i))
     for u in seed.get("uteis", []):
         con.execute("INSERT INTO uteis (uid, nome, tipo, valor) VALUES (?,?,?,?)",
                     (u.get("id", ""), u.get("nome", ""), u.get("tipo", ""), u.get("valor", "")))
@@ -750,7 +792,9 @@ def build_hierarquia(con):
 
     def contato_pub(c, no_id=""):
         return {"id": c["id"], "tipo": c["cargo"], "descricao": c["descricao"],
-                "valor": c["telefone"] or c["email"], "observacao": c["observacao"]}
+                "valor": c["telefone"] or c["email"], "observacao": c["observacao"],
+                "fonte": c["fonte"] if "fonte" in c.keys() else "",
+                "vigente_desde": c["vigente_desde"] if "vigente_desde" in c.keys() else ""}
 
     def ser_no(u, raiz_end, raiz_cep):
         end_ex = u["endereco"] or raiz_end
@@ -922,6 +966,8 @@ def init_db():
         ("pedidos", "usuario_id", "ALTER TABLE pedidos ADD COLUMN usuario_id INTEGER"),
         ("historico", "usuario_id", "ALTER TABLE historico ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id)"),
         ("historico", "autor_nome", "ALTER TABLE historico ADD COLUMN autor_nome TEXT NOT NULL DEFAULT ''"),
+        ("contatos", "fonte", "ALTER TABLE contatos ADD COLUMN fonte TEXT NOT NULL DEFAULT ''"),
+        ("contatos", "vigente_desde", "ALTER TABLE contatos ADD COLUMN vigente_desde TEXT NOT NULL DEFAULT ''"),
     ]:
         try:
             nomes = {r[1] for r in con.execute(f"PRAGMA table_info({_tbl})").fetchall()}
@@ -929,6 +975,7 @@ def init_db():
                 con.execute(_ddl)
         except Exception:
             pass
+    _procedencia_preencher(con)
     _unificar_emails(con)
     n = con.execute("SELECT COUNT(*) AS c FROM contatos").fetchone()["c"]
     if n == 0 and _carregar_seed_json(con):
@@ -1016,6 +1063,7 @@ def admin_ids(con):
 # o COALESCE cai na comarca da própria unidade, senão esses contatos somem.
 CAMPOS_CONTATO = (
     "SELECT ct.id, ct.nome, ct.cargo, ct.telefone, ct.email,"
+    " ct.descricao, ct.fonte, ct.vigente_desde,"
     " s.nome AS setor, s.id AS setor_id, s.virtual AS setor_virtual,"
     " u.nome AS unidade, u.id AS unidade_id, u.virtual AS unidade_virtual,"
     " f.nome AS forum, f.id AS forum_id,"
@@ -1569,6 +1617,45 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({
                     "lista": lista,
                     "nao_lidas": sum(1 for r in lista if not r["lida"])})
+            if u.path == "/api/historico/mensal":
+                # Uma linha por (mês, ação) e a tela monta o gráfico. O mês vazio
+                # entra com zero aqui, não no JavaScript: o calendário é do
+                # servidor, para o gráfico não depender do relógio do navegador.
+                uid = self._uid()
+                if not uid:
+                    return self._json({"erro": "não autenticado"}, 403)
+                if not eh_admin(con, uid):
+                    return self._json({"erro": "sem permissão"}, 403)
+                contagem, por_acao = {}, {}
+                for r in con.execute(
+                        "SELECT substr(data,1,7) AS mes, acao, COUNT(*) AS total"
+                        " FROM historico WHERE COALESCE(data,'')<>''"
+                        " GROUP BY mes, acao").fetchall():
+                    contagem[r["mes"]] = contagem.get(r["mes"], 0) + r["total"]
+                    por_acao[r["mes"]] = por_acao.get(r["mes"], {})
+                    por_acao[r["mes"]][r["acao"]] = r["total"]
+                hoje = time.localtime()
+                meses, acoes = [], {}
+                for volta in range(11, -1, -1):
+                    ano, mes = hoje.tm_year, hoje.tm_mon - volta
+                    while mes <= 0:
+                        mes += 12
+                        ano -= 1
+                    chave = "%04d-%02d" % (ano, mes)
+                    meses.append({"mes": chave,
+                                  "total": contagem.get(chave, 0)})
+                    for acao, n in por_acao.get(chave, {}).items():
+                        acoes[acao] = acoes.get(acao, 0) + n
+                return self._json({
+                    "meses": meses,
+                    "acoes": sorted(({"acao": a, "total": n}
+                                     for a, n in acoes.items()),
+                                    key=lambda x: (-x["total"], x["acao"])),
+                    "total": sum(m["total"] for m in meses),
+                    "total_geral": con.execute(
+                        "SELECT COUNT(*) FROM historico").fetchone()[0],
+                    "mes_atual": meses[-1]["mes"],
+                })
             if u.path == "/api/historico":
                 uid = self._uid()
                 if not uid:
@@ -1969,10 +2056,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"erro": "sem acesso a este local"}, 403)
             nid = novo_id(con, "contatos", "C")
             con.execute(
-                "INSERT INTO contatos (id, setor_id, nome, cargo, telefone, email)"
-                " VALUES (?,?,?,?,?,?)",
+                "INSERT INTO contatos (id, setor_id, nome, cargo, telefone, email,"
+                " fonte, vigente_desde)"
+                " VALUES (?,?,?,?,?,?,?,?)",
                 (nid, data.get("setor_id"), data.get("nome"), data.get("cargo", ""),
-                 data.get("telefone", ""), data.get("email", "")))
+                 data.get("telefone", ""), data.get("email", ""),
+                 "criação manual", time.strftime("%Y-%m-%d")))
             log(con, "criar", nid, f"criado: {data.get('nome')}", uid)
             for aid in admin_ids(con):
                 notify(con, aid, "contato",
@@ -2011,11 +2100,19 @@ class Handler(BaseHTTPRequestHandler):
                 if not data.get("nome"):
                     con.close()
                     return self._json({"erro": "'nome' é obrigatório"}, 400)
+                # edição de telefone/e-mail é uma confirmação humana do dado:
+                # passa a ser a procedência, com a data de hoje
+                mudou_valor = (data.get("telefone", "") != row["telefone"]
+                               or data.get("email", "") != row["email"])
                 con.execute(
                     "UPDATE contatos SET nome=?, cargo=?, telefone=?, email=?"
                     " WHERE id=?",
                     (data.get("nome"), data.get("cargo", ""),
                      data.get("telefone", ""), data.get("email", ""), cid))
+                if mudou_valor:
+                    con.execute(
+                        "UPDATE contatos SET fonte=?, vigente_desde=? WHERE id=?",
+                        ("edição manual", time.strftime("%Y-%m-%d"), cid))
                 log(con, "editar", cid, f"editado: {data.get('nome')}", uid)
                 for aid in admin_ids(con):
                     notify(con, aid, "contato",
