@@ -2236,6 +2236,16 @@ function desenharMensal(d) {
     rodape.textContent = (+d.total_geral) + ' alterações no total, desde o início da trilha.';
     card.append(rodape);
   }
+  // Honestidade do ambiente: o demo nasce com trilha fictícia porque o banco é
+  // recriado a cada boot. Quem lê o gráfico precisa saber disso pelo servidor
+  // (`demonstracao`), não por texto fixo que mentiria numa base real.
+  if (d.demonstracao === true) {
+    const nota = document.createElement('p');
+    nota.className = 'hm-vazio hm-nota-demo';
+    nota.textContent = 'Inclui registros fictícios de demonstração: neste ambiente ' +
+      'o banco é recriado a cada boot e a trilha real recomeça vazia.';
+    card.append(nota);
+  }
   alvo.append(card);
 }
 
