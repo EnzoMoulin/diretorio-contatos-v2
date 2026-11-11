@@ -65,6 +65,27 @@ class TestHistoricoMensal(unittest.TestCase):
         self.assertTrue(all(m["total"] >= 0 for m in d["meses"]))
         self.assertTrue(all(a["total"] > 0 for a in d["acoes"]))
 
+    def test_flag_de_demonstracao_bate_com_o_banco(self):
+        """A nota de rodapé do gráfico é do servidor, não texto fixo na tela.
+
+        Banco novo (o do CI, e o de cada boot no Render) nasce com a trilha
+        fictícia; base já usada não ganha linha inventada. O teste vale nos dois
+        casos: o que ele trava é a coerência entre a flag e a tabela.
+        """
+        st, d = self._mensal()
+        self.assertEqual(st, 200)
+        self.assertIsInstance(d["demonstracao"], bool)
+        con = sqlite3.connect(DB)
+        try:
+            existe = bool(con.execute(
+                "SELECT 1 FROM historico WHERE autor_nome='demonstração'"
+                " LIMIT 1").fetchone())
+        finally:
+            con.close()
+        self.assertEqual(d["demonstracao"], existe)
+        if existe:
+            self.assertGreater(d["total"], 0, "com trilha fictícia o gráfico não abre vazio")
+
     def test_contagem_por_mes_bate_com_o_banco(self):
         st, d = self._mensal()
         self.assertEqual(st, 200)

@@ -938,6 +938,71 @@ def _unificar_emails(con):
         pass
 
 
+# Histórico de demonstração: no ambiente público o banco é recriado a cada boot,
+# então a trilha nasceria vazia e o gráfico mensal — que é a leitura da trilha —
+# apareceria zerado para quem visita o demo. Estas linhas são fictícias, gravadas
+# UMA vez na criação do banco, em datas relativas ao boot: data fixa envelheceria
+# e deixaria o gráfico vazio de novo dentro de um ano.
+MARCA_DEMO = "demonstração"
+
+# (meses atrás, quantas alterações). Dois meses ficam zerados de propósito: o mês
+# sem alteração é informação (o gráfico mostra o trilho) e é o que o teste da
+# janela de 12 meses exercita.
+DEMO_HISTORICO = (
+    (11, 2), (10, 3), (9, 1), (8, 4), (7, 0), (6, 2),
+    (5, 5), (4, 0), (3, 3), (2, 6), (1, 4), (0, 2),
+)
+# Ação -> detalhe neutro. Nenhum nome de pessoa, nenhum dado real: o detalhe
+# declara que é demonstração, e o autor da linha também.
+DEMO_ACOES = (
+    ("editar", "contato de demonstração atualizado"),
+    ("aprovar", "acesso de demonstração aprovado"),
+    ("criar", "contato de demonstração incluído"),
+    ("pedido", "pedido de acesso de demonstração"),
+    ("backup", "backup do banco (demonstração)"),
+)
+
+
+def _mes_atras(atras):
+    """(ano, mês) de N meses atrás, no mesmo calendário do /api/historico/mensal."""
+    hoje = time.localtime()
+    ano, mes = hoje.tm_year, hoje.tm_mon - atras
+    while mes <= 0:
+        mes += 12
+        ano -= 1
+    return ano, mes
+
+
+def _historico_demonstracao(con):
+    """Grava a trilha fictícia do demo e devolve quantas linhas criou.
+
+    Chamada só quando o banco está nascendo; a marca (`autor_nome`) protege
+    contra rodar duas vezes — base existente nunca é tocada, então o histórico
+    de quem já usa o app não ganha linha inventada.
+    """
+    if con.execute("SELECT 1 FROM historico WHERE autor_nome=? LIMIT 1",
+                   (MARCA_DEMO,)).fetchone():
+        return 0
+    n = 0
+    hoje = time.localtime()
+    for atras, quantas in DEMO_HISTORICO:
+        ano, mes = _mes_atras(atras)
+        for i in range(quantas):
+            acao, detalhe = DEMO_ACOES[n % len(DEMO_ACOES)]
+            dia = 5 + (i * 7) % 20
+            if atras == 0:
+                # Mês em curso: nada de alteração datada no futuro.
+                dia = min(dia, hoje.tm_mday)
+            con.execute(
+                "INSERT INTO historico (acao, contato_id, detalhe, usuario_id,"
+                " autor_nome, data) VALUES (?,NULL,?,NULL,?,?)",
+                (acao, detalhe, MARCA_DEMO,
+                 "%04d-%02d-%02d %02d:%02d:00"
+                 % (ano, mes, dia, 9 + (i % 8), (i * 13) % 60)))
+            n += 1
+    return n
+
+
 def init_db():
     con = get_db()
     tabelas = {r["name"] for r in con.execute(
@@ -1018,6 +1083,9 @@ def init_db():
         con.execute(
             "INSERT INTO historico (acao, detalhe) VALUES (?,?)",
             ("init", "base inicial criada com dados fictícios"))
+        # Banco acabou de nascer: o gráfico mensal ganha a trilha de demonstração
+        # em vez de abrir zerado (no demo público o banco renasce a cada boot).
+        _historico_demonstracao(con)
     init_fts(con)
     con.commit()
     con.close()
@@ -1655,6 +1723,11 @@ class Handler(BaseHTTPRequestHandler):
                     "total_geral": con.execute(
                         "SELECT COUNT(*) FROM historico").fetchone()[0],
                     "mes_atual": meses[-1]["mes"],
+                    # A tela avisa que a trilha inclui registros fictícios; o
+                    # servidor é quem sabe, não o JavaScript.
+                    "demonstracao": bool(con.execute(
+                        "SELECT 1 FROM historico WHERE autor_nome=? LIMIT 1",
+                        (MARCA_DEMO,)).fetchone()),
                 })
             if u.path == "/api/historico":
                 uid = self._uid()
