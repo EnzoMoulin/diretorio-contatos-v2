@@ -39,7 +39,19 @@
     return '<p class="fc-contato-fonte">' + esc(fonte) + data + "</p>";
   }
 
-  function fmtTipoContato(tipo) {
+  // A observação genérica ("Contato provisório — validar vigência.") vira ruído
+// quando `fonte` + `vigente_desde` já dizem de onde veio e de quando: a linha de
+// procedência carrega a mesma informação com data. Some com ela só nesse caso —
+// observação que tem conteúdo próprio continua aparecendo inteira.
+var OBS_GENERICA = /^contato provis[oó]rio\s*[—–-]\s*validar vig[eê]ncia\.?$/i;
+function obsVisivel(c) {
+  var t = String((c && c.observacao) || "").trim();
+  if (!t) return "";
+  if (c && c.fonte && OBS_GENERICA.test(t)) return "";
+  return t;
+}
+
+function fmtTipoContato(tipo) {
     var t = String(tipo || "").trim().toUpperCase();
     if (t === "E_MAIL" || t === "EMAIL" || t === "E-MAIL") return "E-mail";
     if (t === "WHATSAPP") return "WhatsApp";
@@ -673,7 +685,7 @@
       var descricao = String(c.descricao || "").trim();
       var descricaoHtml = descricao && descricao.toLocaleLowerCase("pt-BR") !== String(tipo).toLocaleLowerCase("pt-BR")
         ? "<h4>" + esc(descricao) + "</h4>" : "";
-      var observacao = String(c.observacao || "").trim();
+      var observacao = obsVisivel(c);
       var observacaoHtml = observacao
         ? '<p class="fc-contato-observacao' + (/contato provis[oó]rio/i.test(observacao) ? " fc-contato-observacao--provisoria" : "") + '">' + esc(observacao) + "</p>"
         : "";
@@ -1081,7 +1093,7 @@
   function contatoPrint(c) {
     var tipo = fmtTipoContato(c.tipo);
     var descricao = String(c.descricao || "").trim();
-    var observacao = String(c.observacao || "").trim();
+    var observacao = obsVisivel(c);
     var complemento = descricao && descricao.toLocaleLowerCase("pt-BR") !== String(tipo).toLocaleLowerCase("pt-BR")
       ? " — " + esc(descricao) : "";
     var nota = observacao ? '<small class="note">' + esc(observacao) + "</small>" : "";

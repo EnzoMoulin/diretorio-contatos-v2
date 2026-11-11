@@ -27,6 +27,18 @@ function esc(s) {
 const auth = () => ({ 'Content-Type': 'application/json', 'X-Admin-Token': token });
 
 /* Procedência do dado: fonte (de onde veio) e vigência (de quando é). */
+// A observação genérica ("Contato provisório — validar vigência.") vira ruído
+// quando `fonte` + `vigente_desde` já dizem de onde veio e de quando: a linha de
+// procedência carrega a mesma informação com data. Some com ela só nesse caso —
+// observação que tem conteúdo próprio continua aparecendo inteira.
+var OBS_GENERICA = /^contato provis[oó]rio\s*[—–-]\s*validar vig[eê]ncia\.?$/i;
+function obsVisivel(c) {
+  var t = String((c && c.observacao) || "").trim();
+  if (!t) return "";
+  if (c && c.fonte && OBS_GENERICA.test(t)) return "";
+  return t;
+}
+
 function htmlVigencia(c) {
   const fonte = String((c && c.fonte) || '').trim();
   if (!fonte) return '';
@@ -586,7 +598,7 @@ function contatosCards(contatos, ctxOk) {
     const descricao = String(c.descricao || '').trim();
     const descricaoHtml = descricao && descricao.toLocaleLowerCase('pt-BR') !== String(tipo).toLocaleLowerCase('pt-BR')
       ? '<h4>' + esc(descricao) + '</h4>' : '';
-    const observacao = String(c.observacao || '').trim();
+    const observacao = obsVisivel(c);
     const observacaoHtml = observacao
       ? '<p class="fc-contato-observacao' + (/contato provis[oó]rio/i.test(observacao) ? ' fc-contato-observacao--provisoria' : '') + '">' + esc(observacao) + '</p>'
       : '';
@@ -1107,6 +1119,53 @@ function realcarBusca(termo, texto){
   }
   return out + base.slice(i);
 }
+// ---- reconfirmar: os contatos com procedência mais antiga primeiro ----------
+// `vigente_desde` não serve só para exibir: é a fila de manutenção. Quanto mais
+// velha a data, mais provável que o ramal tenha mudado desde o documento. A
+// lista sai do mesmo índice da busca, ordenada da data mais antiga para a mais
+// recente, e mostra a fonte ao lado — quem reconfere sabe o que está conferindo.
+function contatosParaReconfirmar() {
+  if (indiceBusca === null) indiceBusca = construirIndiceBusca();
+  return indiceBusca
+    .filter(item => String(item.contato.vigente_desde || '').trim() !== '')
+    .sort((a, b) => String(a.contato.vigente_desde).localeCompare(String(b.contato.vigente_desde)));
+}
+function pintarReconfirmar() {
+  const caixa = $('fc-busca-resultados');
+  if (!caixa) return;
+  const itens = contatosParaReconfirmar();
+  if (!itens.length) { caixa.setAttribute('hidden', ''); return; }
+  const cabecalho = '<div class="fc-busca-cabecalho">' + itens.length +
+    ' contatos com procedência registrada — mais antigos primeiro</div>';
+  caixa.innerHTML = [cabecalho].concat(itens.map((item, i) => {
+    const c = item.contato;
+    const quando = String(c.vigente_desde || '').slice(0, 7).split('-').reverse().join('/');
+    return '<button type="button" class="fc-busca-item" data-reconf-i="' + i + '" role="option">' +
+      '<strong>' + esc(c.descricao || fmtTipoContato(c.tipo)) + '</strong>' +
+      '<small>' + esc(fmtTipoContato(c.tipo) + (c.valor ? ' · ' + c.valor : '')) + '</small>' +
+      '<small>' + esc(item.caminho) + '</small>' +
+      '<small class="fc-busca-fonte">' + esc(c.fonte || '') + ' · desde ' + esc(quando) + '</small></button>';
+  })).join('');
+  caixa.removeAttribute('hidden');
+  caixa.querySelectorAll('[data-reconf-i]').forEach(btn => {
+    const item = itens[+btn.getAttribute('data-reconf-i')];
+    btn.onclick = () => { caixa.setAttribute('hidden', ''); caixa.innerHTML = ''; irParaResultado(item); };
+  });
+}
+function vincularReconfirmar() {
+  const botao = $('fc-antigos');
+  if (!botao || botao.getAttribute('data-ok')) return;
+  botao.setAttribute('data-ok', '1');
+  botao.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    const caixa = $('fc-busca-resultados');
+    if (caixa && !caixa.hasAttribute('hidden') && caixa.querySelector('[data-reconf-i]')) {
+      caixa.setAttribute('hidden', ''); caixa.innerHTML = ''; return;
+    }
+    pintarReconfirmar();
+  });
+}
+
 function vincularBuscaGlobal() {
   const campo = $('fc-busca'), caixa = $('fc-busca-resultados');
   if (!campo || !caixa || campo.getAttribute('data-busca-ok')) return;
@@ -1161,7 +1220,7 @@ function vincularBuscaGlobal() {
 function contatoPrint(c) {
   const tipo = fmtTipoContato(c.tipo);
   const descricao = String(c.descricao || '').trim();
-  const observacao = String(c.observacao || '').trim();
+  const observacao = obsVisivel(c);
   const complemento = descricao && descricao.toLocaleLowerCase('pt-BR') !== String(tipo).toLocaleLowerCase('pt-BR')
     ? ' — ' + esc(descricao) : '';
   const nota = observacao ? '<small class="note">' + esc(observacao) + '</small>' : '';
@@ -1992,6 +2051,7 @@ async function carregarHistorico() {
 
 (async () => {
   vincularBuscaGlobal();
+  vincularReconfirmar();
   await refresh();
   try {
     if (sessionStorage.getItem('pedirAposLogin') && logado()) {

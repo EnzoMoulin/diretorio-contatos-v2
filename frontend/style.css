@@ -546,3 +546,13 @@ body[data-theme="dark"] .tooltip-premium small{color:#cbd5e1}
 .fc-btn:hover{background:#f8fafc}
 .fc-print-footer{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin-top:22px;padding-top:16px;border-top:1px solid #e2e8f0}
 .fc-print-footer .fc-btn{min-height:42px;display:inline-flex;align-items:center;justify-content:center;padding-inline:18px}
+
+/* reconfirmar: fila de manutenção da procedência (admin) */
+.fc-antigos-btn{margin-left:8px;padding:6px 10px;font-size:12px;line-height:1;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#475569;cursor:pointer;white-space:nowrap}
+.fc-antigos-btn:hover{border-color:#94a3b8;color:#1e293b}
+.fc-busca-cabecalho{padding:8px 12px 6px;font-size:11px;letter-spacing:.01em;color:#64748b;border-bottom:1px solid #e2e8f0}
+.fc-busca-fonte{color:#94a3b8}
+body[data-theme="dark"] .fc-antigos-btn{background:#1e293b;border-color:#334155;color:#cbd5e1}
+body[data-theme="dark"] .fc-antigos-btn:hover{border-color:#64748b;color:#f1f5f9}
+body[data-theme="dark"] .fc-busca-cabecalho{color:#94a3b8;border-bottom-color:#334155}
+body[data-theme="dark"] .fc-busca-fonte{color:#64748b}

@@ -120,6 +120,10 @@ ranking de busca com tolerância a erro de digitação.
   "Contato provisório — validar vigência." na observação, que não filtrava, não ordenava e não expirava.
   Editar telefone ou e-mail marca o contato como `edição manual`, com a data do dia — é a confirmação
   humana do dado, e é ela que responde "esse ramal ainda vale?".
+- **Fila de reconfirmação (admin)**: o botão **Reconfirmar** lista os contatos com procedência
+  registrada, do documento mais antigo para o mais novo, com a fonte e o mês ao lado. É a rotina de
+  manutenção que o campo `vigente_desde` existe para permitir — os 43 do ofício de 2024 aparecem
+  primeiro porque são os mais prováveis de ter mudado.
 - **Consulta pública** (`/`): **mapa clicável à esquerda como porta de entrada**
   (Leaflet + GeoJSON público do IBGE filtra por comarca) + **painel à direita**
   com busca global (alcança todos os níveis: nome, cargo, telefone, e-mail,
