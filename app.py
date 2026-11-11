@@ -33,6 +33,7 @@ Endpoints (JSON):
     GET  /api/contatos?q=&setor_id=&unidade_id=&forum_id=&comarca_id=
     GET  /api/contatos/<id>                   um contato (token, no seu escopo)
     GET  /api/historico                       requer token
+    GET  /api/historico/mensal                requer token de admin -> {meses, acoes}
     GET  /api/me                              requer token -> {usuario}
     POST /api/login                           {usuario, senha} -> {token}
     POST /api/contatos                        cria (token, no seu escopo)
@@ -1616,6 +1617,45 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({
                     "lista": lista,
                     "nao_lidas": sum(1 for r in lista if not r["lida"])})
+            if u.path == "/api/historico/mensal":
+                # Uma linha por (mês, ação) e a tela monta o gráfico. O mês vazio
+                # entra com zero aqui, não no JavaScript: o calendário é do
+                # servidor, para o gráfico não depender do relógio do navegador.
+                uid = self._uid()
+                if not uid:
+                    return self._json({"erro": "não autenticado"}, 403)
+                if not eh_admin(con, uid):
+                    return self._json({"erro": "sem permissão"}, 403)
+                contagem, por_acao = {}, {}
+                for r in con.execute(
+                        "SELECT substr(data,1,7) AS mes, acao, COUNT(*) AS total"
+                        " FROM historico WHERE COALESCE(data,'')<>''"
+                        " GROUP BY mes, acao").fetchall():
+                    contagem[r["mes"]] = contagem.get(r["mes"], 0) + r["total"]
+                    por_acao[r["mes"]] = por_acao.get(r["mes"], {})
+                    por_acao[r["mes"]][r["acao"]] = r["total"]
+                hoje = time.localtime()
+                meses, acoes = [], {}
+                for volta in range(11, -1, -1):
+                    ano, mes = hoje.tm_year, hoje.tm_mon - volta
+                    while mes <= 0:
+                        mes += 12
+                        ano -= 1
+                    chave = "%04d-%02d" % (ano, mes)
+                    meses.append({"mes": chave,
+                                  "total": contagem.get(chave, 0)})
+                    for acao, n in por_acao.get(chave, {}).items():
+                        acoes[acao] = acoes.get(acao, 0) + n
+                return self._json({
+                    "meses": meses,
+                    "acoes": sorted(({"acao": a, "total": n}
+                                     for a, n in acoes.items()),
+                                    key=lambda x: (-x["total"], x["acao"])),
+                    "total": sum(m["total"] for m in meses),
+                    "total_geral": con.execute(
+                        "SELECT COUNT(*) FROM historico").fetchone()[0],
+                    "mes_atual": meses[-1]["mes"],
+                })
             if u.path == "/api/historico":
                 uid = self._uid()
                 if not uid:

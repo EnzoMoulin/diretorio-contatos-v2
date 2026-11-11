@@ -1158,6 +1158,10 @@ function vincularReconfirmar() {
   botao.setAttribute('data-ok', '1');
   botao.addEventListener('click', (ev) => {
     ev.preventDefault();
+    // Sem isto o "fecha ao clicar fora" da busca global fecha a fila no mesmo
+    // clique que a abriu: o botão está fora do `caixa`, então o listener de
+    // documento também disparava e apagava o que tinha acabado de ser pintado.
+    ev.stopPropagation();
     const caixa = $('fc-busca-resultados');
     if (caixa && !caixa.hasAttribute('hidden') && caixa.querySelector('[data-reconf-i]')) {
       caixa.setAttribute('hidden', ''); caixa.innerHTML = ''; return;
@@ -2041,12 +2045,198 @@ function pedLigarBarra(){
 }
 async function carregarHistorico() {
   if (!logado()) return;
-  const h = await (await fetch('/api/historico', { headers: auth() })).json();
+  // A lista e o gráfico vêm de rotas diferentes: a lista é o detalhe (50
+  // últimas), o mensal é a série de 12 meses já preenchida com zeros.
+  const [h, mensal] = await Promise.all([
+    fetch('/api/historico', { headers: auth() }).then(r => r.json()).catch(() => []),
+    fetch('/api/historico/mensal', { headers: auth() }).then(r => r.json()).catch(() => null)
+  ]);
   $('hist').innerHTML = (Array.isArray(h) ? h : []).map(x =>
     `<li><b>${esc(x.acao)}</b> — ${esc(x.detalhe)}` +
     (x.autor ? ` · por ${esc(x.autor)}` : '') +
     ` <i>${esc(x.data)}</i></li>`
   ).join('') || '<li>Sem registros.</li>';
+  desenharMensal(mensal);
+}
+
+const MES_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+                   'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const ROTULO_ACAO = {
+  criar: 'Criação', editar: 'Edição', remover: 'Remoção', aprovar: 'Aprovação',
+  recusar: 'Recusa', pedido: 'Solicitação', backup: 'Backup',
+  ativo: 'Usuário', init: 'Carga inicial'
+};
+function rotuloAcao(a) { return ROTULO_ACAO[a] || String(a || '—'); }
+
+/* Gráfico de barras da trilha de auditoria, desenhado em SVG pelo DOM (sem
+   innerHTML): 12 meses vindos do servidor, mês vazio já com zero. */
+function desenharMensal(d) {
+  const alvo = $('hist-mensal');
+  if (!alvo) return;
+  alvo.textContent = '';
+  if (!d || !Array.isArray(d.meses) || !d.meses.length) return;
+  const meses = d.meses.map(m => ({
+    mes: String(m.mes || ''), total: Math.max(0, +m.total || 0)
+  }));
+  const total = meses.reduce((s, m) => s + m.total, 0);
+  const max = Math.max(1, ...meses.map(m => m.total));
+  const ultimo = meses[meses.length - 1] || { mes: '', total: 0 };
+  const mesAtual = (MES_ABREV[(+ultimo.mes.slice(5, 7) || 1) - 1] || '') +
+    '/' + ultimo.mes.slice(0, 4);
+  const primeiro = meses[0] || { mes: '' };
+  const periodo = (MES_ABREV[(+primeiro.mes.slice(5, 7) || 1) - 1] || '') +
+    '/' + primeiro.mes.slice(0, 4) + ' a ' + mesAtual;
+
+  const card = document.createElement('div');
+  card.className = 'hm-card';
+
+  const cab = document.createElement('div');
+  cab.className = 'hm-head';
+  const esq = document.createElement('div');
+  const titulo = document.createElement('h3');
+  titulo.textContent = 'Alterações por mês';
+  const sub = document.createElement('p');
+  sub.textContent = 'Alterações na trilha de auditoria, de ' + periodo + '.';
+  esq.append(titulo, sub);
+  const dir = document.createElement('div');
+  dir.className = 'hm-num';
+  const num = document.createElement('b');
+  num.textContent = String(total);
+  const rot = document.createElement('span');
+  rot.textContent = total === 1 ? ' alteração em 12 meses' : ' alterações em 12 meses';
+  const agora = document.createElement('em');
+  agora.className = 'hm-mes-atual';
+  agora.textContent = ultimo.total + ' em ' + mesAtual + ' (mês em curso)';
+  dir.append(num, rot, agora);
+  cab.append(esq, dir);
+  card.append(cab);
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const W = 640, H = 172, PL = 6, PR = 6, PT = 18, PB = 30;
+  const baseY = H - PB, alturaMax = baseY - PT;
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.setAttribute('class', 'hm-svg');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label',
+    'Gráfico de barras: ' + total + ' alterações nos últimos 12 meses');
+
+  [0, 0.5, 1].forEach(frac => {
+    const linha = document.createElementNS(NS, 'line');
+    const y = baseY - alturaMax * frac;
+    linha.setAttribute('x1', String(PL));
+    linha.setAttribute('x2', String(W - PR));
+    linha.setAttribute('y1', String(y));
+    linha.setAttribute('y2', String(y));
+    linha.setAttribute('class', frac === 0 ? 'hm-base' : 'hm-grid');
+    svg.append(linha);
+  });
+
+  const slot = (W - PL - PR) / meses.length;
+  const larg = Math.min(30, slot * 0.58);
+  meses.forEach((m, i) => {
+    const cx = PL + slot * i + slot / 2;
+    const h = m.total ? Math.max(3, m.total / max * alturaMax) : 0;
+    const atual = i === meses.length - 1;
+    // Trilho: o mês sem alteração aparece como coluna vazia, não como ausência.
+    const trilho = document.createElementNS(NS, 'rect');
+    trilho.setAttribute('x', String(cx - larg / 2));
+    trilho.setAttribute('y', String(PT));
+    trilho.setAttribute('width', String(larg));
+    trilho.setAttribute('height', String(alturaMax));
+    trilho.setAttribute('rx', '4');
+    trilho.setAttribute('class', 'hm-trilho');
+    svg.append(trilho);
+
+    const barra = document.createElementNS(NS, 'rect');
+    barra.setAttribute('x', String(cx - larg / 2));
+    barra.setAttribute('width', String(larg));
+    barra.setAttribute('rx', '4');
+    if (h) {
+      barra.setAttribute('y', String(baseY - h));
+      barra.setAttribute('height', String(h));
+      barra.setAttribute('class', 'hm-bar' + (atual ? ' hm-now' : ''));
+      barra.style.animationDelay = (i * 30) + 'ms';
+    } else {
+      barra.setAttribute('y', String(baseY - 2));
+      barra.setAttribute('height', '2');
+      barra.setAttribute('class', 'hm-bar hm-zero');
+      // Zero é dado, não ausência: o mês sem alteração mostra "0".
+      const zero = document.createElementNS(NS, 'text');
+      zero.setAttribute('x', String(cx));
+      zero.setAttribute('y', String(baseY - 6));
+      zero.setAttribute('text-anchor', 'middle');
+      zero.setAttribute('class', 'hm-valor hm-valor-zero');
+      zero.textContent = '0';
+      svg.append(zero);
+    }
+    const dica = document.createElementNS(NS, 'title');
+    const mes = m.mes.slice(0, 7).split('-');
+    dica.textContent = (MES_ABREV[(+mes[1] || 1) - 1] || '?') + '/' + mes[0] + ' · ' +
+      m.total + (m.total === 1 ? ' alteração' : ' alterações');
+    barra.append(dica);
+    svg.append(barra);
+
+    if (m.total) {
+      const valor = document.createElementNS(NS, 'text');
+      valor.setAttribute('x', String(cx));
+      valor.setAttribute('y', String(baseY - h - 4));
+      valor.setAttribute('text-anchor', 'middle');
+      valor.setAttribute('class', 'hm-valor' + (atual ? ' hm-lbl-now' : ''));
+      valor.textContent = String(m.total);
+      svg.append(valor);
+    }
+
+    const rotulo = document.createElementNS(NS, 'text');
+    rotulo.setAttribute('x', String(cx));
+    rotulo.setAttribute('y', String(baseY + 15));
+    rotulo.setAttribute('text-anchor', 'middle');
+    rotulo.setAttribute('class', 'hm-lbl' + (atual ? ' hm-lbl-now' : ''));
+    rotulo.textContent = MES_ABREV[(+mes[1] || 1) - 1] || '?';
+    svg.append(rotulo);
+    if (i === 0 || mes[1] === '01') {
+      const ano = document.createElementNS(NS, 'text');
+      ano.setAttribute('x', String(cx));
+      ano.setAttribute('y', String(baseY + 26));
+      ano.setAttribute('text-anchor', 'middle');
+      ano.setAttribute('class', 'hm-lbl-ano');
+      ano.textContent = mes[0];
+      svg.append(ano);
+    }
+  });
+  card.append(svg);
+
+  const acoes = Array.isArray(d.acoes) ? d.acoes : [];
+  if (acoes.length) {
+    const legenda = document.createElement('div');
+    legenda.className = 'hm-legenda';
+    const etiqueta = document.createElement('span');
+    etiqueta.className = 'hm-legenda-titulo';
+    etiqueta.textContent = 'Por tipo';
+    legenda.append(etiqueta);
+    acoes.slice(0, 6).forEach(a => {
+      const chip = document.createElement('span');
+      chip.className = 'hm-chip';
+      const n = document.createElement('b');
+      n.textContent = String(a.total);
+      chip.append(n, document.createTextNode(rotuloAcao(a.acao)));
+      legenda.append(chip);
+    });
+    card.append(legenda);
+  }
+  if (total === 0) {
+    const vazio = document.createElement('p');
+    vazio.className = 'hm-vazio';
+    vazio.textContent = 'Nenhuma alteração registrada nos últimos 12 meses.';
+    card.append(vazio);
+  }
+  if ((+d.total_geral || 0) > total) {
+    const rodape = document.createElement('p');
+    rodape.className = 'hm-vazio';
+    rodape.textContent = (+d.total_geral) + ' alterações no total, desde o início da trilha.';
+    card.append(rodape);
+  }
+  alvo.append(card);
 }
 
 (async () => {
