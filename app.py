@@ -293,6 +293,12 @@ CREATE TABLE IF NOT EXISTS contatos (
     -- — validar vigência."), que não filtra, não ordena e não expira.
     fonte TEXT NOT NULL DEFAULT '',
     vigente_desde TEXT NOT NULL DEFAULT '',
+    -- conferência: quando alguém olhou o dado e disse "continua valendo".
+    -- Separado de `vigente_desde`: aquele é de quando o documento é; este é de
+    -- quando uma pessoa conferiu. Um não substitui o outro — o ofício de 2024
+    -- continua sendo de 2024 depois de reconferido hoje.
+    conferido_em TEXT NOT NULL DEFAULT '',
+    conferido_por TEXT NOT NULL DEFAULT '',
     ordem_num REAL, ordem_idx INTEGER NOT NULL DEFAULT 0,
     atualizado_em TEXT NOT NULL DEFAULT (datetime('now')));
 CREATE TABLE IF NOT EXISTS uteis (
@@ -793,6 +799,8 @@ def build_hierarquia(con):
     def contato_pub(c, no_id=""):
         return {"id": c["id"], "tipo": c["cargo"], "descricao": c["descricao"],
                 "valor": c["telefone"] or c["email"], "observacao": c["observacao"],
+                "conferido_em": c["conferido_em"] if "conferido_em" in c.keys() else "",
+                "conferido_por": c["conferido_por"] if "conferido_por" in c.keys() else "",
                 "fonte": c["fonte"] if "fonte" in c.keys() else "",
                 "vigente_desde": c["vigente_desde"] if "vigente_desde" in c.keys() else ""}
 
@@ -1033,6 +1041,8 @@ def init_db():
         ("historico", "autor_nome", "ALTER TABLE historico ADD COLUMN autor_nome TEXT NOT NULL DEFAULT ''"),
         ("contatos", "fonte", "ALTER TABLE contatos ADD COLUMN fonte TEXT NOT NULL DEFAULT ''"),
         ("contatos", "vigente_desde", "ALTER TABLE contatos ADD COLUMN vigente_desde TEXT NOT NULL DEFAULT ''"),
+        ("contatos", "conferido_em", "ALTER TABLE contatos ADD COLUMN conferido_em TEXT NOT NULL DEFAULT ''"),
+        ("contatos", "conferido_por", "ALTER TABLE contatos ADD COLUMN conferido_por TEXT NOT NULL DEFAULT ''"),
     ]:
         try:
             nomes = {r[1] for r in con.execute(f"PRAGMA table_info({_tbl})").fetchall()}
@@ -1132,6 +1142,7 @@ def admin_ids(con):
 CAMPOS_CONTATO = (
     "SELECT ct.id, ct.nome, ct.cargo, ct.telefone, ct.email,"
     " ct.descricao, ct.fonte, ct.vigente_desde,"
+    " ct.conferido_em, ct.conferido_por,"
     " s.nome AS setor, s.id AS setor_id, s.virtual AS setor_virtual,"
     " u.nome AS unidade, u.id AS unidade_id, u.virtual AS unidade_virtual,"
     " f.nome AS forum, f.id AS forum_id,"
@@ -1162,6 +1173,18 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
+        # `?v=` é o hash curto do próprio arquivo (ver
+        # scripts/atualizar-cache-busting.py): se bate, esta URL nunca muda de
+        # conteúdo e o navegador pode guardar para sempre. O HTML fica com
+        # no-cache — é ele que carrega o `?v=` novo, então a troca de versão
+        # chega na próxima abertura sem F5 forçado.
+        versao = (urllib.parse.parse_qs(
+            urllib.parse.urlparse(self.path).query).get("v") or [""])[0]
+        if name.endswith(".html"):
+            self.send_header("Cache-Control", "no-cache")
+        elif versao and versao == hashlib.sha256(body).hexdigest()[:8]:
+            self.send_header("Cache-Control",
+                             "public, max-age=%d, immutable" % (60 * 60 * 24 * 365))
         self.end_headers()
         self.wfile.write(body)
 
@@ -2130,10 +2153,11 @@ class Handler(BaseHTTPRequestHandler):
             nid = novo_id(con, "contatos", "C")
             con.execute(
                 "INSERT INTO contatos (id, setor_id, nome, cargo, telefone, email,"
-                " fonte, vigente_desde)"
-                " VALUES (?,?,?,?,?,?,?,?)",
+                " descricao, fonte, vigente_desde)"
+                " VALUES (?,?,?,?,?,?,?,?,?)",
                 (nid, data.get("setor_id"), data.get("nome"), data.get("cargo", ""),
                  data.get("telefone", ""), data.get("email", ""),
+                 data.get("descricao") or data.get("nome") or "",
                  "criação manual", time.strftime("%Y-%m-%d")))
             log(con, "criar", nid, f"criado: {data.get('nome')}", uid)
             for aid in admin_ids(con):
@@ -2145,6 +2169,36 @@ class Handler(BaseHTTPRequestHandler):
                 "SELECT * FROM contatos WHERE id=?", (nid,)).fetchone()
             con.close()
             return self._json(dict(row), 201)
+        # Conferir: o dado continua valendo hoje. Não é edição — o valor e a
+        # procedência ficam como estão; grava-se quem olhou e quando, e a
+        # auditoria registra a conferência. Depende do escopo do setor, como
+        # editar e remover.
+        partes = u.path.rstrip("/").split("/")
+        if len(partes) == 5 and partes[1:3] == ["api", "contatos"] and partes[4] == "conferir":
+            uid = self._uid()
+            if not uid:
+                return self._json({"erro": "não autenticado"}, 403)
+            cid = urllib.parse.unquote(partes[3]).strip()
+            con = get_db()
+            row = con.execute("SELECT * FROM contatos WHERE id=?", (cid,)).fetchone()
+            if not row:
+                con.close()
+                return self._json({"erro": "não encontrado"}, 404)
+            if not self._cobre(con, uid, "setor", self._cadeia(con, contato_id=cid)[3] or 0):
+                con.close()
+                return self._json({"erro": "sem acesso a este local"}, 403)
+            quem = con.execute("SELECT usuario FROM usuarios WHERE id=?", (uid,)).fetchone()
+            quando = time.strftime("%Y-%m-%d %H:%M")
+            con.execute(
+                "UPDATE contatos SET conferido_em=?, conferido_por=? WHERE id=?",
+                (quando, quem["usuario"] if quem else "", cid))
+            log(con, "conferir", cid,
+                f"conferido: {row['nome']} ({row['cargo']})", uid)
+            con.commit()
+            invalidar_hierarquia()
+            row = con.execute("SELECT * FROM contatos WHERE id=?", (cid,)).fetchone()
+            con.close()
+            return self._json(dict(row))
         return self.send_error(404)
 
     def do_DELETE(self):
@@ -2220,6 +2274,11 @@ if __name__ == "__main__":
     ThreadingHTTPServer.allow_reuse_address = True
     print("Pública: http://%s:%d  |  Admin: http://%s:%d/admin (INTRANET_ONLY=%s)"
           % (host, port, host, port, "1" if INTRANET_ONLY else "0"))
+    # Quem é admin sai daqui, não do banco: sem esta linha, "pode_admin: false"
+    # com o e-mail digitado errado na allowlist vira uma caçada silenciosa.
+    print("Admin por allowlist: %s"
+          % (", ".join(sorted(ADMIN_EMAILS)) if ADMIN_EMAILS
+             else "vazia (ninguém é promovido por e-mail)"))
     if LOCAL_LOGIN:
         print("AVISO: login local ativo (dev/testes). Produção: LOCAL_LOGIN=0.")
     ThreadingHTTPServer((host, port), Handler).serve_forever()

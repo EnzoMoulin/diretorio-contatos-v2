@@ -4,8 +4,11 @@
  *
  * A suíte de Python bate na API e confere o HTML servido; ela não prova que o
  * JavaScript monta a tela. Este teste abre o /admin, entra com o login local,
- * clica em "Reconfirmar" e confere a primeira linha da fila e o gráfico de
- * mudanças por mês — o caminho que ninguém estava olhando.
+ * clica em "Reconfirmar" e confere a primeira linha da fila, baixa o CSV e
+ * compara o arquivo com o que está na tela, e confere o gráfico de mudanças por
+ * mês — o caminho que ninguém estava olhando. O CSV entra aqui porque o guard
+ * de Python é estrutural (lê o JS): só um download de verdade prova que o
+ * arquivo sai com o cabeçalho e as linhas certas.
  *
  * Roda numa cópia do app em diretório temporário: nunca toca no contatos.db
  * do dono (que pode ter o resultado do teste manual dele).
@@ -18,7 +21,7 @@
  */
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -117,7 +120,7 @@ async function main() {
     const { token } = await login.json();
 
     navegador = await chromium.launch({ headless: !process.env.PW_HEADED });
-    const contexto = await navegador.newContext({ viewport: { width: 1360, height: 900 } });
+    const contexto = await navegador.newContext({ viewport: { width: 1360, height: 900 }, acceptDownloads: true });
     const erros = [];
     await contexto.addInitScript(t => {
       localStorage.setItem('contatos-token', t);
@@ -175,7 +178,69 @@ async function main() {
       null, { timeout: 10000 });
     ok('contato clicado aparece destacado na lista (navegação executou)');
 
-    console.log('\n4) mudanças por mês no Registro');
+    console.log('\n4) exportar CSV do que está na tela');
+    // O CSV era o único caminho de saída do dado e não tinha teste de ponta a
+    // ponta: o guard era estrutural (lê o JS). Aqui o arquivo é baixado de
+    // verdade e conferido contra a tela, que é a fonte do export.
+    const botaoCsv = pagina.locator('#fc-exportar');
+    await botaoCsv.waitFor({ state: 'visible', timeout: 15000 });
+    const [download] = await Promise.all([
+      pagina.waitForEvent('download', { timeout: 20000 }),
+      botaoCsv.click()
+    ]);
+    conferir(/\.csv$/.test(download.suggestedFilename()),
+      'download tem nome de CSV (' + download.suggestedFilename() + ')');
+    const bruto = readFileSync(await download.path(), 'utf8').replace(/^\uFEFF/, '');
+    const linhas = bruto.split('\r\n').filter(l => l.trim() !== '');
+    const colunas = linhas[0].split(';').map(c => c.replace(/^"|"$/g, ''));
+    conferir(colunas.join('|') === 'Nome|Tipo|Valor|Fonte|Desde|Conferido em|Conferido por',
+      'cabeçalho do CSV: ' + colunas.join('; '));
+    const naTela = await pagina.$$eval('#lista .fc-contato', els => els.length);
+    conferir(linhas.length - 1 === naTela,
+      'CSV tem ' + (linhas.length - 1) + ' linha(s) para ' + naTela + ' contato(s) na tela');
+    const seteColunas = linhas.slice(1).every(l => (l.match(/;/g) || []).length === 6);
+    conferir(linhas.length > 1 && seteColunas,
+      'toda linha do CSV traz as 7 colunas');
+    const novoNaBarra = await pagina.evaluate(() => {
+      const b = document.getElementById('fc-novo');
+      return { existe: !!b, oculto: b ? getComputedStyle(b).display === 'none' : null };
+    });
+    conferir(novoNaBarra.oculto,
+      'com contato na tela o "Novo contato" da barra não aparece (a ação mora na seção)');
+
+    console.log('\n5) Exportar CSV fora de uma tela de contatos');
+    // O botão só existe onde há contato na tela. Fora daí ele tem de sair de
+    // cena com estado coerente — desabilitado e com o motivo escrito —, não
+    // sobreviver habilitado de uma tela anterior (clique que exporta nada) nem
+    // virar botão cinza morto em toda tela do sistema.
+    await pagina.locator('[data-view="consulta"]').click();
+    await pagina.waitForFunction(
+      () => document.querySelectorAll('#lista .fc-contato').length === 0,
+      null, { timeout: 15000 });
+    const semContatos = await pagina.evaluate(() => {
+      const b = document.getElementById('fc-exportar');
+      return {
+        oculto: getComputedStyle(b).display === 'none',
+        hidden: b.classList.contains('hidden'),
+        disabled: b.disabled,
+        title: b.title,
+        aria: b.getAttribute('aria-label'),
+      };
+    });
+    conferir(semContatos.hidden && semContatos.oculto,
+      'sem contato na tela o botão sai de cena (display none)');
+    conferir(semContatos.disabled, 'e sai desabilitado, não clicável');
+    conferir(/^Nada para exportar/.test(semContatos.title || ''),
+      'o title explica o estado: ' + semContatos.title);
+    conferir(semContatos.aria === semContatos.title,
+      'o aria-label repete o motivo (leitor de tela não lê title)');
+    const novoInicio = await pagina.evaluate(() => {
+      const b = document.getElementById('fc-novo');
+      return b ? getComputedStyle(b).display === 'none' : null;
+    });
+    conferir(novoInicio, 'no início o "Novo contato" da barra também fica fora de cena');
+
+    console.log('\n6) mudanças por mês no Registro');
     await pagina.locator('#menu-reg').click();
     await pagina.waitForSelector('#hist-mensal .hm-card svg .hm-bar', { timeout: 15000 });
     const barras = await pagina.$$eval('#hist-mensal .hm-bar', els => els.length);
@@ -193,7 +258,7 @@ async function main() {
     await pagina.screenshot({ path: join(pasta, 'registro.png'), fullPage: true });
     console.log('  evidência: ' + join(pasta, 'registro.png'));
 
-    console.log('\n5) console do navegador');
+    console.log('\n7) console do navegador');
     conferir(erros.length === 0, 'sem erro de JavaScript' + (erros.length ? ': ' + erros.slice(0, 3).join(' | ') : ''));
   } catch (e) {
     falha('exceção: ' + (e && e.message ? e.message : String(e)));

@@ -39,15 +39,30 @@ function obsVisivel(c) {
   return t;
 }
 
+/* Procedência + conferência na mesma linha. São duas datas diferentes:
+   `vigente_desde` é de quando é o documento; `conferido_em` é de quando alguém
+   olhou o dado e disse que continua valendo. */
 function htmlVigencia(c) {
   const fonte = String((c && c.fonte) || '').trim();
-  if (!fonte) return '';
-  const vig = String((c && c.vigente_desde) || '').trim();
-  const data = /^\d{4}-\d{2}/.test(vig)
-    ? '<span class="fc-contato-fonte-data" title="Vigente desde ' + esc(vig) + '">desde ' +
-      vig.slice(5, 7) + '/' + vig.slice(0, 4) + '</span>'
-    : '';
-  return '<p class="fc-contato-fonte">' + esc(fonte) + data + '</p>';
+  const conf = String((c && c.conferido_em) || '').trim();
+  const partes = [];
+  if (fonte) {
+    const vig = String((c && c.vigente_desde) || '').trim();
+    const data = /^\d{4}-\d{2}/.test(vig)
+      ? '<span class="fc-contato-fonte-data" title="Vigente desde ' + esc(vig) + '">desde ' +
+        vig.slice(5, 7) + '/' + vig.slice(0, 4) + '</span>'
+      : '';
+    partes.push(esc(fonte) + data);
+  }
+  if (conf) {
+    const dia = /^\d{4}-\d{2}-\d{2}/.test(conf)
+      ? conf.slice(8, 10) + '/' + conf.slice(5, 7) + '/' + conf.slice(0, 4) : conf;
+    const por = String((c && c.conferido_por) || '').trim();
+    partes.push('<span class="fc-contato-conferido" title="Conferido' +
+      (por ? ' por ' + esc(por) : '') + ' em ' + esc(conf) + '">✓ conferido ' + esc(dia) + '</span>');
+  }
+  if (!partes.length) return '';
+  return '<p class="fc-contato-fonte">' + partes.join(' · ') + '</p>';
 }
 
 /* Aviso flutuante: substitui o alert() nativo, que trava a página e aparece
@@ -573,7 +588,10 @@ function opcoesComarcas(comarcas, selecionado) {
 }
 // ctxOk: o contexto do contato está coberto → mostra Editar/Remover
 function contatosCards(contatos, ctxOk) {
-  if (!contatos || !contatos.length) return '<div class="fc-empty">Nenhum contato cadastrado.</div>';
+  // `fc-empty-contatos` é o marcador de "esta é uma tela de contatos e ela
+  // está vazia": é o que faz o Exportar CSV ficar cinza com o motivo em vez de
+  // desaparecer sem explicação (ver atualizarExportar).
+  if (!contatos || !contatos.length) return '<div class="fc-empty fc-empty-contatos">Nenhum contato cadastrado.</div>';
   return '<div class="fc-contatos">' + contatos.map(c => {
     const tipo = fmtTipoContato(c.tipo);
     const valor = fmtValor(c.tipo, c.valor);
@@ -590,7 +608,9 @@ function contatosCards(contatos, ctxOk) {
       botaoVcf({ tipo: c.tipo, valor: c.valor }, String(c.descricao || '').trim() || tipo) +
       botaoLink(c.id, String(c.descricao || '').trim() || tipo);
     if (ctxOk) {
-      acoes += '<button type="button" class="fc-icon-btn" data-edit="' + esc(c.id) +
+      acoes += '<button type="button" class="fc-icon-btn fc-icon-btn--ok" data-conf="' + esc(c.id) +
+        '" title="Marcar como conferido hoje" aria-label="Marcar como conferido hoje">✓ Conferi</button>' +
+        '<button type="button" class="fc-icon-btn" data-edit="' + esc(c.id) +
         '" title="Editar contato">✏️ Editar</button>' +
         '<button type="button" class="fc-icon-btn fc-icon-btn--danger" data-del="' + esc(c.id) +
         '" title="Remover contato"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button>';
@@ -602,7 +622,10 @@ function contatosCards(contatos, ctxOk) {
     const observacaoHtml = observacao
       ? '<p class="fc-contato-observacao' + (/contato provis[oó]rio/i.test(observacao) ? ' fc-contato-observacao--provisoria' : '') + '">' + esc(observacao) + '</p>'
       : '';
-    return '<article class="fc-contato" data-contato="' + esc(c.id) + '">' +
+    return '<article class="fc-contato" data-contato="' + esc(c.id) + '"' +
+      (c.fonte ? ' data-fonte="' + esc(c.fonte) + '"' : '') +
+      (c.vigente_desde ? ' data-vigente-desde="' + esc(c.vigente_desde) + '"' : '') +
+      (c.conferido_em ? ' data-conferido-em="' + esc(c.conferido_em) + '" data-conferido-por="' + esc(c.conferido_por || '') + '"' : '') + '>' +
       '<div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(tipo) + '</span>' + descricaoHtml + observacaoHtml + htmlVigencia(c) + '</div>' +
       '<div class="fc-contato-side">' + valorHtml + '<div class="fc-contato-actions">' + acoes + '</div></div></article>';
   }).join('') + '</div>';
@@ -627,12 +650,19 @@ function cardNo(no) {
 }
 function exportarCsvVisivel() {
   const host = document.getElementById("lista") || document;
-  const linhas = [["Nome", "Tipo", "Valor"]];
+  // Procedência e conferência viajam com o dado: quem recebe a planilha precisa
+  // saber de onde veio cada contato, de quando ele é e o que já foi revisado —
+  // sem essas colunas o arquivo parece uma base intocada, sem origem.
+  const linhas = [["Nome", "Tipo", "Valor", "Fonte", "Desde", "Conferido em", "Conferido por"]];
   host.querySelectorAll(".fc-contato").forEach(a => {
     const t = a.querySelector(".fc-contato-tipo");
     const n = a.querySelector("h4");
     const v = a.querySelector(".fc-contato-valor");
-    linhas.push([(n ? n.textContent : "").trim(), (t ? t.textContent : "").trim(), (v ? v.textContent : "").trim()]);
+    const em = a.dataset.conferidoEm || "";
+    const vig = a.dataset.vigenteDesde || "";
+    linhas.push([(n ? n.textContent : "").trim(), (t ? t.textContent : "").trim(), (v ? v.textContent : "").trim(),
+      a.dataset.fonte || "", vig ? dataCurta(vig) : "",
+      em ? dataCurta(em) : "", a.dataset.conferidoPor || ""]);
   });
   if (linhas.length < 2) {
     if (typeof mostrarToast === "function") mostrarToast("Nada para exportar.", "warning");
@@ -648,24 +678,102 @@ function exportarCsvVisivel() {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   if (typeof mostrarToast === "function") mostrarToast("CSV exportado.", "success");
 }
+/* A barra acima do painel é o lugar das ações sobre o que está na tela. O CSV
+   nasceu no rodapé, depois da lista inteira e em letra pequena: era o único
+   caminho de saída do dado e o pixel menos visível da tela. Agora ele fica ao
+   lado do Reconfirmar, com o mesmo peso visual. */
+function vincularBarraPainel() {
+  const b = $('fc-exportar');
+  if (!b || b.getAttribute('data-ok')) return;
+  b.setAttribute('data-ok', '1');
+  b.onclick = () => exportarCsvVisivel();
+}
+/* Fila vazia era um botão que não fazia nada: o clique abria e fechava a caixa
+   no mesmo gesto, sem texto nenhum — impossível distinguir de JS quebrado. O
+   estado agora está no próprio botão: desabilitado, com o motivo no `title`
+   (hover) e no `aria-label` (leitor de tela, que não lê `title`). A contagem
+   usa o filtro sem ordenar: ordenar 329 itens a cada render é desperdício que
+   só não dói nesta escala. */
+function atualizarContagemReconfirmar() {
+  const n = $('fc-antigos-n'), b = $('fc-antigos');
+  if (!n || !b) return;
+  const carregado = !!(H && (H.comarcas || []).length);
+  const qtd = carregado ? contatosComProcedencia().length : 0;
+  n.textContent = qtd ? String(qtd) : '';
+  n.classList.toggle('hidden', !qtd);
+  const txt = $('fc-antigos-txt');
+  const dica = 'Fila de revisão: quem nunca foi conferido primeiro, depois a conferência mais antiga';
+  const motivo = 'Nada para reconfirmar: nenhum contato desta base tem data de vigência registrada';
+  // A barra aparece antes de a hierarquia chegar, e nesse instante não dá para
+  // saber se a fila está vazia. O botão fica desabilitado e mudo por um instante,
+  // em vez de habilitado para um clique que abriria caixa nenhuma.
+  const carregando = !carregado;
+  const vazio = carregado && qtd === 0;
+  // O estado também é texto visível: `title` só existe no hover e botão
+  // desabilitado nem recebe foco, então só ele deixaria o motivo inalcançável.
+  if (txt) txt.textContent = vazio ? 'Nada para reconfirmar' : 'Reconfirmar';
+  b.disabled = vazio || carregando;
+  b.classList.toggle('vazio', vazio || carregando);
+  b.title = carregando ? 'Carregando a fila de revisão…' : (vazio ? motivo : dica);
+  if (carregando) b.setAttribute('aria-label', 'Carregando a fila de revisão');
+  else if (vazio) b.setAttribute('aria-label', motivo);
+  else b.removeAttribute('aria-label');  // sem rótulo extra: "Reconfirmar 329" já é o nome
+}
+/* O Exportar CSV tem estado próprio pela mesma razão do Reconfirmar: sem
+   contato na tela não há o que exportar, e o motivo vai no `title` (hover) e
+   no `aria-label` (leitor de tela, que não lê `title`) — botão desabilitado
+   nem recebe foco, então sem o par o estado fica sem explicação.
+   Três estados, e a diferença importa: na tela de contatos vazia (unidade ou
+   setor sem contato cadastrado) o botão fica no lugar, cinza, dizendo por quê,
+   porque ali a pergunta é "para onde foi o Exportar?"; nas telas de navegação
+   (início, comarca, fórum) não existe ação sobre o que está na tela, então o
+   botão sai de cena em vez de virar botão morto em toda tela do sistema. */
+function atualizarExportar(tem, telaVazia) {
+  const exp = $('fc-exportar');
+  if (!exp) return;
+  const dica = 'Exportar os contatos visíveis em CSV, com fonte e data de vigência';
+  const motivo = 'Nada para exportar: nenhum contato cadastrado nesta unidade ou setor';
+  exp.classList.toggle('hidden', !tem && !telaVazia);
+  exp.disabled = !tem;
+  exp.title = tem ? dica : motivo;
+  if (tem) exp.removeAttribute('aria-label');
+  else exp.setAttribute('aria-label', motivo);
+}
+/* Na unidade sem contato a ação que resolve o estado é cadastrar o primeiro, e
+   ela mora no fim do painel (botão do cabeçalho da seção de contatos). Aqui ela
+   sobe para a barra, ao lado do Exportar cinza: quem lê o aviso de "sem
+   contato" enxerga a saída e a entrada no mesmo lugar. O botão da barra só
+   delega o clique ao do painel — uma implementação só, e a permissão é a mesma
+   que já decide o outro (sem `btn-novo-contato` na tela, este não aparece). */
+function atualizarNovoNaBarra(telaVazia) {
+  const b = $('fc-novo');
+  if (!b) return;
+  const doPainel = $('btn-novo-contato');
+  const caixa = $('create-box');
+  const formularioAberto = !!(caixa && !caixa.classList.contains('hidden'));
+  const mostrar = !!(telaVazia && doPainel && !formularioAberto);
+  b.classList.toggle('hidden', !mostrar);
+  b.onclick = () => {
+    const alvo = $('btn-novo-contato');
+    if (!alvo) return;
+    alvo.click();
+    // O formulário aberto assume o papel: o botão da barra sai de cena, senão
+    // ficam dois "Novo contato" na mesma tela.
+    b.classList.add('hidden');
+  };
+}
+function atualizarBarraPainel() {
+  vincularBarraPainel();
+  const lista = $('lista');
+  const tem = !!(lista && lista.querySelector('.fc-contato'));
+  const telaVazia = !!(lista && lista.querySelector('.fc-empty-contatos'));
+  atualizarExportar(tem, telaVazia);
+  atualizarNovoNaBarra(telaVazia);
+  atualizarContagemReconfirmar();
+}
 function vincularAcoes() {
   vincularCopias();
-  document.querySelectorAll('.fc-print-footer').forEach(ft => {
-    if (ft.querySelector('[data-csv]')) return;
-    const painel = ft.closest ? ft.closest('.fc-panel') : null;
-    if (!(painel || document).querySelector('.fc-contato')) return;
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "fc-btn";
-    b.setAttribute("data-csv", "");
-    b.title = "Exportar contatos visíveis (CSV)";
-    b.setAttribute("aria-label", "Exportar contatos visíveis em CSV");
-    b.innerHTML = SVG_BAIXAR + " Exportar CSV";
-    b.onclick = () => exportarCsvVisivel();
-      const topo = ft.querySelector('[data-scroll-top]');
-      if (topo) ft.insertBefore(b, topo);
-      else ft.appendChild(b);
-  });
+  atualizarBarraPainel();
   document.querySelectorAll('[data-gerais-toggle]').forEach(card => {
     const corpo0 = card.nextElementSibling;
     const pr0 = card.querySelector('[data-gerais-print]');
@@ -727,6 +835,9 @@ function vincularAcoes() {
   });
   document.querySelectorAll('#lista [data-edit]').forEach(b => {
     b.onclick = (e) => { e.stopPropagation(); abrirEdicao(b.dataset.edit); };
+  });
+  document.querySelectorAll('#lista [data-conf]').forEach(b => {
+    b.onclick = (e) => { e.stopPropagation(); conferirContato(b.dataset.conf, b); };
   });
   document.querySelectorAll('#lista [data-del]').forEach(b => {
     b.onclick = (e) => { e.stopPropagation(); excluirContato(b.dataset.del); };
@@ -964,16 +1075,26 @@ function renderNo() {
   const tipoTela = String(no.tipo || '').toUpperCase() === 'SETOR' ? 'Setor' : 'Unidade';
   const nivelNo = tipoTela === 'Setor' ? 'setor' : 'unidade';
   const ctxOk = cobre(nivelNo, no.id);
+  // Formulário de novo contato: mora dentro da seção "Contatos deste Setor" —
+  // ele já foi um bloco fixo no topo do painel, e o clique no botão abria o
+  // formulário lá em cima, longe de onde a pessoa clicou. Nasce fechado, para
+  // não empurrar a lista de quem só veio consultar, e o `×` fecha de novo.
+  const podeNovo = logado() && tipoTela === 'Setor' && ctxOk;
+  if (!podeNovo) setorAlvo = null;
+  const boxAberto = podeNovo && setorAlvo === no.id;
   c.innerHTML =
     '<button type="button" class="fc-back" id="fc-back-no">← ' + esc(pai ? pai.nome : raiz.nome) + '</button>' +
     '<div class="fc-head"><div><h2 class="fc-title">' + esc(no.nome) + covMark(nivelNo, no.id) + '</h2>' +
     breadcrumbHtml(m, f, no) + '</div></div>' +
     '<div class="fc-meta"><span class="fc-pill fc-pill-type">' + esc(tipo) + '</span>' +
-    badgeQuantidade(qtdSetores(no.filhos || []), 'Setor', 'Setores') + solBtn(nivelNo, no.id) + gestBtn(nivelNo, no.id) + '</div>' +
+    badgeQuantidade(qtdSetores(no.filhos || []), 'Setor', 'Setores') + solBtn(nivelNo, no.id) + '</div>' +
     '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço:</strong> ' + linkEndereco(no.enderecoExibicao) +
     (no.cepExibicao ? ' • CEP ' + esc(no.cepExibicao) : '') +
     (no.endereco ? '' : ' <span class="fc-muted">(' + (pai ? 'herdado da Unidade' : (ehOrgao(m) ? 'herdado da Sede' : 'herdado do Fórum')) + ')</span>') + '</div></div>' +
-    '<div class="fc-section"><div class="fc-section-title"><h3>Contatos ' + (tipoTela === 'Setor' ? 'deste Setor' : 'desta Unidade') + '</h3></div>' +
+    '<div class="fc-section"><div class="fc-section-title"><h3>Contatos ' + (tipoTela === 'Setor' ? 'deste Setor' : 'desta Unidade') + '</h3>' +
+    (podeNovo
+      ? '<button type="button" class="btn-primary btn-novo" id="btn-novo-contato">Novo contato</button>' : '') + '</div>' +
+    (podeNovo ? criarBoxHtml(boxAberto) : '') +
     contatosCards(no.contatos || [], ctxOk) + '</div>' +
     ((no.filhos || []).length
       ? '<div class="fc-section"><div class="fc-section-title"><h3>Setores</h3></div>' +
@@ -992,14 +1113,38 @@ function renderNo() {
   vincularBreadcrumbs();
   vincularAcoes();
   destacarMapaAdmin(m.nome);
-  // create-box: só no setor coberto
-  if (logado() && tipoTela === 'Setor' && cobre('setor', no.id)) {
-    setorAlvo = no.id;
-    $('create-box').classList.remove('hidden');
-    $('save-status').textContent = '';
-  } else {
-    esconderCreate();
+  if (podeNovo) {
+    $('btn-novo-contato').onclick = () => {
+      setorAlvo = no.id;
+      $('create-box').classList.remove('hidden');
+      $('save-status').textContent = '';
+      $('f-nome').focus();
+    };
+    $('fechar-create').onclick = () => { esconderCreate(); $('save-status').textContent = ''; };
+    $('salvar').onclick = salvarContato;
   }
+}
+// O formulário nasce e morre junto com o innerHTML da lista, então os handlers
+// são religados a cada render — mesmo padrão dos botões `data-no`. O HTML é
+// literal, sem interpolação: nada de dado de usuário entra por aqui.
+/* Tipos do modelo: `cargo` guarda o tipo, `telefone`/`email` guardam o valor e
+   `descricao` diz quem atende. O formulário pede exatamente essas três coisas —
+   antes pedia "Nome" e "Cargo", e o card (que mostra tipo + valor + descrição)
+   saía sem o que a pessoa tinha digitado. */
+const TIPOS_CONTATO = ['Telefone', 'Ramal', 'WhatsApp', 'E-mail', 'Fax'];
+
+function criarBoxHtml(aberto) {
+  return '<div class="create-box' + (aberto ? '' : ' hidden') + '" id="create-box">' +
+    '<div class="create-box-head"><h3>Novo contato neste setor</h3>' +
+    '<button type="button" class="create-close" id="fechar-create" aria-label="Fechar o formulário de novo contato">×</button></div>' +
+    '<div class="form-grid">' +
+    '<select id="f-tipo" class="fc-select" aria-label="Tipo do contato">' +
+    TIPOS_CONTATO.map(t => '<option value="' + esc(t) + '">' + esc(t) + '</option>').join('') +
+    '</select>' +
+    '<input id="f-valor" placeholder="Número ou e-mail*" autocomplete="off">' +
+    '<input id="f-desc" placeholder="Quem atende (ex.: Gabinete) — opcional" autocomplete="off">' +
+    '<button id="salvar" class="btn-primary">Salvar</button><span id="save-status"></span>' +
+    '</div></div>';
 }
 function esconderCreate() {
   setorAlvo = null;
@@ -1119,37 +1264,79 @@ function realcarBusca(termo, texto){
   }
   return out + base.slice(i);
 }
-// ---- reconfirmar: os contatos com procedência mais antiga primeiro ----------
+// ---- reconfirmar: a fila de manutenção -------------------------------------
 // `vigente_desde` não serve só para exibir: é a fila de manutenção. Quanto mais
 // velha a data, mais provável que o ramal tenha mudado desde o documento. A
-// lista sai do mesmo índice da busca, ordenada da data mais antiga para a mais
-// recente, e mostra a fonte ao lado — quem reconfere sabe o que está conferindo.
-function contatosParaReconfirmar() {
+// lista sai do mesmo índice da busca e ordena por quem precisa mais: primeiro
+// os que nunca foram conferidos, depois os conferidos há mais tempo — e, entre
+// iguais, o documento mais antigo. Cada linha mostra a fonte e a conferência,
+// e o ✓ marca ali mesmo, sem sair da fila.
+function contatosComProcedencia() {
   if (indiceBusca === null) indiceBusca = construirIndiceBusca();
   return indiceBusca
-    .filter(item => String(item.contato.vigente_desde || '').trim() !== '')
-    .sort((a, b) => String(a.contato.vigente_desde).localeCompare(String(b.contato.vigente_desde)));
+    .filter(item => String(item.contato.vigente_desde || '').trim() !== '');
+}
+function contatosParaReconfirmar() {
+  return contatosComProcedencia().sort((a, b) => {
+      const ka = String(a.contato.conferido_em || '').trim();
+      const kb = String(b.contato.conferido_em || '').trim();
+      if (ka !== kb) return ka.localeCompare(kb);
+      return String(a.contato.vigente_desde).localeCompare(String(b.contato.vigente_desde));
+    });
+}
+function dataCurta(iso) {
+  return /^\d{4}-\d{2}-\d{2}/.test(iso) ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : iso;
+}
+function marcarFila(aberta) {
+  const b = $('fc-antigos');
+  if (b) b.setAttribute('aria-expanded', aberta ? 'true' : 'false');
 }
 function pintarReconfirmar() {
   const caixa = $('fc-busca-resultados');
   if (!caixa) return;
   const itens = contatosParaReconfirmar();
-  if (!itens.length) { caixa.setAttribute('hidden', ''); return; }
+  if (!itens.length) { caixa.setAttribute('hidden', ''); marcarFila(false); atualizarContagemReconfirmar(); return; }
+  const pendentes = itens.filter(i => !String(i.contato.conferido_em || '').trim()).length;
   const cabecalho = '<div class="fc-busca-cabecalho">' + itens.length +
-    ' contatos com procedência registrada — mais antigos primeiro</div>';
+    ' contatos com procedência registrada · ' + pendentes + ' nunca conferidos</div>';
   caixa.innerHTML = [cabecalho].concat(itens.map((item, i) => {
     const c = item.contato;
     const quando = String(c.vigente_desde || '').slice(0, 7).split('-').reverse().join('/');
-    return '<button type="button" class="fc-busca-item" data-reconf-i="' + i + '" role="option">' +
+    const conf = String(c.conferido_em || '').trim();
+    const confTxt = conf ? ' · conferido ' + dataCurta(conf) : ' · nunca conferido';
+    return '<div class="fc-reconf-row" role="presentation">' +
+      '<button type="button" class="fc-busca-item" data-reconf-i="' + i + '" role="option">' +
       '<strong>' + esc(c.descricao || fmtTipoContato(c.tipo)) + '</strong>' +
       '<small>' + esc(fmtTipoContato(c.tipo) + (c.valor ? ' · ' + c.valor : '')) + '</small>' +
       '<small>' + esc(item.caminho) + '</small>' +
-      '<small class="fc-busca-fonte">' + esc(c.fonte || '') + ' · desde ' + esc(quando) + '</small></button>';
+      '<small class="fc-busca-fonte">' + esc(c.fonte || '') + ' · desde ' + esc(quando) +
+      esc(confTxt) + '</small></button>' +
+      '<button type="button" class="fc-conf-btn" data-conf-i="' + i +
+      '" title="Marcar como conferido hoje" aria-label="Marcar como conferido hoje">✓</button>' +
+      '</div>';
   })).join('');
   caixa.removeAttribute('hidden');
+  marcarFila(true);
   caixa.querySelectorAll('[data-reconf-i]').forEach(btn => {
     const item = itens[+btn.getAttribute('data-reconf-i')];
-    btn.onclick = () => { caixa.setAttribute('hidden', ''); caixa.innerHTML = ''; irParaResultado(item); };
+    btn.onclick = () => { caixa.setAttribute('hidden', ''); caixa.innerHTML = ''; marcarFila(false); irParaResultado(item); };
+  });
+  caixa.querySelectorAll('[data-conf-i]').forEach(btn => {
+    btn.onclick = async (ev) => {
+      ev.stopPropagation();
+      const c = itens[+btn.getAttribute('data-conf-i')].contato;
+      btn.disabled = true;
+      const r = await fetch('/api/contatos/' + encodeURIComponent(c.id) + '/conferir',
+        { method: 'POST', headers: auth(), body: '{}' });
+      if (!r.ok) {
+        btn.disabled = false;
+        mostrarToast('Não foi possível conferir: ' + await r.text(), 'erro');
+        return;
+      }
+      await recarregarHierarquia(true);
+      pintarReconfirmar();
+      mostrarToast('Conferido hoje.');
+    };
   });
 }
 function vincularReconfirmar() {
@@ -1164,7 +1351,7 @@ function vincularReconfirmar() {
     ev.stopPropagation();
     const caixa = $('fc-busca-resultados');
     if (caixa && !caixa.hasAttribute('hidden') && caixa.querySelector('[data-reconf-i]')) {
-      caixa.setAttribute('hidden', ''); caixa.innerHTML = ''; return;
+      caixa.setAttribute('hidden', ''); caixa.innerHTML = ''; marcarFila(false); return;
     }
     pintarReconfirmar();
   });
@@ -1174,7 +1361,7 @@ function vincularBuscaGlobal() {
   const campo = $('fc-busca'), caixa = $('fc-busca-resultados');
   if (!campo || !caixa || campo.getAttribute('data-busca-ok')) return;
   campo.setAttribute('data-busca-ok', '1');
-  function fechar() { caixa.setAttribute('hidden', ''); caixa.innerHTML = ''; campo.setAttribute('aria-expanded', 'false'); campo.removeAttribute('aria-activedescendant'); }
+  function fechar() { caixa.setAttribute('hidden', ''); caixa.innerHTML = ''; campo.setAttribute('aria-expanded', 'false'); campo.removeAttribute('aria-activedescendant'); marcarFila(false); }
   let indiceAtivo = -1;
   function pintarAtivo() {
     caixa.querySelectorAll('[data-busca-i]').forEach((btn, i) => {
@@ -1382,23 +1569,47 @@ $('e-salvar').onclick = async () => {
   if (r.ok) { $('modal-edit').classList.add('hidden'); await recarregarHierarquia(true); }
   else $('e-status').textContent = 'Erro: ' + await r.text();
 };
+/* Conferir é dizer "este dado continua valendo hoje": grava quem olhou e
+   quando, sem mexer no valor nem na procedência. Fica com o escopo do setor,
+   como editar e remover — o servidor recusa fora dele. */
+async function conferirContato(id, botao) {
+  if (!id) return;
+  if (botao) botao.disabled = true;
+  const r = await fetch('/api/contatos/' + encodeURIComponent(id) + '/conferir',
+    { method: 'POST', headers: auth(), body: '{}' });
+  if (!r.ok) {
+    if (botao) botao.disabled = false;
+    mostrarToast('Não foi possível conferir: ' + await r.text(), 'erro');
+    return;
+  }
+  await recarregarHierarquia(true);
+  mostrarToast('Conferido hoje.');
+}
 async function excluirContato(id) {
   if (!confirm('Remover este contato?')) return;
   const r = await fetch('/api/contatos/' + id, { method: 'DELETE', headers: auth() });
   if (!r.ok) toast('Erro: ' + await r.text(), 'erro');
   await recarregarHierarquia(true);
 }
-$('salvar').onclick = async () => {
+// `setorAlvo` é o setor cujo formulário está aberto; quem o define é o botão
+// "Novo contato" (os handlers são religados em `renderNo`).
+async function salvarContato() {
   if (!setorAlvo) { $('save-status').textContent = 'Setor inválido.'; return; }
-  const corpo = { setor_id: setorAlvo, nome: $('f-nome').value.trim(),
-                  cargo: $('f-cargo').value.trim(), telefone: $('f-tel').value.trim(),
-                  email: $('f-email').value.trim() };
+  const tipo = $('f-tipo').value;
+  const valor = $('f-valor').value.trim();
+  const quem = $('f-desc').value.trim() || 'Geral';
+  if (!valor) { $('save-status').textContent = 'Informe o número ou o e-mail.'; return; }
+  const ehEmail = String(tipo).toUpperCase() === 'E-MAIL';
+  const corpo = { setor_id: setorAlvo, cargo: tipo, nome: quem, descricao: quem,
+                  telefone: ehEmail ? '' : valor, email: ehEmail ? valor : '' };
   const r = await fetch('/api/contatos', { method: 'POST', headers: auth(), body: JSON.stringify(corpo) });
   if (r.ok) {
-    $('f-nome').value = ''; $('f-cargo').value = ''; $('f-tel').value = ''; $('f-email').value = '';
+    $('save-status').textContent = '';
+    // O render seguinte recria o formulário vazio; não há o que limpar aqui.
     await recarregarHierarquia(true);
+    mostrarToast('Contato criado.');
   } else $('save-status').textContent = 'Erro: ' + await r.text();
-};
+}
 
 /* Texto do aviso de acesso: o demo público sobe somente leitura (=0) e o
    ambiente local/testes usa a aprovação automática (=1). A frase vem do
@@ -1428,7 +1639,7 @@ async function refresh() {
   $('menu-dash').classList.toggle('hidden', !(dentro && me && me.admin));
   $('menu-notif').classList.toggle('hidden', !dentro);
   $('menu-sol').classList.toggle('hidden', !(dentro && me && me.admin));
-  $('menu-meus').classList.toggle('hidden', !dentro);
+  $('menu-meus').classList.toggle('hidden', !(dentro && me && me.escopo !== 'all'));
   $('menu-usu').classList.toggle('hidden', !(dentro && me && me.admin));
   ligarBackup();
   $('menu-reg').classList.toggle('hidden', !(dentro && me && me.admin));
@@ -1437,8 +1648,19 @@ async function refresh() {
   $('who-line').innerHTML = dentro ? ICON_PESSOA + ' ' + esc(me.usuario) : 'Sem acesso administrativo';
   $('btn-entrar').classList.toggle('hidden', dentro);
   $('btn-pedir').classList.toggle('hidden', dentro);
-  $('btn-pedir-locais').classList.toggle('hidden', !dentro);
+  // Quem enxerga todos os locais não tem o que pedir: o botão da árvore só
+  // faz sentido para escopo parcial — mesmo critério do botão por nó, que não
+  // desenha "Solicitar acesso" quando `escopo === 'all'`.
+  $('btn-pedir-locais').classList.toggle('hidden', !(dentro && me && me.escopo !== 'all'));
   $('btn-sair').classList.toggle('hidden', !dentro);
+  // A fila de reconfirmação é da base inteira (329 dos 1.807 contatos) e o
+  // `conferir` no servidor exige escopo do setor: um usuário de escopo parcial
+  // abriria a fila e levaria 403 na maioria das linhas. Quem enxerga todos os
+  // locais é o admin (`escopo: 'all'`), então a fila é dele — a fila filtrada
+  // por escopo é assunto do v3, onde os papéis existem no banco.
+  const veFila = dentro && !!me && (me.admin === 1 || me.escopo === 'all');
+  const bFila = $('fc-antigos');
+  if (bFila) bFila.classList.toggle('hidden', !veFila);
   $('secao-admin').classList.toggle('hidden', !dentro);
   $('secao-consulta').classList.toggle('hidden', !dentro);
   $('btn-pedir').onclick = () => {

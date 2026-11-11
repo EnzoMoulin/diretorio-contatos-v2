@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
-<link rel="stylesheet" href="style.css?v=55">
+<link rel="stylesheet" href="style.css?v=baddb2e2">
 </head>
 <body>
 <div class="app-container">
@@ -40,15 +40,15 @@
       <p class="hint" id="estado-hint">Solicite acesso administrativo abaixo.</p>
       <button id="btn-entrar" class="sidebar-status-btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Entrar no acesso administrativo</button>
       <button id="btn-pedir" class="sidebar-status-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg> Solicitar acesso</button>
-      <button id="btn-pedir-locais" class="sidebar-status-btn hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Solicitar localidade</button>
+      <button id="btn-pedir-locais" class="sidebar-status-btn hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Solicitar locais</button>
       <button id="btn-sair" class="sidebar-status-btn hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sair do acesso administrativo</button>
     </div>
   </aside>
   <main class="main-content" id="conteudo" tabindex="-1">
     <section id="view-consulta">
       <div id="aviso-sem-escopo" class="hidden" style="margin:0 0 10px;padding:10px 14px;border:1px solid #fcd34d;background:#fffbeb;border-radius:10px;font-size:13px;color:#92400e;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <span>Você está logado mas ainda não tem acesso a nenhuma localidade.</span>
-        <button type="button" class="btn-primary" id="aviso-pedir-locais">Solicitar acesso a localidade</button>
+        <span>Você está logado mas ainda não tem acesso a nenhum local.</span>
+        <button type="button" class="btn-primary" id="aviso-pedir-locais">Solicitar acesso a locais</button>
       </div>
       <div class="fc-page-head">
         <div>
@@ -65,20 +65,13 @@
           <div class="fc-busca">
             <input id="fc-busca" class="fc-busca-input" type="search" title="Buscar (atalho: /)" placeholder="Buscar contato, setor, unidade…" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="fc-busca-resultados">
             <div id="fc-busca-resultados" class="fc-busca-resultados" role="listbox" aria-label="Resultados da busca" hidden></div>
-            <button type="button" id="fc-antigos" class="fc-antigos-btn" title="Contatos com procedência mais antiga primeiro">Reconfirmar</button>
-          </div>
-        <div class="fc-panel">
-          <div class="create-box hidden" id="create-box">
-            <h3>Novo contato neste setor</h3>
-            <div class="form-grid">
-              <input id="f-nome" placeholder="Nome*">
-              <input id="f-cargo" placeholder="Cargo">
-              <input id="f-tel" placeholder="Telefone">
-              <input id="f-email" placeholder="E-mail">
-              <button id="salvar" class="btn-primary">Salvar</button>
-              <span id="save-status"></span>
+            <div class="fc-panel-bar">
+              <button type="button" id="fc-antigos" class="fc-bar-btn" aria-expanded="false" title="Fila de revisão: quem nunca foi conferido primeiro, depois a conferência mais antiga"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg> <span id="fc-antigos-txt">Reconfirmar</span> <span class="fc-bar-count hidden" id="fc-antigos-n"></span></button>
+              <button type="button" id="fc-exportar" class="fc-bar-btn hidden" title="Exportar os contatos visíveis em CSV, com fonte e data de vigência"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar CSV</button>
+              <button type="button" id="fc-novo" class="fc-bar-btn fc-bar-btn--primary hidden" title="Abrir o formulário de novo contato"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Novo contato</button>
             </div>
           </div>
+        <div class="fc-panel">
           <div id="lista"><div class="fc-empty">Carregando contatos...</div></div>
         </div>
         </div>
@@ -309,8 +302,9 @@
         <section id="m-gerenciar" class="panel manual-section">
           <div class="manual-section-head"><div><h3>☎️ 04 — Gerenciar contatos</h3><p>Criar, editar e remover dentro do seu escopo, direto na consulta.</p></div></div>
           <ol class="manual-steps">
-            <li><span class="manual-step-num">1</span><div><strong>Criar</strong><p>Selecione o setor e use <span class="manual-kbd">Novo contato neste setor</span>. Fora do escopo, o formulário nem aparece.</p></div></li>
+            <li><span class="manual-step-num">1</span><div><strong>Criar</strong><p>Selecione o setor coberto e clique em <span class="manual-kbd">Novo contato</span>, na seção <em>Contatos deste Setor</em>. O formulário nasce fechado para não empurrar a lista; o <code>×</code> fecha de novo. Ele pede o que o card mostra: <em>tipo</em> (Telefone, Ramal, WhatsApp, E-mail, Fax), <em>valor</em> (o número ou o e-mail) e <em>quem atende</em> (opcional — "Geral" quando vazio). Fora do escopo, nem o botão aparece.</p></div></li>
             <li><span class="manual-step-num">2</span><div><strong>Editar / remover</strong><p>Botões em cada linha, só onde há cobertura. O servidor barra o resto (403).</p></div></li>
+            <li><span class="manual-step-num">3</span><div><strong>Conferir</strong><p><span class="manual-kbd">✓ Conferi</span> registra que o dado continua valendo hoje — grava quem conferiu e quando, sem mexer no valor nem na procedência. O card passa a mostrar <em>✓ conferido</em> ao lado da fonte. Em <span class="manual-kbd">Reconfirmar</span>, a fila abre com os nunca conferidos na frente; o <code>✓</code> de cada linha marca sem sair da fila. A fila é da administração — ela cobre a base inteira e só aparece para quem enxerga todos os locais.</p></div></li>
           </ol>
         </section>
         <section id="m-escopo" class="panel manual-section" style="border-left:4px solid #2563eb">
@@ -397,7 +391,7 @@
   <div class="modal-box">
     <h2>Editar contato</h2>
     <label>Nome*<input id="e-nome"></label>
-    <label>Cargo<input id="e-cargo"></label>
+    <label>Tipo (Telefone, Ramal, WhatsApp, E-mail, Fax)<input id="e-cargo"></label>
     <label>Telefone<input id="e-tel"></label>
     <label>E-mail<input id="e-email"></label>
     <div class="modal-actions">
@@ -420,7 +414,7 @@
   </div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="mapa.js?v=22"></script>
-<script src="admin.js?v=73"></script>
+<script src="mapa.js?v=66df4135"></script>
+<script src="admin.js?v=756f7231"></script>
 </body>
 </html>

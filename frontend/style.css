@@ -82,7 +82,7 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 /* ---- impressão ---- */
 .print-head{margin:6px 0}
 @media print{
-  .fc-back,.fc-search,.fc-select,.fc-toolbar,.fc-access,.fc-print-footer,.fc-copy-btn,.skip-link{display:none!important}
+  .fc-back,.fc-search,.fc-select,.fc-toolbar,.fc-access,.fc-print-footer,.fc-copy-btn,.fc-panel-bar,.skip-link{display:none!important}
   .fc-panel{height:auto;overflow:visible;border:0;box-shadow:none}
   .fc-contato,.fc-card{break-inside:avoid}
   .print-meta{display:block;font-size:12px;color:#64748b;margin-bottom:12px;border-bottom:1px solid #cbd5e1;padding-bottom:8px}
@@ -146,6 +146,10 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 .wide{width:100%;margin-bottom:8px}
 .create-box{margin-top:12px;border-top:1px solid #e2e8f0;padding-top:12px}
 .create-box h3{margin:0 0 8px;font-size:15px}
+.create-box-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.create-box-head h3{margin:0 0 8px}
+.create-close{background:none;border:none;color:#64748b;font-size:20px;line-height:1;cursor:pointer;padding:0 6px;margin-bottom:8px;border-radius:6px}
+.create-close:hover{background:#f1f5f9;color:#0f172a}
 .linklike{background:none;border:none;color:#2563eb;cursor:pointer;font-size:14px;padding:0;text-decoration:underline}
 .cascade select{display:block;width:100%;margin-bottom:8px}
 .cascade .btn-ghost{margin:-4px 0 8px}
@@ -196,6 +200,9 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 .fc-contato-fonte{margin:3px 0 0;font-size:11px;line-height:1.35;color:#64748b}
 .fc-contato-fonte-data{color:#94a3b8}
 .fc-contato-fonte-data::before{content:"·";margin:0 4px}
+.fc-contato-conferido{color:#15803d;font-weight:600}
+.fc-contato-conferido::before{content:"·";margin:0 4px;font-weight:400;color:#94a3b8}
+body[data-theme="dark"] .fc-contato-conferido{color:#4ade80}
 body[data-theme="dark"] .fc-contato-fonte{color:#94a3b8}
 body[data-theme="dark"] .fc-contato-fonte-data{color:#64748b}
 .fc-contato-side{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
@@ -204,6 +211,8 @@ body[data-theme="dark"] .fc-contato-fonte-data{color:#64748b}
 .fc-icon-btn{border:1px solid #dbe3ed;background:#fff;border-radius:8px;padding:5px 7px;cursor:pointer;font-size:12px}
 .fc-icon-btn:hover{background:#f1f5f9}
 .fc-icon-btn--danger{color:#b91c1c;border-color:#fecaca}
+.fc-icon-btn--ok{color:#15803d;border-color:#bbf7d0}
+.fc-icon-btn--ok:hover{background:#f0fdf4}
 .fc-empty{padding:20px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;text-align:center}
 @media(max-width:680px){.fc-contato{align-items:flex-start;flex-direction:column}.fc-contato-side{justify-content:flex-start}}
 body[data-theme="dark"] .fc-card{background:#1e293b;border-color:#334155}
@@ -327,7 +336,7 @@ body[data-theme="dark"] .fc-page-head{border-color:#334155}
 .fc-page-head h1{margin:0;font-size:22px;font-weight:800;color:#0f172a;font-family:Arial,Helvetica,sans-serif;line-height:1.2}
 .fc-busca{position:relative;flex:1 1 auto;max-width:340px;margin:0 8px}
 .consulta-direita{display:flex;flex-direction:column;min-width:0;min-height:0}
-#view-consulta .consulta-direita>.fc-busca{max-width:none;width:100%;margin:0 0 5px;flex:none;box-sizing:border-box}
+#view-consulta .consulta-direita>.fc-busca{max-width:none;width:100%;margin:0 0 8px;flex:none;box-sizing:border-box}
 #view-consulta .consulta-direita .fc-busca-input{max-width:none;margin-bottom:0}
 .consulta-direita>.fc-panel{flex:1 1 auto;min-height:0}
 .fc-busca-input{width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#f8fafc;color:#0f172a}
@@ -359,6 +368,9 @@ body[data-theme="dark"] .fc-page-head{border-color:#334155}
 .fc-total-localidades{display:inline-flex;align-self:flex-start;margin:2px 0 10px;background:#dbeafe;color:#1e40af;font-weight:800}
 .fc-print-all{width:100%;min-height:44px;display:flex;align-items:center;justify-content:center;line-height:1.2;margin-bottom:12px}
 .fc-section h3{font-size:15px;margin:8px 0 4px;color:#0f172a}
+.fc-section-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.fc-section-title h3{margin:8px 0 4px}
+.fc-section-title .btn-novo{font-size:13px;padding:6px 14px;border-radius:7px}
 .fc-section--comarcas{margin-top:10px}
 .fc-section--comarcas h3{margin:0 0 10px}
 .main-content{display:flex;flex-direction:column}
@@ -548,14 +560,57 @@ body[data-theme="dark"] .tooltip-premium small{color:#cbd5e1}
 .fc-print-footer .fc-btn{min-height:42px;display:inline-flex;align-items:center;justify-content:center;padding-inline:18px}
 
 /* reconfirmar: fila de manutenção da procedência (admin) */
-.fc-antigos-btn{margin-left:8px;padding:6px 10px;font-size:12px;line-height:1;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#475569;cursor:pointer;white-space:nowrap}
-.fc-antigos-btn:hover{border-color:#94a3b8;color:#1e293b}
+/* barra de ações do painel: abaixo da busca, alinhada à direita e separada dela
+   — antes o Reconfirmar ficava dentro da barra de busca e parecia colado nela */
+.fc-panel-bar{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.fc-bar-btn{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 13px;font:inherit;font-size:12.5px;font-weight:500;line-height:1;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#475569;cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s,background .15s,box-shadow .15s}
+.fc-bar-btn svg{width:14px;height:14px;flex:none}
+.fc-bar-btn:hover{border-color:#94a3b8;color:#0f172a;background:#f8fafc}
+.fc-bar-btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.3)}
+.fc-bar-btn[aria-expanded="true"]{border-color:#2563eb;background:#eff6ff;color:#1d4ed8}
+/* Fila vazia: o botão desabilitado tem de parecer desabilitado — sem isto ele
+   fica idêntico a um botão que funciona e o clique morto vira "bug de JS". */
+.fc-bar-btn:disabled,.fc-bar-btn.vazio{opacity:.55;cursor:not-allowed;background:#f8fafc;border-color:#e2e8f0;color:#94a3b8}
+.fc-bar-btn:disabled:hover{background:#f8fafc;border-color:#e2e8f0;color:#94a3b8}
+/* Ação primária da barra (o "Novo contato" da unidade sem contato): mesma cor
+   do .btn-primary do formulário, na forma do .fc-bar-btn. Vem depois das
+   regras de :hover para vencer por ordem, não por especificidade extra. */
+.fc-bar-btn--primary{border-color:#2563eb;background:#2563eb;color:#fff}
+.fc-bar-btn--primary:hover{border-color:#1d4ed8;background:#1d4ed8;color:#fff}
+.fc-bar-btn--primary:focus-visible{box-shadow:0 0 0 3px rgba(37,99,235,.35)}
+.fc-bar-count{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;padding:1px 6px;border-radius:999px;background:#e2e8f0;color:#334155}
 .fc-busca-cabecalho{padding:8px 12px 6px;font-size:11px;letter-spacing:.01em;color:#64748b;border-bottom:1px solid #e2e8f0}
 .fc-busca-fonte{color:#94a3b8}
-body[data-theme="dark"] .fc-antigos-btn{background:#1e293b;border-color:#334155;color:#cbd5e1}
-body[data-theme="dark"] .fc-antigos-btn:hover{border-color:#64748b;color:#f1f5f9}
+/* cada linha da fila: o item navega, o ✓ confere sem sair da fila */
+.fc-reconf-row{display:flex;align-items:stretch;border-bottom:1px solid #f1f5f9}
+.fc-reconf-row .fc-busca-item{flex:1;min-width:0;width:auto;border-bottom:0}
+.fc-conf-btn{flex:0 0 auto;width:36px;border:0;border-left:1px solid #e2e8f0;background:#f8fafc;color:#15803d;font-size:14px;font-weight:800;cursor:pointer}
+.fc-conf-btn:hover{background:#f0fdf4}
+.fc-conf-btn:disabled{opacity:.45;cursor:default}
+body[data-theme="dark"] .fc-bar-btn{background:#1e293b;border-color:#334155;color:#cbd5e1}
+body[data-theme="dark"] .fc-bar-btn:hover{border-color:#64748b;color:#f1f5f9;background:#243247}
+body[data-theme="dark"] .fc-bar-btn[aria-expanded="true"]{border-color:#3b82f6;background:#1e3a8a55;color:#bfdbfe}
+body[data-theme="dark"] .fc-bar-btn:disabled,body[data-theme="dark"] .fc-bar-btn.vazio{background:#1e293b;border-color:#334155;color:#94a3b8}
+body[data-theme="dark"] .fc-bar-btn:disabled:hover{background:#1e293b;border-color:#334155;color:#94a3b8}
+body[data-theme="dark"] .fc-bar-btn--primary{background:#2563eb;border-color:#3b82f6;color:#fff}
+body[data-theme="dark"] .fc-bar-btn--primary:hover{background:#1d4ed8;border-color:#60a5fa;color:#fff}
+body[data-theme="dark"] .fc-bar-count{background:#334155;color:#e2e8f0}
 body[data-theme="dark"] .fc-busca-cabecalho{color:#94a3b8;border-bottom-color:#334155}
 body[data-theme="dark"] .fc-busca-fonte{color:#64748b}
+/* o bloco da busca (campo, dropdown e fila) não tinha tema escuro: o campo e a
+   fila ficavam brancos no meio da tela escura, e o dropdown da fila era o pior
+   caso por ocupar 320 px de altura */
+body[data-theme="dark"] .fc-busca-input{background:#0f172a;border-color:#475569;color:#e2e8f0}
+body[data-theme="dark"] .fc-busca-input::placeholder{color:#94a3b8}
+body[data-theme="dark"] .fc-busca-resultados{background:#1e293b;border-color:#334155;box-shadow:0 12px 32px rgba(0,0,0,.55)}
+body[data-theme="dark"] .fc-busca-item{border-bottom-color:#334155}
+body[data-theme="dark"] .fc-busca-item:hover{background:#243247}
+body[data-theme="dark"] .fc-busca-item.ativo{background:#1e3a8a55;outline-color:#60a5fa}
+body[data-theme="dark"] .fc-busca-item strong{color:#f1f5f9}
+body[data-theme="dark"] .fc-busca-item small{color:#94a3b8}
+body[data-theme="dark"] .fc-busca-item mark{background:#facc15;color:#0f172a}
+body[data-theme="dark"] .fc-reconf-row{border-bottom-color:#334155}
+body[data-theme="dark"] .fc-conf-btn{background:#1e293b;border-left-color:#334155;color:#4ade80}
 
 
 /* registro de alterações: série de 12 meses (histórico_mensal na tela) */

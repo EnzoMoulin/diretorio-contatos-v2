@@ -32,7 +32,7 @@ são as mesmas; o que evolui é a fundação técnica:
 | Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
 | Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
 | Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 56 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
+| Testes | Sem testes automatizados | 72 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
 | Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Front estático (Cloudflare Pages) + API FastAPI separada: a página abre na hora, a API acorda sozinha |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
@@ -83,7 +83,7 @@ flowchart LR
 
 - **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
   mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
-  `lru_cache` com invalidação, 56 casos de teste (`unittest`, banco temporário) e
+  `lru_cache` com invalidação, 72 casos de teste (`unittest`, banco temporário) e
   um teste de fumaça do admin que abre o Chromium e clica no fluxo.
 - **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
   escopo por nível, UX das telas — a interface e as regras são as mesmas, propositalmente.
@@ -124,7 +124,11 @@ ranking de busca com tolerância a erro de digitação.
 - **Fila de reconfirmação (admin)**: o botão **Reconfirmar** lista os contatos com procedência
   registrada, do documento mais antigo para o mais novo, com a fonte e o mês ao lado. É a rotina de
   manutenção que o campo `vigente_desde` existe para permitir — os 43 do ofício de 2024 aparecem
-  primeiro porque são os mais prováveis de ter mudado.
+  primeiro porque são os mais prováveis de ter mudado. O botão é da administração: a fila é da base
+  inteira (329 dos 1.807 contatos) e a conferência no servidor exige escopo do setor, então um
+  usuário de escopo parcial abriria uma lista que o servidor recusaria em quase toda linha. Sem nada
+  para reconfirmar, o botão fica desabilitado e explica o motivo no `title` — antes o clique fechava
+  a caixa no mesmo gesto e parecia JavaScript quebrado.
 - **Consulta pública** (`/`): **mapa clicável à esquerda como porta de entrada**
   (Leaflet + GeoJSON público do IBGE filtra por comarca) + **painel à direita**
   com busca global (alcança todos os níveis: nome, cargo, telefone, e-mail,
@@ -195,14 +199,15 @@ cd tests/fumaca && node smoke.mjs
 ```
 Os testes batem na API por HTTP. Quem roda a suíte precisa exportar **as mesmas**
 variáveis que o servidor: `SIMULACAO_AUTO_APROVAR` e `ADMIN_EMAILS` são lidas do
-ambiente de quem executa o `unittest`, não do processo que está servindo. São 56
-casos rodando em cada perna, medidos com Python 3.15.2:
+ambiente de quem executa o `unittest`, não do processo que está servindo. A
+contagem muda por perna (o script `medir-modos-testes.sh` roda as três), medidas
+com Python 3.15.2:
 
 | Ambiente de quem roda | Resultado |
 |---|---|
-| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 56 rodando, 1 pulado (a classe `TestSomenteLeitura`, que só vale no modo 0) |
-| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 55 rodando, 2 pulados (a classe acima e `test_admin_na_allowlist_recebe_admin`) |
-| `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 56 rodando, 2 pulados (`test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist`) |
+| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 72 rodando, 1 pulado (`Ran 73`) — o pulado é a classe `TestSomenteLeitura`, que só vale no modo 0 |
+| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 71 rodando, 2 pulados (`Ran 73`) — a classe acima e `test_admin_na_allowlist_recebe_admin` |
+| `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 72 rodando, 2 pulados (`Ran 74`) — `test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist` |
 
 No modo 0 pulam `test_cadeia_completa_com_limpeza` e a classe
 `TestAdminPorAllowlist` inteira — **mesmo com `ADMIN_EMAILS` exportado**, porque
@@ -215,14 +220,35 @@ as duas pernas (modo 1 e modo 0) em paralelo.
 Os testes de Python batem na API e conferem o HTML servido, mas não provam que
 o JavaScript monta a tela. `tests/fumaca/smoke.mjs` sobe uma cópia do app num
 diretório temporário (nunca toca no `contatos.db` de quem está testando), entra
-com o login local, clica em **Reconfirmar**, abre a primeira linha da fila e
-confere o gráfico de alterações por mês. Treze verificações, nenhuma dependência
-nova no app: o Playwright vive só em `tests/fumaca`.
+com o login local, clica em **Reconfirmar**, abre a primeira linha da fila,
+**baixa o CSV** e confere as linhas do arquivo contra os contatos da tela, e
+confere o gráfico de alterações por mês. Dezenove verificações, nenhuma
+dependência nova no app: o Playwright vive só em `tests/fumaca`.
+
+`tests/fumaca/smoke-fila.mjs` cobre os dois estados que o caminho feliz não
+visita, numa cópia em que todo `vigente_desde` é apagado e existe um usuário de
+escopo parcial: com a fila vazia o **Reconfirmar** fica desabilitado, com o
+motivo no `title` e no `aria-label`, e o clique não abre caixa nenhuma; para o
+usuário de escopo parcial o botão não aparece — e o mesmo script prova pela API
+que o `conferir` dele responde 200 dentro do escopo e 403 fora, que é o motivo
+da regra.
 
 O teste pagou o próprio custo na primeira execução: o botão **Reconfirmar**
 pintava a fila e a fechava no mesmo clique — o listener de "clique fora" da
 busca global não distinguia o botão da área de resultados. O `stopPropagation`
 no handler está comentado no `admin.js` para ninguém refazer o caminho.
+
+### Cache dos estáticos (`?v=`)
+Cada asset referenciado nos HTML carrega `?v=` com os oito primeiros caracteres
+do sha256 do próprio arquivo. Editar um `.js`/`.css` e esquecer o `?v=` fazia o
+navegador servir a versão velha — e o teste manual concluir que "não funcionou".
+Quem cuida disso agora é `scripts/atualizar-cache-busting.py` (idempotente), o
+`tests/test_cache_busting.py` reprova o CI quando o HTML diverge do disco e
+`scripts/pre-commit` faz o recálculo antes do commit (copie para
+`.git/hooks/pre-commit`; hooks não são versionados). O servidor só responde
+`immutable` quando o `?v=` pedido bate com o conteúdo entregue — `?v=` velho
+volta sem cache — e o HTML nunca é cacheado, porque é ele que carrega a versão
+nova. `tests/test_cache_http.py` cobre os três casos.
 
 ## Hospedagem (pôr no ar)
 Só stdlib: sem `pip install`. No Render (gratuito): novo Web Service a partir
@@ -362,7 +388,7 @@ ambiente local, com o login `admin` de teste.</sub>
 - **Favoritos** (aba na sidebar + estrela em cada contato, com contador): salvos no navegador, em ordem A–Z, com filtro próprio, impressão, exportação CSV, download de todos em um `.vcf` e limpeza com confirmação
 - **Baixar contato (.vcf)**: cada contato gera o cartão para importar na agenda do celular
 - **Link direto**: cada contato tem URL `?contato=id` que abre direto nele com destaque; no celular abre o menu de compartilhar do sistema
-- **Exportar CSV**: botão junto ao imprimir baixa Nome;Tipo;Valor do que está na tela (com BOM para o Excel)
+- **Exportar CSV**: botão na barra acima do painel, ao lado de Reconfirmar, baixa o que está na tela — `Nome;Tipo;Valor;Fonte;Desde;Conferido em;Conferido por` — com BOM para o Excel; coluna vazia significa "não registrado" (contato sem fonte, nunca conferido); sem contato na tela ele não é um clique morto — numa unidade ou setor sem contato o botão fica cinza com o motivo no `title` e no `aria-label`, e nas telas de navegação sai de cena
 - **Busca de verdade**: `/` foca o campo, setas navegam, Enter abre, Esc fecha; termo grifado nos resultados e semântica de combobox para leitor de tela; opção ativa anunciada
 - **Mobile de verdade**: até 900px a sidebar vira gaveta (hambúrguer por vista, fecha no Esc e ao trocar de aba) e o mapa ganha altura mínima — validado em render headless 390px
 - **Acessibilidade medida**: pares de cor auditados no WCAG AA (4.5+), anel de foco visível, skip-link para o conteúdo, `reduced-motion` respeitado em tudo, favicon e `theme-color`
