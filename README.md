@@ -32,7 +32,7 @@ são as mesmas; o que evolui é a fundação técnica:
 | Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
 | Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
 | Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 36 casos (`unittest`, banco temporário) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
+| Testes | Sem testes automatizados | 48 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
 | Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Front estático (Cloudflare Pages) + API FastAPI separada: a página abre na hora, a API acorda sozinha |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
@@ -83,7 +83,8 @@ flowchart LR
 
 - **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
   mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
-  `lru_cache` com invalidação, 36 casos de teste (`unittest`, banco temporário).
+  `lru_cache` com invalidação, 48 casos de teste (`unittest`, banco temporário) e
+  um teste de fumaça do admin que abre o Chromium e clica no fluxo.
 - **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
   escopo por nível, UX das telas — a interface e as regras são as mesmas, propositalmente.
 - **Por que só stdlib:** zero dependências = deploy gratuito trivial e prova de que a
@@ -113,6 +114,17 @@ ranking de busca com tolerância a erro de digitação.
   com `tel:` + `mailto:`; Criar/Editar/Remover só onde há cobertura
 
 ## O que faz
+- **Procedência de cada contato**: todo contato carrega **de onde veio** (`fonte`) e **de quando é**
+  (`vigente_desde`) — `ofício 432/2024 — diretoria do foro` desde 03/2024, `catálogo de ramais —
+  agosto/2026` desde 08/2026, ou `base do sistema (sem documento declarado)` quando não há documento.
+  Aparece discreto sob o contato, no público e no interno. Antes disso, a única pista era o texto livre
+  "Contato provisório — validar vigência." na observação, que não filtrava, não ordenava e não expirava.
+  Editar telefone ou e-mail marca o contato como `edição manual`, com a data do dia — é a confirmação
+  humana do dado, e é ela que responde "esse ramal ainda vale?".
+- **Fila de reconfirmação (admin)**: o botão **Reconfirmar** lista os contatos com procedência
+  registrada, do documento mais antigo para o mais novo, com a fonte e o mês ao lado. É a rotina de
+  manutenção que o campo `vigente_desde` existe para permitir — os 43 do ofício de 2024 aparecem
+  primeiro porque são os mais prováveis de ter mudado.
 - **Consulta pública** (`/`): **mapa clicável à esquerda como porta de entrada**
   (Leaflet + GeoJSON público do IBGE filtra por comarca) + **painel à direita**
   com busca global (alcança todos os níveis: nome, cargo, telefone, e-mail,
@@ -173,17 +185,19 @@ SIMULACAO_AUTO_APROVAR=1 ADMIN_EMAILS=seu@gmail.com python3 app.py
 bash teste_rapido.sh   # imprime os códigos do fluxo completo (não é teste automatizado;
                        # atenção: encerra qualquer processo na porta 8000)
 python3 -m unittest discover -s tests -t . -v   # servidor no ar; ver a tabela de pulados abaixo
+# fumaça do admin num navegador real (uma vez: cd tests/fumaca && npm ci && npx playwright install chromium)
+cd tests/fumaca && node smoke.mjs
 ```
 Os testes batem na API por HTTP. Quem roda a suíte precisa exportar **as mesmas**
 variáveis que o servidor: `SIMULACAO_AUTO_APROVAR` e `ADMIN_EMAILS` são lidas do
-ambiente de quem executa o `unittest`, não do processo que está servindo. São 36
-casos no total, medidos com Python 3.15.2:
+ambiente de quem executa o `unittest`, não do processo que está servindo. São 48
+casos rodando em cada perna, medidos com Python 3.15.2:
 
 | Ambiente de quem roda | Resultado |
 |---|---|
-| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 32 rodando, 1 pulado (a classe `TestSomenteLeitura`, que só vale no modo 0) |
-| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 31 rodando, 2 pulados (a classe acima e `test_admin_na_allowlist_recebe_admin`) |
-| `SIMULACAO_AUTO_APROVAR=0` | 32 rodando, 2 pulados (`test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist`) |
+| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 48 rodando, 1 pulado (a classe `TestSomenteLeitura`, que só vale no modo 0) |
+| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 47 rodando, 2 pulados (a classe acima e `test_admin_na_allowlist_recebe_admin`) |
+| `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 48 rodando, 2 pulados (`test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist`) |
 
 No modo 0 pulam `test_cadeia_completa_com_limpeza` e a classe
 `TestAdminPorAllowlist` inteira — **mesmo com `ADMIN_EMAILS` exportado**, porque
@@ -191,6 +205,19 @@ a causa é a flag, não a allowlist. O `unittest` conta a classe pulada como **u
 skip, embora ela tenha mais de um teste: por isso o `Ran N` não bate com a soma
 dos casos e `skipped=2` no modo 0 não quer dizer "dois testes pulados". O CI roda
 as duas pernas (modo 1 e modo 0) em paralelo.
+
+### Fumaça do admin (navegador real)
+Os testes de Python batem na API e conferem o HTML servido, mas não provam que
+o JavaScript monta a tela. `tests/fumaca/smoke.mjs` sobe uma cópia do app num
+diretório temporário (nunca toca no `contatos.db` de quem está testando), entra
+com o login local, clica em **Reconfirmar**, abre a primeira linha da fila e
+confere o gráfico de alterações por mês. Treze verificações, nenhuma dependência
+nova no app: o Playwright vive só em `tests/fumaca`.
+
+O teste pagou o próprio custo na primeira execução: o botão **Reconfirmar**
+pintava a fila e a fechava no mesmo clique — o listener de "clique fora" da
+busca global não distinguia o botão da área de resultados. O `stopPropagation`
+no handler está comentado no `admin.js` para ninguém refazer o caminho.
 
 ## Hospedagem (pôr no ar)
 Só stdlib: sem `pip install`. No Render (gratuito): novo Web Service a partir
@@ -277,6 +304,7 @@ com salt; hashes sha256 legados são convertidos no primeiro login.
 | GET | `/api/contatos/<id>` | `X-Admin-Token` | um contato, com o caminho até a comarca (só no seu escopo) |
 | GET | `/api/me` | `X-Admin-Token` | usuário + flag admin + escopo |
 | GET | `/api/historico` | `X-Admin-Token` (admin) | últimas 50 alterações, com o autor de cada uma |
+| GET | `/api/historico/mensal` | `X-Admin-Token` (admin) | série de 12 meses (meses vazios com zero) e totais por ação — alimenta o gráfico do Registro |
 | GET | `/oauth/login` | não | inicia login com Google |
 | GET | `/oauth/callback` | não | retorno do Google → sessão |
 | POST | `/api/logout` | token | encerra a sessão |

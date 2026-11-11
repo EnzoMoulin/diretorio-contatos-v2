@@ -27,7 +27,31 @@
     });
   }
 
-  function fmtTipoContato(tipo) {
+  /* Procedência do dado: fonte (de onde veio) e vigência (de quando é).
+     "2024-03-01" sai como "03/2024" — o dia não é o que importa aqui. */
+  function htmlVigencia(c) {
+    var fonte = String((c && c.fonte) || "").trim();
+    if (!fonte) return "";
+    var vig = String((c && c.vigente_desde) || "").trim();
+    var data = /^\d{4}-\d{2}/.test(vig)
+      ? '<span class="fc-contato-fonte-data" title="Vigente desde ' + esc(vig) + '">desde ' + vig.slice(5, 7) + "/" + vig.slice(0, 4) + "</span>"
+      : "";
+    return '<p class="fc-contato-fonte">' + esc(fonte) + data + "</p>";
+  }
+
+  // A observação genérica ("Contato provisório — validar vigência.") vira ruído
+// quando `fonte` + `vigente_desde` já dizem de onde veio e de quando: a linha de
+// procedência carrega a mesma informação com data. Some com ela só nesse caso —
+// observação que tem conteúdo próprio continua aparecendo inteira.
+var OBS_GENERICA = /^contato provis[oó]rio\s*[—–-]\s*validar vig[eê]ncia\.?$/i;
+function obsVisivel(c) {
+  var t = String((c && c.observacao) || "").trim();
+  if (!t) return "";
+  if (c && c.fonte && OBS_GENERICA.test(t)) return "";
+  return t;
+}
+
+function fmtTipoContato(tipo) {
     var t = String(tipo || "").trim().toUpperCase();
     if (t === "E_MAIL" || t === "EMAIL" || t === "E-MAIL") return "E-mail";
     if (t === "WHATSAPP") return "WhatsApp";
@@ -661,12 +685,13 @@
       var descricao = String(c.descricao || "").trim();
       var descricaoHtml = descricao && descricao.toLocaleLowerCase("pt-BR") !== String(tipo).toLocaleLowerCase("pt-BR")
         ? "<h4>" + esc(descricao) + "</h4>" : "";
-      var observacao = String(c.observacao || "").trim();
+      var observacao = obsVisivel(c);
       var observacaoHtml = observacao
         ? '<p class="fc-contato-observacao' + (/contato provis[oó]rio/i.test(observacao) ? " fc-contato-observacao--provisoria" : "") + '">' + esc(observacao) + "</p>"
         : "";
+      var vigenciaHtml = htmlVigencia(c);
       return '<article class="fc-contato" data-contato="' + esc(c.id) + '">' +
-        '<div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(tipo) + "</span>" + descricaoHtml + observacaoHtml + "</div>" +
+        '<div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(tipo) + "</span>" + descricaoHtml + observacaoHtml + vigenciaHtml + "</div>" +
         '<div class="fc-contato-side">' + valorHtml + acoes + "</div></article>";
     }).join("") + "</div>";
   }
@@ -1068,7 +1093,7 @@
   function contatoPrint(c) {
     var tipo = fmtTipoContato(c.tipo);
     var descricao = String(c.descricao || "").trim();
-    var observacao = String(c.observacao || "").trim();
+    var observacao = obsVisivel(c);
     var complemento = descricao && descricao.toLocaleLowerCase("pt-BR") !== String(tipo).toLocaleLowerCase("pt-BR")
       ? " — " + esc(descricao) : "";
     var nota = observacao ? '<small class="note">' + esc(observacao) + "</small>" : "";
