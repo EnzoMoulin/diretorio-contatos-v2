@@ -29,6 +29,12 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CANONICO = os.path.join(RAIZ, "scripts", "contagens.json")
 MEDIR = os.path.expanduser(
     "~/.hermes/skills/diretorio-contatos-v2/scripts/medir-modos-testes.sh")
+# A skill é o quinto lugar: ficava fora de qualquer conferência e já nasceu
+# dizendo 87/86/87 enquanto o README dizia 92/91/92.
+SKILL_MD = os.path.expanduser(
+    "~/.hermes/skills/diretorio-contatos-v2/references/testes-e-ci.md")
+BLOCO_INI = "<!-- CONTAGENS:INICIO -->"
+BLOCO_FIM = "<!-- CONTAGENS:FIM -->"
 
 
 def ler(*partes):
@@ -48,6 +54,44 @@ def textos_do_pdf(partes):
         return None
     saida = subprocess.run(["pdftotext", caminho, "-"], capture_output=True, text=True)
     return saida.stdout if saida.returncode == 0 else None
+
+
+def bloco_da_skill(texto):
+    """Contagens declaradas no bloco da skill: {chave: [números]} ou None.
+
+    Bloco e não varredura solta: a skill cita "2 casos" ao descrever um teste
+    específico, e qualquer regex sobre o arquivo inteiro leria isso como a
+    contagem da suíte. O bloco é a única parte que declara número.
+    """
+    if not texto:
+        return None
+    i, f = texto.find(BLOCO_INI), texto.find(BLOCO_FIM)
+    if not (0 <= i < f):
+        return None
+    achado = {}
+    for linha in texto[i:f].splitlines():
+        m = re.match(r"\|\s*([^|]+?)\s*\|\s*([\d/]+)\s*\|", linha)
+        if m:
+            achado[m.group(1).strip()] = [int(n) for n in m.group(2).split("/")]
+    return achado
+
+
+def bloco_novo(canonico):
+    """O bloco pronto, gerado do `contagens.json` (`--atualizar`)."""
+    pernas = canonico["pernas"]
+    rodando = "/".join(str(p["rodando"]) for p in pernas)
+    ran = "/".join(str(p["ran"]) for p in pernas)
+    return "\n".join([
+        BLOCO_INI,
+        "| medida | valor |",
+        "| :--- | :--- |",
+        f"| casos | {canonico['casos']} |",
+        f"| pernas (rodando) | {rodando} |",
+        f"| pernas (Ran) | {ran} |",
+        f"| fumaça | {canonico['fumaca']} |",
+        f"| acessibilidade | {canonico.get('acessibilidade', 0)} |",
+        BLOCO_FIM,
+    ])
 
 
 def arquivos_de_texto():
@@ -153,7 +197,34 @@ def main():
         c.igual("medir-modos-testes.sh · rótulos", achado,
                 [[p["rodando"], p["skipped"], p["ran"]] for p in pernas])
 
-    # 5) Opcional: medir de verdade, em vez de conferir o que está escrito.
+    # 5) A skill (quinto lugar da contagem): bloco declarado e conferido.
+    if not os.path.exists(SKILL_MD):
+        c.pulado(os.path.basename(SKILL_MD), "skill ausente nesta máquina")
+    else:
+        with open(SKILL_MD, encoding="utf-8") as f:
+            texto_skill = f.read()
+        esperado = {
+            "casos": [casos],
+            "pernas (rodando)": [p["rodando"] for p in pernas],
+            "pernas (Ran)": [p["ran"] for p in pernas],
+            "fumaça": [fumaca],
+            "acessibilidade": [canonico.get("acessibilidade", 0)],
+        }
+        declarado = bloco_da_skill(texto_skill)
+        c.igual("skill · bloco de contagens",
+                declarado if declarado is not None else "bloco ausente", esperado)
+        if "--atualizar" in sys.argv:
+            novo = bloco_novo(canonico)
+            i, f2 = texto_skill.find(BLOCO_INI), texto_skill.find(BLOCO_FIM)
+            if 0 <= i < f2:
+                texto_skill = texto_skill[:i] + novo + texto_skill[f2 + len(BLOCO_FIM):]
+            else:
+                texto_skill = novo + "\n\n" + texto_skill
+            with open(SKILL_MD, "w", encoding="utf-8") as f:
+                f.write(texto_skill)
+            print("  .. bloco da skill regravado a partir de scripts/contagens.json")
+
+    # 6) Opcional: medir de verdade, em vez de conferir o que está escrito.
     if "--medir" in sys.argv:
         print("\nMedindo a suíte nas três pernas (leva ~2 min)...")
         saida = subprocess.run(["bash", MEDIR], capture_output=True, text=True).stdout

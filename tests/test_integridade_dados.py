@@ -28,13 +28,13 @@ Exige o servidor no ar (BASE_API, padrão http://localhost:8000).
 """
 import json
 import os
-import shutil
 import sqlite3
-import tempfile
 import unittest
 import urllib.request
 
 import app
+
+from tests import base
 
 BASE = os.environ.get("BASE_API", "http://localhost:8000")
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -86,22 +86,8 @@ def soma_contatos(no):
     return total
 
 
-class TestBaseIntegra(unittest.TestCase):
+class TestBaseIntegra(base.BaseComSeed):
     """Órfãos, nulos e duplicatas no seed — em banco temporário, sem vizinho."""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.dir = tempfile.mkdtemp()
-        cls.db_antigo = app.DB
-        app.DB = os.path.join(cls.dir, "contatos.db")
-        app.init_db()
-        cls.con = app.get_db()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.con.close()
-        app.DB = cls.db_antigo
-        shutil.rmtree(cls.dir, ignore_errors=True)
 
     def consulta(self, sql, args=()):
         return self.con.execute(sql, args).fetchall()

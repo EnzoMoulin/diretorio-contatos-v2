@@ -14,27 +14,16 @@ comarca e um fórum escolhidos de propósito, e a unidade+setor virtuais inserid
 
     python3 -m unittest tests.test_contatos_gerais -v
 """
-import os
-import shutil
-import tempfile
 import unittest
 
 import app
 
+from tests import base
 
-class TestContatosGerais(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.dir = tempfile.mkdtemp()
-        cls.db_antigo = app.DB
-        app.DB = os.path.join(cls.dir, "contatos.db")
-        app.init_db()
 
-    @classmethod
-    def tearDownClass(cls):
-        app.DB = cls.db_antigo
-        shutil.rmtree(cls.dir, ignore_errors=True)
-
+class TestContatosGerais(base.BaseComSeed):
+    # A base vem de `tests/base.py`: um `init_db()` por processo, cópia por
+    # classe. Antes cada classe pagava os ~7 s de seed só para si.
     def setUp(self):
         self.con = app.get_db()
         # `_CONT` guarda o cursor de ids por tabela: zerar evita que o id

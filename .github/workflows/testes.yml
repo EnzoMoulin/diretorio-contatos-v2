@@ -93,10 +93,16 @@ jobs:
         # fila vazia (botão que não fazia nada) e usuário de escopo parcial
         # (a fila é da base inteira; o `conferir` exige escopo do setor).
         run: cd tests/fumaca && node smoke-fila.mjs
+      - name: Acessibilidade medida (nome, foco e contraste nos dois temas)
+        # O smoke clica e prova que a tela funciona; este mede o que ninguém vê
+        # no olho: nome acessível, anel de foco por Tab e contraste WCAG AA.
+        run: cd tests/fumaca && node acessibilidade.mjs
       - name: Guardar a tela da falha
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: fumaca-evidencia
-          path: /tmp/dc2-fumaca-*/registro.png
+          path: |
+            /tmp/dc2-fumaca-*/registro.png
+            /tmp/dc2-a11y-*/acessibilidade.png
           if-no-files-found: ignore
