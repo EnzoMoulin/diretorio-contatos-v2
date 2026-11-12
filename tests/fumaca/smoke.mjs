@@ -217,6 +217,24 @@ async function main() {
       null, { timeout: 10000 });
     ok('contato clicado aparece destacado na lista (navegação executou)');
 
+    // Procedência no card, que é o que o visitante lê. O rótulo neutro
+    // "base do sistema (sem documento declarado)" foi aposentado em 12/11/2026:
+    // quem não tem documento fica sem linha de procedência, não com carimbo.
+    // Card que declara `data-fonte` tem de mostrar essa fonte no texto; o
+    // caminho de volta do rótulo (seed, backfill ou render) morre aqui.
+    const procedencias = await pagina.$$eval('#lista .fc-contato', els => els.map(el => ({
+      fonte: (el.dataset.fonte || '').trim(),
+      texto: ((el.querySelector('.fc-contato-fonte') || {}).innerText || '')
+        .replace(/\s+/g, ' ').trim(),
+    })));
+    conferir(procedencias.length > 0, 'a tela tem ' + procedencias.length + ' card(s) de contato');
+    conferir(!procedencias.some(p => /documento declarado/i.test(p.texto)),
+      'nenhum card exibe o rótulo neutro aposentado');
+    conferir(procedencias.filter(p => p.fonte).every(p => p.texto.includes(p.fonte)),
+      'card com fonte declarada mostra a fonte no texto');
+    conferir(procedencias.filter(p => !p.fonte).every(p => !p.texto || p.texto.startsWith('✓')),
+      'card sem documento não inventa linha de procedência');
+
     console.log('\n4) exportar CSV do que está na tela');
     // O CSV era o único caminho de saída do dado e não tinha teste de ponta a
     // ponta: o guard era estrutural (lê o JS). Aqui o arquivo é baixado de
@@ -240,6 +258,11 @@ async function main() {
     const seteColunas = linhas.slice(1).every(l => (l.match(/;/g) || []).length === 6);
     conferir(linhas.length > 1 && seteColunas,
       'toda linha do CSV traz as 7 colunas');
+    // A coluna Fonte é o `data-fonte` do card: contato sem documento sai com a
+    // célula vazia, nunca com o rótulo neutro que saiu da tela.
+    const colunaFonte = linhas.slice(1).map(l => l.split(';')[3].replace(/^"|"$/g, ''));
+    conferir(!colunaFonte.some(v => /documento declarado/i.test(v)),
+      'o CSV não carrega o rótulo neutro aposentado');
     const novoNaBarra = await pagina.evaluate(() => {
       const b = document.getElementById('fc-novo');
       return { existe: !!b, oculto: b ? getComputedStyle(b).display === 'none' : null };

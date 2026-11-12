@@ -44,6 +44,16 @@ jobs:
             sleep 1
           done
           curl -sf http://127.0.0.1:8000/api/hierarquia -o /dev/null
+      - name: Conferir as contagens declaradas
+        # O número de casos aparece no README, na cartilha (HTML e PDF) e no
+        # rótulo do medir-modos-testes.sh, e já divergiu duas vezes. Falha aqui
+        # antes da suíte: número errado no documento não é problema que os testes
+        # de comportamento resolvam.
+        run: python3 scripts/conferir-contagens.py
+      - name: Auditoria de integridade (falha rápido)
+        # ~1 s e olha o dado (órfãos, nulos, árvore servida): se a base quebrou,
+        # saber isso antes dos ~45 s da suíte inteira economiza uma volta.
+        run: python3 -m unittest tests.test_integridade_dados -v
       - name: Rodar testes
         run: python3 -m unittest discover -s tests -t . -v
       - name: Log do servidor (só em falha)

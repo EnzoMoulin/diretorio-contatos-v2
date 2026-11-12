@@ -32,7 +32,7 @@ são as mesmas; o que evolui é a fundação técnica:
 | Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
 | Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
 | Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 78 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright, nos dois modos) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
+| Testes | Sem testes automatizados | 87 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright, nos dois modos) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
 | Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Front estático (Cloudflare Pages) + API FastAPI separada: a página abre na hora, a API acorda sozinha |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
@@ -83,7 +83,7 @@ flowchart LR
 
 - **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
   mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
-  `lru_cache` com invalidação, 78 casos de teste (`unittest`, banco temporário) e
+  `lru_cache` com invalidação, 87 casos de teste (`unittest`, banco temporário) e
   um teste de fumaça do admin que abre o Chromium e clica no fluxo (nos dois
   modos de aprovação).
 - **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
@@ -115,9 +115,10 @@ ranking de busca com tolerância a erro de digitação.
   com `tel:` + `mailto:`; Criar/Editar/Remover só onde há cobertura
 
 ## O que faz
-- **Procedência de cada contato**: todo contato carrega **de onde veio** (`fonte`) e **de quando é**
-  (`vigente_desde`) — `ofício 432/2024 — diretoria do foro` desde 03/2024, `catálogo de ramais —
-  agosto/2026` desde 08/2026, ou `base do sistema (sem documento declarado)` quando não há documento.
+- **Procedência de cada contato**: quando existe documento, o contato carrega **de onde veio** (`fonte`)
+  e **de quando é** (`vigente_desde`) — `ofício 432/2024 — diretoria do foro` desde 03/2024, `catálogo de
+  ramais — agosto/2026` desde 08/2026. Sem documento declarado o contato fica **sem fonte**: a linha de
+  procedência não aparece, em vez de carimbar "sem documento" em 1.478 dos 1.807.
   Aparece discreto sob o contato, no público e no interno. Antes disso, a única pista era o texto livre
   "Contato provisório — validar vigência." na observação, que não filtrava, não ordenava e não expirava.
   Editar telefone ou e-mail marca o contato como `edição manual`, com a data do dia — é a confirmação
@@ -206,9 +207,9 @@ com Python 3.15.2:
 
 | Ambiente de quem roda | Resultado |
 |---|---|
-| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 78 rodando, 1 pulado (`Ran 79`) — o pulado é a classe `TestSomenteLeitura`, que só vale no modo 0 |
-| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 77 rodando, 2 pulados (`Ran 79`) — a classe acima e `test_admin_na_allowlist_recebe_admin` |
-| `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 78 rodando, 2 pulados (`Ran 80`) — `test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist` |
+| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 87 rodando, 1 pulado (`Ran 88`) — o pulado é a classe `TestSomenteLeitura`, que só vale no modo 0 |
+| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 86 rodando, 2 pulados (`Ran 88`) — a classe acima e `test_admin_na_allowlist_recebe_admin` |
+| `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 87 rodando, 2 pulados (`Ran 89`) — `test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist` |
 
 No modo 0 pulam `test_cadeia_completa_com_limpeza` e a classe
 `TestAdminPorAllowlist` inteira — **mesmo com `ADMIN_EMAILS` exportado**, porque
@@ -216,6 +217,16 @@ a causa é a flag, não a allowlist. O `unittest` conta a classe pulada como **u
 skip, embora ela tenha mais de um teste: por isso o `Ran N` não bate com a soma
 dos casos e `skipped=2` no modo 0 não quer dizer "dois testes pulados". O CI roda
 as duas pernas (modo 1 e modo 0) em paralelo.
+
+O número de casos aparece em quatro lugares que não se leem entre si — este
+README, a cartilha em HTML, o PDF dela e o rótulo `esperado:` do
+`medir-modos-testes.sh`. Já divergiram duas vezes, e o instrumento de medir
+acabou contradizendo o documento que ele deveria confirmar.
+`scripts/contagens.json` é a fonte única; `scripts/conferir-contagens.py` lê os
+quatro e falha quando discordam (`--medir` roda a suíte nas três pernas em vez de
+confiar no que está escrito). O CI roda essa conferência antes dos testes, e
+antes deles também roda só `tests/test_integridade_dados.py`, que é o que olha o
+dado e leva ~1 s: base quebrada aparece em segundos, não no fim dos 45 s.
 
 ### Fumaça do admin (navegador real)
 Os testes de Python batem na API e conferem o HTML servido, mas não provam que
@@ -229,8 +240,10 @@ mesma cópia em `SIMULACAO_AUTO_APROVAR=0` — o modo que o `render.yaml` public
 e confere o que o visitante lê: um usuário sem escopo pede uma comarca e o
 cartão tem de trazer o chip **Aguardando Administrador** (desabilitado, com o
 motivo no `title` e no `aria-label`), o aviso do formulário tem de dizer somente
-leitura e a sessão não pode ganhar escopo nem aprovação automática. Trinta e
-nove verificações, nenhuma dependência nova no app: o Playwright vive só em
+leitura e a sessão não pode ganhar escopo nem aprovação automática — e nenhum
+card nem coluna Fonte do CSV pode carregar o rótulo neutro aposentado da
+procedência, enquanto quem tem documento mostra a fonte no texto. 44
+verificações, nenhuma dependência nova no app: o Playwright vive só em
 `tests/fumaca`.
 
 `tests/fumaca/smoke-fila.mjs` cobre os dois estados que o caminho feliz não

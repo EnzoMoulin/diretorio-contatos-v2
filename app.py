@@ -597,21 +597,30 @@ def _procedencia(obs):
     return "", ""
 
 
+# Rótulo neutro que versões anteriores gravavam em todo contato sem documento
+# declarado. Saiu da tela em 12/11/2026 a pedido do dono: contato sem documento
+# fica sem fonte, e o card não mostra linha de procedência nenhuma em vez de
+# exibir um carimbo burocrático em 1.478 dos 1.807. A constante sobrevive só
+# para a limpeza de bases que já gravaram o rótulo.
+_FONTE_NEUTRA_APOSENTADA = "base do sistema (sem documento declarado)"
+
+
 def _procedencia_preencher(con):
-    """Preenche fonte/vigente_desde vazias. Idempotente e não destrutiva.
+    """Preenche fonte/vigente_desde a partir da observação. Idempotente.
 
     Roda a cada boot: só toca linha com `fonte` vazio, então edição manual
     (que grava `edição manual`) nunca é sobrescrita. Linha sem observação de
-    documento recebe o rótulo neutro — não se inventa data de vigência.
+    documento fica **sem fonte** — não se inventa documento nem data de
+    vigência. A limpeza do rótulo neutro vem antes do preenchimento para que
+    uma base antiga que o tenha gravado volte a ser lida pela observação.
     """
+    con.execute("UPDATE contatos SET fonte='' WHERE fonte=?",
+                (_FONTE_NEUTRA_APOSENTADA,))
     for marca, rotulo, data in PROCEDENCIA:
         con.execute(
             "UPDATE contatos SET fonte=?, vigente_desde=?"
             " WHERE COALESCE(fonte,'')='' AND lower(COALESCE(observacao,'')) LIKE ?",
             (rotulo, data, f"%{marca}%"))
-    con.execute(
-        "UPDATE contatos SET fonte='base do sistema (sem documento declarado)'"
-        " WHERE COALESCE(fonte,'')=''")
 
 
 def _carregar_seed_json(con):
@@ -747,8 +756,7 @@ def _carregar_seed_json(con):
             (novo_id(con, "contatos", "C"), sid, nome, str(ct.get("tipo", "")),
              valor if col == "telefone" else "",
              valor if col == "email" else "", ct.get("desc", ""),
-             ct.get("obs", ""), fonte or "base do sistema (sem documento declarado)",
-             vigente, ct.get("ordem"), i))
+             ct.get("obs", ""), fonte, vigente, ct.get("ordem"), i))
     for u in seed.get("uteis", []):
         con.execute("INSERT INTO uteis (uid, nome, tipo, valor) VALUES (?,?,?,?)",
                     (u.get("id", ""), u.get("nome", ""), u.get("tipo", ""), u.get("valor", "")))
