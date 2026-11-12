@@ -272,6 +272,16 @@ async function medirPagina(pagina, nome) {
   });
 
   const caminhada = async () => {
+    // A foto de repouso só vale com o foco fora de qualquer controle: a passada
+    // anterior (ou a checagem do primeiro Tab, no topo) deixa o skip-link
+    // focado, e aí "estilo sem foco" seria o estilo COM foco — o próprio
+    // skip-link apareceria como se o Tab não mudasse nada. Blur e espera a
+    // transição dele (180 ms) voltar ao repouso antes de fotografar.
+    await pagina.evaluate(() => {
+      const a = document.activeElement;
+      if (a && a.blur) a.blur();
+    });
+    await pagina.waitForTimeout(300);
     await medir('instantaneos');              // referência: estilo sem foco
     await pagina.evaluate(() => document.body.focus());
     const vistos = new Set();
