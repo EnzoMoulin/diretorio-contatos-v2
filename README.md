@@ -375,6 +375,7 @@ com salt; hashes sha256 legados são convertidos no primeiro login.
 | POST | `/api/logout` | token | encerra a sessão |
 | POST | `/api/login` | não | dev/testes `{usuario, senha}` → `{token}` (só `LOCAL_LOGIN=1`) |
 | POST | `/api/contatos` | `X-Admin-Token` | cria (só no seu escopo) |
+| POST | `/api/contatos/<id>/conferir` | `X-Admin-Token` | marca o contato como conferido: grava autor e data e registra a ação no histórico (só no seu escopo) |
 | PUT | `/api/contatos/<id>` | `X-Admin-Token` | edita nome, cargo, telefone e e-mail (só no seu escopo) |
 | DELETE | `/api/contatos/<id>` | `X-Admin-Token` | remove (só no seu escopo) |
 | POST | `/api/pedidos` | token | solicita acesso (com local) |
