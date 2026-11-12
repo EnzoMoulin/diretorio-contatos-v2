@@ -19,9 +19,10 @@
 > (código institucional); o arco técnico está documentado abaixo, em
 > [Estudo de caso](#estudo-de-caso-v1--v2--v3).
 
-## Evolução v1 → v2 → v3
+## Estudo de caso: v1 → v2 → v3
 Mesmo produto, três fases de maturidade — a interface e as regras de negócio
-são as mesmas; o que evolui é a fundação técnica:
+são as mesmas; o que evolui é a fundação técnica. A tabela é o resumo; o arco
+completo, com as decisões e o que cada fase custou, vem em seguida.
 
 | Aspecto | v1 — MVP (privado) | v2 — reescrita (este repo) | v3 — direção |
 |---|---|---|---|
@@ -38,8 +39,6 @@ são as mesmas; o que evolui é a fundação técnica:
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
 zero dentro do ecossistema onde os dados viviam; o v2 prova a mesma arquitetura
 sem dependência de fornecedor; o v3 endurece para escala.
-
-## Estudo de caso: v1 → v2 → v3
 
 O v1 nasceu como proposta de estágio no Laboratório de Inovação e IA do
 Tribunal de Justiça do Estado do Espírito Santo (TJES): a proposta e o MVP
@@ -371,6 +370,9 @@ frontend/admin.html    área administrativa (consulta + modais)
 frontend/admin.js      estados de acesso + gestão por escopo + solicitações + registro
 frontend/mapa.js       mapa Leaflet compartilhado (densidade + clique filtra)
 frontend/style.css     tema (paleta, tipografia e componentes)
+docs/testes.md         cada script de teste, o cache ?v= e a conferência de contagens
+docs/cartilha-deploy.html  runbook de deploy (com o PDF ao lado)
+docs/demo-fluxo.mp4    screencast do fluxo completo (com o .sha256)
 ```
 
 ## Licença
