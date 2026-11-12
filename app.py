@@ -971,14 +971,42 @@ DEMO_ACOES = (
 )
 
 
-def _mes_atras(atras):
-    """(ano, mês) de N meses atrás, no mesmo calendário do /api/historico/mensal."""
-    hoje = time.localtime()
+def _mes_atras(atras, hoje=None):
+    """(ano, mês) de N meses atrás, no mesmo calendário do /api/historico/mensal.
+
+    `hoje` aceita um `time.struct_time` já capturado, e a trilha passa o dela:
+    a janela inteira tem de sair de UM instante. Lendo o relógio aqui dentro,
+    um boot na virada do mês trocava o calendário no meio da geração — medido
+    em 2027-01-31 23:59:58 → 2027-02-01 00:00:01: 9 meses distintos em vez de
+    10, o mês em curso zerado e as barras vazias em outra posição.
+    """
+    hoje = hoje or time.localtime()
     ano, mes = hoje.tm_year, hoje.tm_mon - atras
     while mes <= 0:
         mes += 12
         ano -= 1
     return ano, mes
+
+
+def _carimbo_mes_em_curso(ano, mes, indice, agora):
+    """Carimbo de uma linha do mês em curso: sempre no passado e distinto.
+
+    Recua minutos do próprio "agora" em vez de cortar o carimbo do dia 5–20
+    contra ele: o corte empilhava as linhas do mês no mesmo instante quando o
+    demo nascia antes das 9h de um dia 1 a 5 — dois registros idênticos na
+    trilha. O piso é o primeiro segundo do mês: recuar para o mês anterior
+    moveria a barra do gráfico e zeraria o mês em curso.
+    """
+    inicio = "%04d-%02d-01 00:00:00" % (ano, mes)
+    if agora <= inicio:
+        return inicio  # primeiro instante do mês: não há para onde recuar
+    minutos = ((int(agora[8:10]) - 1) * 24 + int(agora[11:13])) * 60 \
+        + int(agora[14:16]) - (indice + 1)
+    if minutos < 0:
+        return inicio
+    dia, resto = divmod(minutos, 24 * 60)
+    hora, minuto = divmod(resto, 60)
+    return "%04d-%02d-%02d %02d:%02d:00" % (ano, mes, dia + 1, hora, minuto)
 
 
 def _historico_demonstracao(con):
@@ -993,20 +1021,27 @@ def _historico_demonstracao(con):
         return 0
     n = 0
     hoje = time.localtime()
+    # Um instante só para a trilha inteira (janela e carimbos): ler o relógio
+    # dentro do laço fazia a virada do mês trocar o calendário no meio, e a
+    # barra do mês em curso nascia zerada (o corte `min(quando, agora)` empurrava
+    # as linhas do mês novo para o mês velho). Medido: 9 meses distintos.
+    agora = time.strftime("%Y-%m-%d %H:%M:%S", hoje)
     for atras, quantas in DEMO_HISTORICO:
-        ano, mes = _mes_atras(atras)
+        ano, mes = _mes_atras(atras, hoje)
         for i in range(quantas):
             acao, detalhe = DEMO_ACOES[n % len(DEMO_ACOES)]
-            dia = 5 + (i * 7) % 20
             if atras == 0:
-                # Mês em curso: nada de alteração datada no futuro.
-                dia = min(dia, hoje.tm_mday)
+                # Mês em curso: carimbo no passado por construção, nunca no
+                # futuro — é a mesma regra do teste, e não depende do fuso.
+                quando = _carimbo_mes_em_curso(ano, mes, i, agora)
+            else:
+                dia = 5 + (i * 7) % 20
+                quando = "%04d-%02d-%02d %02d:%02d:00" % (
+                    ano, mes, dia, 9 + (i % 8), (i * 13) % 60)
             con.execute(
                 "INSERT INTO historico (acao, contato_id, detalhe, usuario_id,"
                 " autor_nome, data) VALUES (?,NULL,?,NULL,?,?)",
-                (acao, detalhe, MARCA_DEMO,
-                 "%04d-%02d-%02d %02d:%02d:00"
-                 % (ano, mes, dia, 9 + (i % 8), (i * 13) % 60)))
+                (acao, detalhe, MARCA_DEMO, quando))
             n += 1
     return n
 

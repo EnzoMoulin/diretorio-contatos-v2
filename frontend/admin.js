@@ -1689,7 +1689,11 @@ async function refresh() {
   $('profile-badge').innerHTML = dentro
     ? ICON_PESSOA + ' ' + esc(me.usuario)
     : '<i>●</i> Visitante';
-  if (dentro) carregarPedidos();
+  // A lista de pedidos é da administração (o GET /api/pedidos é admin-only).
+  // Pedir para quem não é admin devolvia 403 a cada carga da página — e o
+  // console do visitante enchia com um erro que não é erro. O badge e a view
+  // são do admin; para os demais, nada a buscar.
+  if (dentro && ehAdmin) carregarPedidos();
   aplicarAvisoAcesso();
   if (dentro) notifBadge(); else $('notif-count').textContent = '';
   mostrarConsulta();
