@@ -17,6 +17,12 @@ encontrado e o esperado, e o script termina em 1.
 O PDF depende de `pdftotext` (poppler): sem ele o passo é *pulado*, não reprovado
 — o runner do GitHub Actions não traz poppler, e reprovar por falta de ferramenta
 ensinaria a ignorar o script.
+
+**Quem consome a contagem:** os quatro lugares acima são os que este script
+alcança. Existe um quinto, **fora do repositório** — o currículo em português e em
+inglês (`.docx`/`.pdf`/`.txt`), que também anuncia os 94 casos. Mudar o número é
+editar cinco artefatos, não um, e o quinto só se confere a olho: nenhum CI olha
+para fora do repositório.
 """
 import json
 import os

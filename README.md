@@ -27,14 +27,11 @@ completo, com as decisões e o que cada fase custou, vem em seguida.
 | Aspecto | v1 — MVP (privado) | v2 — reescrita (este repo) | v3 — direção |
 |---|---|---|---|
 | Runtime + dados | Apps Script + Sheets (planilha como banco, sem FKs) | Python stdlib + SQLite (FKs, zero dependências) | Migrações versionadas + Postgres gerenciado (Neon) |
-| Concorrência | `LockService` por execução | `ThreadingHTTPServer` + lock em escrita | PHP-FPM atrás do nginx, pool de conexões no Postgres |
+| Concorrência | `LockService` por execução | `ThreadingHTTPServer` + lock em escrita | PHP-FPM atrás do nginx, pool de conexões |
 | Busca | Substring no frontend | FTS5 no servidor + autocomplete com highlight | Ranking por relevância, tolerância a erro de digitação |
-| Auth | Sessão Google + planilha | Google OAuth + login local (só dev, flag `LOCAL_LOGIN`) com PBKDF2 | Expiração de sessão, papéis granulares |
-| Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
-| Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
-| Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 94 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright: fluxo, fila e acessibilidade nos dois temas) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
-| Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Laravel + Blade/TALL num único serviço Docker no Render, com Postgres gerenciado: HTML e JSON saem do mesmo processo |
+| Auth | Sessão Google + planilha | Google OAuth + login local (só dev, `LOCAL_LOGIN`) com PBKDF2 | Expiração de sessão, papéis granulares |
+| Testes | Sem testes automatizados | 94 casos (`unittest`, banco temporário) + fumaça Playwright + CI em duas pernas | Cobertura medida e testes de contrato |
+| Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Laravel + Blade/TALL num serviço Docker + Postgres gerenciado |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
 zero dentro do ecossistema onde os dados viviam; o v2 prova a mesma arquitetura
@@ -63,12 +60,11 @@ flowchart LR
 ```
 
 - **Decisão central:** planilha como banco — custo zero, zero infraestrutura, e os
-  dados já viviam no Workspace do tribunal. Frontend e backend conversando em JSON.
-- **O que segurou o piloto:** `LockService` em escrita, cache de referência com TTL,
-  autorização sempre no servidor.
-- **Limites que motivaram a v2:** planilha não tem chaves estrangeiras nem testes
-  automatizados; tudo preso ao ecossistema Google; sem como provar a arquitetura
-  fora dele.
+  dados já viviam no Workspace do tribunal; front e back conversando em JSON.
+- **O que segurou o piloto:** `LockService` em escrita, cache com TTL, autorização
+  sempre no servidor.
+- **Limite que motivou a v2:** planilha não tem chave estrangeira nem teste, e tudo
+  ficava preso ao ecossistema Google — sem como provar a arquitetura fora dele.
 
 ### Fase 2 — reescrita em Python stdlib + SQLite
 
@@ -80,21 +76,19 @@ flowchart LR
     HTTP -.-> LRU["lru_cache\n(hierarquia)"]
 ```
 
-- **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
-  mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
-  `lru_cache` com invalidação, 94 casos de teste (`unittest`, banco temporário) e
-  um teste de fumaça do admin que abre o Chromium e clica no fluxo (nos dois
-  modos de aprovação).
-- **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
-  escopo por nível, UX das telas — a interface e as regras são as mesmas, propositalmente.
-- **Por que só stdlib:** zero dependências = deploy gratuito trivial e prova de que a
+- **Reescrito do zero:** `http.server` + `sqlite3`, seed mascarado versionado, FTS5
+  com triggers, PBKDF2, `VACUUM INTO` com download no admin, `lru_cache` com
+  invalidação, painel de alterações e obsoletos, 94 casos de teste em banco
+  temporário e fumaça do admin num Chromium real (nos dois modos de aprovação).
+- **Portado fiel:** fluxo Comarca → Fórum → Unidade → Setor, regras de escopo por
+  nível e UX das telas — iguais de propósito.
+- **Por que só stdlib:** zero dependência = deploy gratuito trivial e prova de que a
   arquitetura se sustenta sem fornecedor.
 
 ### Fase 3 — direção (endurecer para escala)
 
-Laravel + TALL num único serviço Docker, Postgres gerenciado, migrações versionadas,
-papéis granulares (RBAC), paginação e ranking de busca com tolerância a erro de
-digitação.
+Laravel + TALL num serviço Docker, Postgres gerenciado, migrações versionadas, papéis
+granulares, paginação e ranking de busca tolerante a erro de digitação.
 
 ## Arquitetura
 - **Duas implantações isoladas, sem trânsito entre elas** — pública e
