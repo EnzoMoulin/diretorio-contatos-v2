@@ -25,7 +25,11 @@ sys.path.insert(0, RAIZ)
 
 OFICIO = "ofício 432/2024 — diretoria do foro"
 CATALOGO = "catálogo de ramais — agosto/2026"
-BASE_SEED = "base do sistema (sem documento declarado)"
+# Rótulo neutro que versões antigas gravavam em todo contato sem documento. Saiu
+# em 12/11/2026: quem não tem documento fica sem fonte, com a linha de
+# procedência ausente do card — em vez de um carimbo repetido em 1.478 linhas.
+# O nome sobrevive aqui só para provar que bases antigas o perdem no boot.
+APOSENTADO = "base do sistema (sem documento declarado)"
 
 
 def api(method, path, corpo=None, token=None):
@@ -54,29 +58,37 @@ def consulta(sql, args=()):
 
 
 class TestProcedenciaNoBanco(unittest.TestCase):
-    """A base carregada do seed tem de sair com procedência preenchida."""
+    """A base carregada do seed tem de sair com procedência só onde há documento."""
 
-    def test_nenhum_contato_sem_fonte(self):
-        vazio = consulta(
-            "SELECT COUNT(*) AS c FROM contatos WHERE COALESCE(fonte,'')=''")[0]["c"]
-        self.assertEqual(vazio, 0, "contato sem procedência no seed")
+    def test_o_rotulo_neutro_nao_existe_mais(self):
+        # nem no seed novo, nem sobrando de base antiga: o card não deve exibir
+        # "sem documento declarado" em contato nenhum
+        restou = consulta(
+            "SELECT COUNT(*) AS c FROM contatos WHERE fonte LIKE ?",
+            (f"%{APOSENTADO}%",))[0]["c"]
+        self.assertEqual(restou, 0, "o rótulo neutro aposentado reapareceu na base")
 
-    def test_as_tres_origens_do_seed(self):
-        # 43 vêm do Ofício 432/2024, 286 do catálogo da Sede (agosto/2026)
-        # e o resto da base sem documento declarado: 43 + 286 + 1.478 = 1.807
+    def test_as_duas_origens_do_seed(self):
+        # 43 vêm do Ofício 432/2024 e 286 do catálogo da Sede (agosto/2026); o
+        # resto não tem documento declarado e por isso fica sem fonte.
         contagem = {r["fonte"]: r["c"] for r in consulta(
             "SELECT fonte, COUNT(*) AS c FROM contatos GROUP BY fonte")}
         self.assertEqual(contagem.get(OFICIO), 43)
         self.assertEqual(contagem.get(CATALOGO), 286)
-        self.assertEqual(contagem.get(BASE_SEED), 1478)
+        total = consulta("SELECT COUNT(*) AS c FROM contatos")[0]["c"]
+        self.assertEqual(contagem.get("") or contagem.get(None), total - 329,
+                         "contato sem documento deveria ficar sem fonte")
 
     def test_data_da_fonte_casa_com_o_documento(self):
         datas = {r["fonte"]: r["d"] for r in consulta(
             "SELECT fonte, MIN(vigente_desde) AS d FROM contatos GROUP BY fonte")}
         self.assertEqual(datas[OFICIO], "2024-03-01")
         self.assertEqual(datas[CATALOGO], "2026-08-28")
-        # a base sem documento não inventa data de vigência
-        self.assertEqual(datas[BASE_SEED], "")
+        # sem fonte não se inventa data de vigência
+        com_data_sem_fonte = consulta(
+            "SELECT id FROM contatos WHERE COALESCE(fonte,'')=''"
+            " AND COALESCE(vigente_desde,'')<>''")
+        self.assertEqual([r["id"] for r in com_data_sem_fonte], [])
 
     def test_vigente_desde_so_em_iso_ou_vazio(self):
         ruins = consulta(
@@ -107,14 +119,21 @@ class TestPreenchimentoIdempotente(unittest.TestCase):
             [("C1", "", "", "Contato provisório — validar vigência."),
              ("C2", "", "", "ramal do catálogo de agosto/2026"),
              ("C3", "", "", ""),
-             ("C4", "edição manual", "2026-11-11", "Contato provisório.")])
+             ("C4", "edição manual", "2026-11-11", "Contato provisório."),
+             # base antiga: o rótulo neutro aposentado, sem observação
+             ("C5", APOSENTADO, "", ""),
+             # base antiga com o rótulo E observação de documento: a limpeza
+             # vem antes do preenchimento, então volta a ler a observação
+             ("C6", APOSENTADO, "", "Contato provisório — validar vigência.")])
         app._procedencia_preencher(con)
         linhas = {r["id"]: (r["fonte"], r["vigente_desde"])
                   for r in con.execute("SELECT * FROM contatos")}
         self.assertEqual(linhas["C1"], (OFICIO, "2024-03-01"))
         self.assertEqual(linhas["C2"], (CATALOGO, "2026-08-28"))
-        self.assertEqual(linhas["C3"], (BASE_SEED, ""))
+        self.assertEqual(linhas["C3"], ("", ""))
         self.assertEqual(linhas["C4"], ("edição manual", "2026-11-11"))
+        self.assertEqual(linhas["C5"], ("", ""))
+        self.assertEqual(linhas["C6"], (OFICIO, "2024-03-01"))
         # segunda passada: nada muda
         app._procedencia_preencher(con)
         depois = {r["id"]: (r["fonte"], r["vigente_desde"])
