@@ -10,6 +10,13 @@
  * de Python é estrutural (lê o JS): só um download de verdade prova que o
  * arquivo sai com o cabeçalho e as linhas certas.
  *
+ * Os passos 1–8 rodam em SIMULACAO_AUTO_APROVAR=1. O passo 9 reinicia a mesma
+ * cópia em =0 — o modo que o render.yaml publica — e confere o que o visitante
+ * lê: o chip "Aguardando Administrador" no cartão do pedido e o aviso de acesso
+ * somente leitura. Até então esse modo só tinha guard de Python (a API), e a
+ * tela ficava sem prova: rótulo trocado, aria-label vazio ou chip sumido
+ * passariam.
+ *
  * Roda numa cópia do app em diretório temporário: nunca toca no contatos.db
  * do dono (que pode ter o resultado do teste manual dele).
  *
@@ -19,7 +26,7 @@
  *
  * Variáveis: PYTHON (padrão python3), PW_HEADED=1 para ver a janela.
  */
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -69,55 +76,88 @@ function copiarApp() {
   return destino;
 }
 
-async function main() {
-  if (!existsSync(join(RAIZ, 'app.py'))) {
-    console.error('Não achei app.py em ' + RAIZ + ' — rode a partir do repositório.');
-    process.exit(2);
-  }
-  const pasta = copiarApp();
+/** Sobe a cópia numa porta livre; `auto` é a flag SIMULACAO_AUTO_APROVAR. */
+async function subirServidor(pasta, auto) {
   const porta = await porta_livre();
-  const base = 'http://127.0.0.1:' + porta;
-  const log = join(pasta, 'servidor.log');
-  console.log('servidor: ' + base + ' (cópia em ' + pasta + ')');
-
-  const servidor = spawn(PYTHON, ['app.py'], {
+  const proc = spawn(PYTHON, ['app.py'], {
     cwd: pasta,
     env: {
       ...process.env,
       PORT: String(porta),
       HOST: '127.0.0.1',
       LOCAL_LOGIN: '1',
-      SIMULACAO_AUTO_APROVAR: '1',
+      SIMULACAO_AUTO_APROVAR: auto ? '1' : '0',
       ADMIN_EMAILS: 'dono@exemplo.jus.br',
       INTRANET_ONLY: '1'
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   let saida = '';
-  servidor.stdout.on('data', d => { saida += d; });
-  servidor.stderr.on('data', d => { saida += d; });
-  servidor.on('exit', codigo => {
+  proc.stdout.on('data', d => { saida += d; });
+  proc.stderr.on('data', d => { saida += d; });
+  proc.on('exit', codigo => {
     if (codigo && falhas.length === 0) {
       console.error('servidor saiu com código ' + codigo + '\n' + saida.slice(-2000));
     }
   });
+  return {
+    proc,
+    base: 'http://127.0.0.1:' + porta,
+    log: () => saida,
+    parar: () => new Promise(r => {
+      if (proc.exitCode !== null) return r();
+      proc.once('exit', r);
+      proc.kill('SIGTERM');
+    })
+  };
+}
+
+/** Erros de console da página, com o ruído de CDN (Leaflet/tiles) filtrado. */
+function ligarErros(pagina, erros) {
+  pagina.on('pageerror', e => erros.push('pageerror: ' + e.message));
+  pagina.on('console', m => {
+    if (m.type() !== 'error') return;
+    const texto = m.text();
+    // Leaflet e tiles vêm de CDN: bloqueio de rede externa não é regressão do app.
+    if (/unpkg\.com|tile\.openstreetmap|ERR_(BLOCKED|INTERNET|CONNECTION|NAME_NOT_RESOLVED)/.test(texto)) return;
+    // A URL entra na mensagem: "Failed to load resource: 403" sozinho não diz
+    // qual rota respondeu isso, e é a rota que aponta o defeito.
+    const onde = (m.location() && m.location().url) || '';
+    erros.push('console: ' + texto + (onde ? ' @ ' + onde : ''));
+  });
+}
+
+async function entrar(base, usuario, senha) {
+  const r = await fetch(base + '/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ usuario, senha })
+  });
+  if (!r.ok) throw new Error('login de ' + usuario + ' falhou: HTTP ' + r.status);
+  return (await r.json()).token;
+}
+
+async function main() {
+  if (!existsSync(join(RAIZ, 'app.py'))) {
+    console.error('Não achei app.py em ' + RAIZ + ' — rode a partir do repositório.');
+    process.exit(2);
+  }
+  const pasta = copiarApp();
+  const log = join(pasta, 'servidor.log');
+  let servidor = await subirServidor(pasta, true);
+  const base = servidor.base;
+  console.log('servidor: ' + base + ' (cópia em ' + pasta + ')');
 
   let navegador;
   try {
     if (!await esperar(base + '/api/comarcas')) {
-      console.error('servidor não respondeu em 40 s\n' + saida.slice(-2000));
+      console.error('servidor não respondeu em 40 s\n' + servidor.log().slice(-2000));
       process.exit(2);
     }
 
     // Login local: o /admin não tem formulário (o público usa Google), então a
     // sessão nasce pela API e entra no localStorage antes do primeiro script.
-    const login = await fetch(base + '/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usuario: 'admin', senha: 'admin123' })
-    });
-    if (!login.ok) throw new Error('login local falhou: HTTP ' + login.status);
-    const { token } = await login.json();
+    const token = await entrar(base, 'admin', 'admin123');
 
     navegador = await chromium.launch({ headless: !process.env.PW_HEADED });
     const contexto = await navegador.newContext({ viewport: { width: 1360, height: 900 }, acceptDownloads: true });
@@ -126,14 +166,7 @@ async function main() {
       localStorage.setItem('contatos-token', t);
     }, token);
     const pagina = await contexto.newPage();
-    pagina.on('pageerror', e => erros.push('pageerror: ' + e.message));
-    pagina.on('console', m => {
-      if (m.type() !== 'error') return;
-      const texto = m.text();
-      // Leaflet e tiles vêm de CDN: bloqueio de rede externa não é regressão do app.
-      if (/unpkg\.com|tile\.openstreetmap|ERR_(BLOCKED|INTERNET|CONNECTION|NAME_NOT_RESOLVED)/.test(texto)) return;
-      erros.push('console: ' + texto);
-    });
+    ligarErros(pagina, erros);
 
     console.log('\n1) /admin com sessão local');
     const resposta = await pagina.goto(base + '/admin', { waitUntil: 'domcontentloaded' });
@@ -142,6 +175,12 @@ async function main() {
     ok('menu "Registro de alterações" aparece para o admin');
     const quem = (await pagina.textContent('#who-line')) || '';
     conferir(!/Sem acesso/i.test(quem), 'rodapé identifica o usuário logado (' + quem.trim() + ')');
+    // O aviso de acesso é reescrito pelo /api/me (o HTML traz o texto somente
+    // leitura como padrão). Em modo automático ele tem de dizer automática: é a
+    // prova de que o texto segue o servidor, e o passo 9 confere o outro modo.
+    const avisoAuto = ((await pagina.textContent('#ped-dica')) || '').trim();
+    conferir(/automática/.test(avisoAuto),
+      'o aviso de acesso segue o servidor (modo automático): ' + avisoAuto.slice(0, 60));
 
     console.log('\n2) clique em Reconfirmar');
     const botao = pagina.locator('#fc-antigos');
@@ -291,11 +330,88 @@ async function main() {
 
     console.log('\n8) console do navegador');
     conferir(erros.length === 0, 'sem erro de JavaScript' + (erros.length ? ': ' + erros.slice(0, 3).join(' | ') : ''));
+
+    console.log('\n9) modo somente leitura: chip "Aguardando Administrador"');
+    // O render.yaml publica SIMULACAO_AUTO_APROVAR=0 e nenhum passo daqui
+    // abria a tela nesse modo — só a suíte de Python olhava a API. Aqui a
+    // cópia reinicia em somente leitura, um visitante sem escopo pede uma
+    // comarca e o cartão tem de contar a ele que o pedido espera um
+    // Administrador (e não "Pedido pendente", que é o rótulo do outro modo).
+    await servidor.parar();
+    servidor = await subirServidor(pasta, false);
+    const baseLeitura = servidor.base;
+    if (!await esperar(baseLeitura + '/api/comarcas')) {
+      throw new Error('o boot em somente leitura não respondeu\n' + servidor.log().slice(-2000));
+    }
+    // O /admin não tem rota de criação de conta: o visitante nasce direto no
+    // banco da cópia (mesmo caminho do smoke-fila.mjs).
+    const senha = execFileSync(PYTHON, ['-c', 'import app; print(app.gerar_hash("leitura123"))'],
+      { cwd: pasta }).toString().trim();
+    execFileSync(PYTHON, ['-c', `
+import sqlite3, sys
+con = sqlite3.connect('contatos.db')
+con.execute("INSERT INTO usuarios (usuario, senha_sha256, aprovado, admin, email)"
+            " VALUES ('visitante', ?, 1, 0, 'visitante@exemplo.jus.br')", (sys.argv[1],))
+con.commit()
+`, senha], { cwd: pasta });
+    const tokenVisitante = await entrar(baseLeitura, 'visitante', 'leitura123');
+    const pedido = await fetch(baseLeitura + '/api/pedidos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': tokenVisitante },
+      body: JSON.stringify({ nome: 'Visitante Fumaça', motivo: 'avaliação',
+                             nivel: 'comarca', alvo_id: 'M2' })
+    });
+    const corpoPedido = await pedido.json().catch(() => ({}));
+    conferir(pedido.status === 201, 'pedido de comarca aceito em somente leitura (' + pedido.status + ')');
+    conferir(corpoPedido.auto_aprovado === false,
+      'o servidor não aprova sozinho (auto_aprovado=false)');
+
+    const contextoLeitura = await navegador.newContext({ viewport: { width: 1360, height: 900 } });
+    await contextoLeitura.addInitScript(t => localStorage.setItem('contatos-token', t), tokenVisitante);
+    const paginaLeitura = await contextoLeitura.newPage();
+    const errosLeitura = [];
+    ligarErros(paginaLeitura, errosLeitura);
+    await paginaLeitura.goto(baseLeitura + '/admin', { waitUntil: 'domcontentloaded' });
+    // O cartão da comarca pedida é o único com pedido pendente: o chip tem de
+    // estar nele, não num cartão qualquer.
+    const chip = paginaLeitura.locator('.fc-card[data-comarca="M2"] .fc-access.pendente');
+    await chip.waitFor({ state: 'visible', timeout: 20000 });
+    const rotulo = ((await chip.textContent()) || '').trim();
+    conferir(rotulo === 'Aguardando Administrador',
+      'o chip diz "Aguardando Administrador" (achou "' + rotulo + '")');
+    conferir(await chip.isDisabled(), 'o chip é estado, não clique: o botão está desabilitado');
+    const avisoChip = (await chip.getAttribute('title')) || '';
+    conferir(/somente leitura/.test(avisoChip),
+      'o title explica o modo: "' + avisoChip + '"');
+    const ariaChip = (await chip.getAttribute('aria-label')) || '';
+    conferir(ariaChip.startsWith(rotulo) && /somente leitura/.test(ariaChip),
+      'o aria-label repete o rótulo e o motivo (leitor de tela não lê title)');
+    const quantosChips = await paginaLeitura.$$eval('.fc-access.pendente', els => els.length);
+    conferir(quantosChips === 1, 'só o cartão do pedido traz o chip (' + quantosChips + ')');
+    const avisoLeitura = ((await paginaLeitura.textContent('#ped-dica')) || '').trim();
+    conferir(/somente leitura/.test(avisoLeitura),
+      'o aviso do formulário diz somente leitura: ' + avisoLeitura.slice(0, 60));
+    const meLeitura = await (await fetch(baseLeitura + '/api/me', {
+      headers: { 'X-Admin-Token': tokenVisitante }
+    })).json();
+    conferir(meLeitura.aprovacao_automatica === false
+      && Array.isArray(meLeitura.escopo) && meLeitura.escopo.length === 0,
+      'a sessão não ganhou escopo nem aprovação automática');
+    conferir(errosLeitura.length === 0,
+      'sem erro de JavaScript em somente leitura'
+      + (errosLeitura.length ? ': ' + errosLeitura.slice(0, 3).join(' | ') : ''));
+    await paginaLeitura.screenshot({ path: join(pasta, 'somente-leitura.png'), fullPage: true });
+    // O recorte do cartão é a evidência que casa com a asserção: na página
+    // inteira o chip some no meio de 900 px de altura.
+    await paginaLeitura.locator('.fc-card[data-comarca="M2"]')
+      .screenshot({ path: join(pasta, 'somente-leitura-cartao.png') });
+    console.log('  evidência: ' + join(pasta, 'somente-leitura-cartao.png'));
+    await contextoLeitura.close();
   } catch (e) {
     falha('exceção: ' + (e && e.message ? e.message : String(e)));
   } finally {
     if (navegador) await navegador.close().catch(() => {});
-    servidor.kill('SIGTERM');
+    await servidor.parar().catch(() => {});
     await new Promise(r => setTimeout(r, 300));
     if (falhas.length === 0 && process.env.PW_KEEP !== '1') {
       rmSync(pasta, { recursive: true, force: true });

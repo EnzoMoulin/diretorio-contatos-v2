@@ -32,7 +32,7 @@ são as mesmas; o que evolui é a fundação técnica:
 | Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
 | Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
 | Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 72 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
+| Testes | Sem testes automatizados | 78 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright, nos dois modos) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
 | Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Front estático (Cloudflare Pages) + API FastAPI separada: a página abre na hora, a API acorda sozinha |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
@@ -83,8 +83,9 @@ flowchart LR
 
 - **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
   mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
-  `lru_cache` com invalidação, 72 casos de teste (`unittest`, banco temporário) e
-  um teste de fumaça do admin que abre o Chromium e clica no fluxo.
+  `lru_cache` com invalidação, 78 casos de teste (`unittest`, banco temporário) e
+  um teste de fumaça do admin que abre o Chromium e clica no fluxo (nos dois
+  modos de aprovação).
 - **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
   escopo por nível, UX das telas — a interface e as regras são as mesmas, propositalmente.
 - **Por que só stdlib:** zero dependências = deploy gratuito trivial e prova de que a
@@ -205,9 +206,9 @@ com Python 3.15.2:
 
 | Ambiente de quem roda | Resultado |
 |---|---|
-| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 72 rodando, 1 pulado (`Ran 73`) — o pulado é a classe `TestSomenteLeitura`, que só vale no modo 0 |
-| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 71 rodando, 2 pulados (`Ran 73`) — a classe acima e `test_admin_na_allowlist_recebe_admin` |
-| `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 72 rodando, 2 pulados (`Ran 74`) — `test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist` |
+| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 78 rodando, 1 pulado (`Ran 79`) — o pulado é a classe `TestSomenteLeitura`, que só vale no modo 0 |
+| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 77 rodando, 2 pulados (`Ran 79`) — a classe acima e `test_admin_na_allowlist_recebe_admin` |
+| `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 78 rodando, 2 pulados (`Ran 80`) — `test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist` |
 
 No modo 0 pulam `test_cadeia_completa_com_limpeza` e a classe
 `TestAdminPorAllowlist` inteira — **mesmo com `ADMIN_EMAILS` exportado**, porque
@@ -221,9 +222,16 @@ Os testes de Python batem na API e conferem o HTML servido, mas não provam que
 o JavaScript monta a tela. `tests/fumaca/smoke.mjs` sobe uma cópia do app num
 diretório temporário (nunca toca no `contatos.db` de quem está testando), entra
 com o login local, clica em **Reconfirmar**, abre a primeira linha da fila,
-**baixa o CSV** e confere as linhas do arquivo contra os contatos da tela, e
-confere o gráfico de alterações por mês. Dezenove verificações, nenhuma
-dependência nova no app: o Playwright vive só em `tests/fumaca`.
+**baixa o CSV** e confere as linhas do arquivo contra os contatos da tela,
+confere o gráfico de alterações por mês e mede a barra de ações em 390 px (o
+alvo de toque tem de continuar valendo no celular). O último passo reinicia a
+mesma cópia em `SIMULACAO_AUTO_APROVAR=0` — o modo que o `render.yaml` publica —
+e confere o que o visitante lê: um usuário sem escopo pede uma comarca e o
+cartão tem de trazer o chip **Aguardando Administrador** (desabilitado, com o
+motivo no `title` e no `aria-label`), o aviso do formulário tem de dizer somente
+leitura e a sessão não pode ganhar escopo nem aprovação automática. Trinta e
+nove verificações, nenhuma dependência nova no app: o Playwright vive só em
+`tests/fumaca`.
 
 `tests/fumaca/smoke-fila.mjs` cobre os dois estados que o caminho feliz não
 visita, numa cópia em que todo `vigente_desde` é apagado e existe um usuário de
