@@ -1,10 +1,10 @@
 {
   "_comentario": "Fonte única das contagens declaradas. Se um teste entra ou sai, este arquivo muda primeiro, e `conferir-contagens.py` obriga README, cartilha, PDF e o rótulo do medir-modos-testes.sh a acompanhar. Valores medidos em 12/11/2026, nas três configurações (ver README, seção de testes).",
-  "casos": 87,
+  "casos": 92,
   "pernas": [
-    {"nome": "modo 1 + ADMIN_EMAILS", "rodando": 87, "skipped": 1, "ran": 88},
-    {"nome": "modo 1 sem ADMIN_EMAILS", "rodando": 86, "skipped": 2, "ran": 88},
-    {"nome": "modo 0 + ADMIN_EMAILS", "rodando": 87, "skipped": 2, "ran": 89}
+    {"nome": "modo 1 + ADMIN_EMAILS", "rodando": 92, "skipped": 1, "ran": 93},
+    {"nome": "modo 1 sem ADMIN_EMAILS", "rodando": 91, "skipped": 2, "ran": 93},
+    {"nome": "modo 0 + ADMIN_EMAILS", "rodando": 92, "skipped": 2, "ran": 94}
   ],
   "fumaca": 44
 }

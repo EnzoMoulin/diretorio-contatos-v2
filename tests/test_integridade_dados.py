@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
-"""Integridade dos dados servidos: órfãos, nulos, ids repetidos e alcance.
+"""Integridade dos dados: órfãos, nulos, ids repetidos e alcance da árvore.
 
 A suíte provava o comportamento (rotas, permissões, procedência) e a fumaça
 provava a tela. Faltava provar o **dado**: uma projeção que perde um nó, um seed
 que deixa contato sem canal ou um `log()` que grava autor inexistente passavam
 despercebidos porque cada teste olhava só o seu recorte.
 
-Régua usada aqui, sempre contra a fonte da verdade local (o banco da própria
-cópia), nunca contra número escrito à mão: a base envelhece e o demo muda de
-tamanho, mas "a árvore servida alcança a base inteira" continua verdadeiro.
+Duas réguas, de propósito:
+
+  - o banco é conferido num **seed próprio**, criado por `init_db()` em arquivo
+    temporário. Não é preciosismo: teste que cria usuário pela API e o apaga
+    deixa `historico.usuario_id` apontando para ninguém (por desenho, `autor_nome`
+    é retrato), e a auditoria passaria a reprovar por causa do vizinho. Contra o
+    seed limpo ela mede o que diz medir;
+  - a árvore servida é conferida contra a base **que o servidor está servindo**,
+    porque aí a pergunta é outra: o que a API entrega cobre o que está no banco?
 
 Duas leituras que **não** são defeito e não se testam como tal:
   - nó `virtual` ("Contatos Gerais") é fundido no pai por `ser_no`, então a
@@ -22,17 +28,22 @@ Exige o servidor no ar (BASE_API, padrão http://localhost:8000).
 """
 import json
 import os
+import shutil
 import sqlite3
+import tempfile
 import unittest
 import urllib.request
 
+import app
+
 BASE = os.environ.get("BASE_API", "http://localhost:8000")
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB = os.path.join(RAIZ, "contatos.db")
+DB_VIVO = os.path.join(RAIZ, "contatos.db")
 
 
-def consulta(sql, args=()):
-    con = sqlite3.connect(DB)
+def consulta_viva(sql, args=()):
+    """Leitura da base que o servidor está servindo — só abre em leitura."""
+    con = sqlite3.connect(DB_VIVO)
     con.row_factory = sqlite3.Row
     try:
         return con.execute(sql, args).fetchall()
@@ -76,7 +87,24 @@ def soma_contatos(no):
 
 
 class TestBaseIntegra(unittest.TestCase):
-    """Órfãos, nulos e duplicatas no banco que serve as telas."""
+    """Órfãos, nulos e duplicatas no seed — em banco temporário, sem vizinho."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.dir = tempfile.mkdtemp()
+        cls.db_antigo = app.DB
+        app.DB = os.path.join(cls.dir, "contatos.db")
+        app.init_db()
+        cls.con = app.get_db()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.con.close()
+        app.DB = cls.db_antigo
+        shutil.rmtree(cls.dir, ignore_errors=True)
+
+    def consulta(self, sql, args=()):
+        return self.con.execute(sql, args).fetchall()
 
     def test_sem_orfaos_entre_os_niveis(self):
         arestas = {
@@ -86,7 +114,7 @@ class TestBaseIntegra(unittest.TestCase):
             "foruns.comarca_id": ("foruns", "comarca_id", "comarcas"),
         }
         for nome, (filha, coluna, pai) in arestas.items():
-            orfaos = consulta(
+            orfaos = self.consulta(
                 f"SELECT f.id FROM {filha} f WHERE f.{coluna} IS NOT NULL"
                 f" AND NOT EXISTS (SELECT 1 FROM {pai} p WHERE p.id = f.{coluna})")
             self.assertEqual([r["id"] for r in orfaos], [],
@@ -103,11 +131,11 @@ class TestBaseIntegra(unittest.TestCase):
                          "                 WHERE u.id = x.usuario_id)",
         }
         for tabela, sql in casos.items():
-            self.assertEqual([dict(r) for r in consulta(sql)], [],
+            self.assertEqual([dict(r) for r in self.consulta(sql)], [],
                              f"{tabela}: linha apontando para usuário inexistente")
 
     def test_todo_contato_tem_nome_e_um_canal(self):
-        maus = consulta(
+        maus = self.consulta(
             "SELECT id FROM contatos WHERE COALESCE(nome,'')=''"
             " OR (COALESCE(telefone,'')='' AND COALESCE(email,'')='')")
         self.assertEqual([r["id"] for r in maus], [],
@@ -115,16 +143,24 @@ class TestBaseIntegra(unittest.TestCase):
 
     def test_ids_unicos_dentro_de_cada_nivel(self):
         for tabela in ("comarcas", "foruns", "unidades", "setores", "contatos"):
-            total, distintos = consulta(
+            total, distintos = self.consulta(
                 f"SELECT COUNT(*) AS t, COUNT(DISTINCT id) AS d FROM {tabela}")[0]
             self.assertEqual(total, distintos, f"{tabela}: id repetido na tabela")
 
     def test_sem_folha_vazia_no_modelo(self):
         # setor sem contato não é "vazio legítimo": é dado que sumiu da tela
-        vazios = consulta(
+        vazios = self.consulta(
             "SELECT s.id FROM setores s WHERE NOT EXISTS"
             " (SELECT 1 FROM contatos c WHERE c.setor_id = s.id)")
         self.assertEqual([r["id"] for r in vazios], [], "setor sem nenhum contato")
+
+    def test_sem_contato_sem_setor_valido(self):
+        # contato órfão de estrutura não abriria em navegação nenhuma
+        soltos = self.consulta(
+            "SELECT c.id FROM contatos c WHERE NOT EXISTS"
+            " (SELECT 1 FROM setores s WHERE s.id = c.setor_id)")
+        self.assertEqual([r["id"] for r in soltos], [],
+                         "contato sem setor válido: não abriria em lugar nenhum")
 
 
 class TestArvoreServida(unittest.TestCase):
@@ -139,7 +175,7 @@ class TestArvoreServida(unittest.TestCase):
             percorrer(comarca, "comarca", cls.achados)
 
     def test_a_arvore_alcanca_a_base_inteira(self):
-        no_banco = consulta("SELECT COUNT(*) AS c FROM contatos")[0]["c"]
+        no_banco = consulta_viva("SELECT COUNT(*) AS c FROM contatos")[0]["c"]
         servidos = {c.get("id") for c in self.achados["contatos"]}
         self.assertEqual(len(self.achados["contatos"]), len(servidos),
                          "o mesmo contato aparece em mais de um nó")
@@ -161,7 +197,8 @@ class TestArvoreServida(unittest.TestCase):
 
     def test_qtd_contatos_declarado_bate_com_a_subarvore(self):
         # O contador que a tela mostra é calculado no servidor: tem de fechar
-        # com o que a própria árvore entrega, nó por nó.
+        # com o que a própria árvore entrega, nó por nó — inclusive os contatos
+        # gerais que sobem para a comarca ou para o fórum dono.
         problemas = []
         for nivel in ("comarca", "forum", "unidade", "setor"):
             for no in self.achados[nivel]:
@@ -174,6 +211,18 @@ class TestArvoreServida(unittest.TestCase):
                         f"{nivel} {no.get('nome')} ({no.get('id')}):"
                         f" declarado {declarado}, árvore {real}")
         self.assertEqual(problemas, [], "contador declarado divergiu da subárvore")
+
+    def test_niveis_com_contato_geral_existem_no_demo(self):
+        # O caminho "contato sem setor sobe para o dono" é provado sinteticamente
+        # em tests/test_contatos_gerais.py. Aqui só se exige que o demo não fique
+        # sem o caso: hoje ele existe por um fio (uma comarca e os fóruns), e se
+        # sumir do seed a auditoria passaria em branco sem ninguém notar.
+        com_com = [c for c in self.achados["comarca"] if c.get("contatos")]
+        com_forum = [f for f in self.achados["forum"] if f.get("contatos")]
+        self.assertGreaterEqual(len(com_com), 1,
+                                "nenhuma comarca recebendo contatos gerais no demo")
+        self.assertGreaterEqual(len(com_forum), 1,
+                                "nenhum fórum recebendo contatos gerais no demo")
 
 
 if __name__ == "__main__":
