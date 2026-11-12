@@ -32,7 +32,7 @@ são as mesmas; o que evolui é a fundação técnica:
 | Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
 | Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
 | Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 87 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright, nos dois modos) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
+| Testes | Sem testes automatizados | 92 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright, nos dois modos) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
 | Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Front estático (Cloudflare Pages) + API FastAPI separada: a página abre na hora, a API acorda sozinha |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
@@ -83,7 +83,7 @@ flowchart LR
 
 - **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
   mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
-  `lru_cache` com invalidação, 87 casos de teste (`unittest`, banco temporário) e
+  `lru_cache` com invalidação, 92 casos de teste (`unittest`, banco temporário) e
   um teste de fumaça do admin que abre o Chromium e clica no fluxo (nos dois
   modos de aprovação).
 - **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
@@ -207,9 +207,9 @@ com Python 3.15.2:
 
 | Ambiente de quem roda | Resultado |
 |---|---|
-| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 87 rodando, 1 pulado (`Ran 88`) — o pulado é a classe `TestSomenteLeitura`, que só vale no modo 0 |
-| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 86 rodando, 2 pulados (`Ran 88`) — a classe acima e `test_admin_na_allowlist_recebe_admin` |
-| `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 87 rodando, 2 pulados (`Ran 89`) — `test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist` |
+| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 92 rodando, 1 pulado (`Ran 93`) — o pulado é a classe `TestSomenteLeitura`, que só vale no modo 0 |
+| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 91 rodando, 2 pulados (`Ran 93`) — a classe acima e `test_admin_na_allowlist_recebe_admin` |
+| `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 92 rodando, 2 pulados (`Ran 94`) — `test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist` |
 
 No modo 0 pulam `test_cadeia_completa_com_limpeza` e a classe
 `TestAdminPorAllowlist` inteira — **mesmo com `ADMIN_EMAILS` exportado**, porque
@@ -222,11 +222,14 @@ O número de casos aparece em quatro lugares que não se leem entre si — este
 README, a cartilha em HTML, o PDF dela e o rótulo `esperado:` do
 `medir-modos-testes.sh`. Já divergiram duas vezes, e o instrumento de medir
 acabou contradizendo o documento que ele deveria confirmar.
-`scripts/contagens.json` é a fonte única; `scripts/conferir-contagens.py` lê os
-quatro e falha quando discordam (`--medir` roda a suíte nas três pernas em vez de
-confiar no que está escrito). O CI roda essa conferência antes dos testes, e
-antes deles também roda só `tests/test_integridade_dados.py`, que é o que olha o
-dado e leva ~1 s: base quebrada aparece em segundos, não no fim dos 45 s.
+`scripts/contagens.json` é a fonte única; `scripts/conferir-contagens.py` varre
+**todo** `*.md` e `*.html` versionado atrás de "N casos" (documento novo entra na
+conferência sozinho, sem ninguém lembrar de cadastrá-lo), confere a tabela das três
+pernas neste README, o número da fumaça, o PDF da cartilha e os rótulos do
+`medir-modos-testes.sh`, e falha quando discordam (`--medir` roda a suíte nas três
+pernas em vez de confiar no que está escrito). O CI roda essa conferência antes dos
+testes, e antes deles também roda só `tests/test_integridade_dados.py`, que é o que
+olha o dado: base quebrada aparece em segundos, não no fim da suíte.
 
 ### Fumaça do admin (navegador real)
 Os testes de Python batem na API e conferem o HTML servido, mas não provam que

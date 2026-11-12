@@ -50,6 +50,31 @@ def textos_do_pdf(partes):
     return saida.stdout if saida.returncode == 0 else None
 
 
+def arquivos_de_texto():
+    """Arquivos versionados ou novos que valem varrer: markdown e html.
+
+    `--cached --others --exclude-standard` inclui o arquivo novo que ainda não
+    foi `git add` (senão a conferência só enxergaria o documento depois do
+    commit, que é tarde) e ao mesmo tempo respeita o que está ignorado — o bundle
+    do Playwright em node_modules e o artefato de sessão que mora no diretório
+    mas não pertence ao repositório. Sem Git, cai no walk com as mesmas exclusões.
+    """
+    if shutil.which("git"):
+        saida = subprocess.run(
+            ["git", "ls-files", "--cached", "--others", "--exclude-standard",
+             "*.md", "*.html"],
+            cwd=RAIZ, capture_output=True, text=True)
+        if saida.returncode == 0:
+            return [l for l in saida.stdout.splitlines() if l.strip()]
+    achados = []
+    for raiz, dirs, arquivos in os.walk(RAIZ):
+        dirs[:] = [d for d in dirs if d not in (".git", "node_modules", "__pycache__")]
+        for nome in arquivos:
+            if nome.endswith((".md", ".html")):
+                achados.append(os.path.relpath(os.path.join(raiz, nome), RAIZ))
+    return sorted(achados)
+
+
 class Checagem:
     def __init__(self):
         self.falhas = []
@@ -80,13 +105,26 @@ def main():
           "/".join(str(p["rodando"]) for p in pernas), "rodando;",
           fumaca, "verificações de fumaça")
 
-    # 1) README: todo "N casos" e a tabela das três pernas.
+    # 1) Varredura: todo "N casos" em markdown ou html versionado.
+    #    Qualquer documento novo que cite a contagem entra sozinho na conferência
+    #    — era o buraco do README-e-cartilha-por-nome, que não via um terceiro
+    #    arquivo nascendo.
+    citantes = {}
+    for rel in arquivos_de_texto():
+        texto = ler(rel)
+        if not texto:
+            continue
+        numeros = sorted({int(n) for n in re.findall(r"(\d+)\s+casos", texto)})
+        if numeros:
+            citantes[rel] = numeros
+    c.igual("'N casos' em *.md/*.html", citantes,
+            {rel: [casos] for rel in citantes})
+
+    # 2) README: a tabela das três pernas e o número da fumaça.
     readme = ler("README.md")
     if readme is None:
         c.pulado("README.md", "ausente")
     else:
-        citados = sorted({int(n) for n in re.findall(r"(\d+) casos", readme)})
-        c.igual("README · 'N casos'", citados, [casos] if citados else [casos])
         tabela = re.findall(
             r"(\d+) rodando, (\d+) pulados? \(`Ran (\d+)`\)", readme)
         c.igual("README · linhas da tabela",
@@ -95,14 +133,6 @@ def main():
         verificacoes = sorted({int(n) for n in re.findall(r"(\d+)\s+verificações", readme)})
         c.igual("README · verificações de fumaça",
                 verificacoes, [fumaca] if verificacoes else [fumaca])
-
-    # 2) Cartilha em HTML.
-    html = ler("docs", "cartilha-deploy.html")
-    if html is None:
-        c.pulado("docs/cartilha-deploy.html", "ausente")
-    else:
-        achado = sorted({int(n) for n in re.findall(r"(\d+) casos de teste", html)})
-        c.igual("cartilha HTML · 'N casos de teste'", achado, [casos] if achado else [casos])
 
     # 3) Cartilha em PDF (a que o recrutador abre).
     pdf = textos_do_pdf(("docs", "cartilha-deploy.pdf"))
