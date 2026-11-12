@@ -1,0 +1,17 @@
+#!/bin/sh
+# Mantém o ?v= dos HTML igual ao hash dos assets antes de o commit nascer.
+#
+# O CI já tem o guard (tests/test_cache_busting.py), mas lá o commit errado já
+# existe. Aqui o recálculo acontece antes: se o commit mexe em JS/CSS/HTML, o
+# script reescreve o ?v= e o HTML corrigido entra no mesmo commit.
+#
+# Instalado em .git/hooks/pre-commit (não versionado). Ver README.
+if ! git diff --cached --name-only | grep -qE '^frontend/.*\.(js|css|html)$'; then
+  exit 0
+fi
+if ! python3 scripts/atualizar-cache-busting.py >/dev/null; then
+  echo "pre-commit: nao consegui recalcular o ?v= (scripts/atualizar-cache-busting.py)"
+  exit 1
+fi
+git add frontend/*.html
+exit 0

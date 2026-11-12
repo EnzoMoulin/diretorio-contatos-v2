@@ -78,6 +78,11 @@ jobs:
           npx playwright install --only-shell chromium
       - name: Rodar o teste de fumaça
         run: cd tests/fumaca && node smoke.mjs
+      - name: Fumaça da fila (vazia e escopo parcial)
+        # Dois estados que já quebraram na tela e que o smoke.mjs não visita:
+        # fila vazia (botão que não fazia nada) e usuário de escopo parcial
+        # (a fila é da base inteira; o `conferir` exige escopo do setor).
+        run: cd tests/fumaca && node smoke-fila.mjs
       - name: Guardar a tela da falha
         if: failure()
         uses: actions/upload-artifact@v4

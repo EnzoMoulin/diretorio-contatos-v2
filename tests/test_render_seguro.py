@@ -23,6 +23,7 @@ SAFE_CALLS = {
     "esc", "Number", "badgeQuantidade", "contatosCards", "cardNo",
     "cardContatosGerais", "breadcrumbHtml", "opcoesComarcas", "realcarBusca",
     "fmtTipoContato", "fmtTipoNo", "fmtValor", "linkEndereco",
+    "criarBoxHtml",
     "barraAcoesUnidade", "barraNavegacaoInferior", "acaoSolicitar", "solBtn",
     "covMark", "gestBtn", "linhaFavorito", "cardComarca", "botaoVcf",
     "botaoFav", "botaoLink", "botaoImpressaoLocalidade",
