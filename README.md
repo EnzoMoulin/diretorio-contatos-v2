@@ -93,8 +93,9 @@ flowchart LR
 
 ### Fase 3 — direção (endurecer para escala)
 
-Migrações versionadas, Postgres opcional, papéis granulares (RBAC), paginação,
-ranking de busca com tolerância a erro de digitação.
+Laravel + TALL num único serviço Docker, Postgres gerenciado, migrações versionadas,
+papéis granulares (RBAC), paginação e ranking de busca com tolerância a erro de
+digitação.
 
 ## Arquitetura
 - **Duas implantações isoladas, sem trânsito entre elas** — pública e
@@ -191,19 +192,14 @@ ranking de busca com tolerância a erro de digitação.
 ## Como rodar
 ```bash
 SIMULACAO_AUTO_APROVAR=1 ADMIN_EMAILS=seu@gmail.com python3 app.py
-# pública: http://localhost:8000
-# admin:   http://localhost:8000/admin   (login Google; admin só p/ e-mail em ADMIN_EMAILS)
-bash teste_rapido.sh   # imprime os códigos do fluxo completo (não é teste automatizado;
-                       # atenção: encerra qualquer processo na porta 8000)
-python3 -m unittest discover -s tests -t . -v   # servidor no ar; ver a tabela de pulados abaixo
-# fumaça do admin num navegador real (uma vez: cd tests/fumaca && npm ci && npx playwright install chromium)
-cd tests/fumaca && node smoke.mjs
+# pública: http://localhost:8000   admin: http://localhost:8000/admin
+bash teste_rapido.sh                            # códigos do fluxo completo (encerra o que estiver na 8000)
+python3 -m unittest discover -s tests -t . -v   # com o servidor no ar
+cd tests/fumaca && npm ci && npx playwright install chromium && node smoke.mjs
 ```
-Os testes batem na API por HTTP. Quem roda a suíte precisa exportar **as mesmas**
-variáveis que o servidor: `SIMULACAO_AUTO_APROVAR` e `ADMIN_EMAILS` são lidas do
-ambiente de quem executa o `unittest`, não do processo que está servindo. A
-contagem muda por perna (o script `medir-modos-testes.sh` roda as três), medidas
-com Python 3.15.2:
+Os testes batem na API por HTTP e leem `SIMULACAO_AUTO_APROVAR` e `ADMIN_EMAILS`
+do **ambiente de quem roda**, não do processo que serve. A contagem muda por perna
+(o `medir-modos-testes.sh` roda as três), medidas com Python 3.15.2:
 
 | Ambiente de quem roda | Resultado |
 |---|---|
@@ -212,121 +208,62 @@ com Python 3.15.2:
 | `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 94 rodando, 2 pulados (`Ran 96`) — `test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist` |
 
 No modo 0 pulam `test_cadeia_completa_com_limpeza` e a classe
-`TestAdminPorAllowlist` inteira — **mesmo com `ADMIN_EMAILS` exportado**, porque
-a causa é a flag, não a allowlist. O `unittest` conta a classe pulada como **um**
-skip, embora ela tenha mais de um teste: por isso o `Ran N` não bate com a soma
-dos casos e `skipped=2` no modo 0 não quer dizer "dois testes pulados". O CI roda
-as duas pernas (modo 1 e modo 0) em paralelo.
+`TestAdminPorAllowlist` inteira — **mesmo com `ADMIN_EMAILS` exportado**, porque a
+causa é a flag, não a allowlist. E o `unittest` conta a classe pulada como **um**
+skip, embora ela tenha mais de um teste: por isso o `Ran N` não soma os casos e
+`skipped=2` no modo 0 não quer dizer "dois testes pulados". O CI roda as duas
+pernas em paralelo.
 
-O número de casos aparece em quatro lugares que não se leem entre si — este
-README, a cartilha em HTML, o PDF dela e o rótulo `esperado:` do
-`medir-modos-testes.sh`. Já divergiram duas vezes, e o instrumento de medir
-acabou contradizendo o documento que ele deveria confirmar.
-`scripts/contagens.json` é a fonte única; `scripts/conferir-contagens.py` varre
-**todo** `*.md` e `*.html` versionado atrás de "N casos" (documento novo entra na
-conferência sozinho, sem ninguém lembrar de cadastrá-lo), confere a tabela das três
-pernas neste README, o número da fumaça, o PDF da cartilha e os rótulos do
-`medir-modos-testes.sh`, e falha quando discordam (`--medir` roda a suíte nas três
-pernas em vez de confiar no que está escrito). O CI roda essa conferência antes dos
-testes, e antes deles também roda só `tests/test_integridade_dados.py`, que é o que
-olha o dado: base quebrada aparece em segundos, não no fim da suíte.
+O número de casos vive em quatro lugares que não se leem entre si — este README, a
+cartilha em HTML, o PDF dela e o rótulo `esperado:` do `medir-modos-testes.sh` — e
+já divergiu duas vezes. `scripts/contagens.json` é a fonte única;
+`scripts/conferir-contagens.py` varre **todo** `*.md` e `*.html` versionado atrás
+de "N casos" (documento novo entra na conferência sozinho), confere esta tabela, a
+fumaça, o PDF e os rótulos, e falha quando discordam. O CI roda isso antes dos
+testes e, antes ainda, só `tests/test_integridade_dados.py`: base quebrada aparece
+em segundos, não no fim da suíte.
 
-### Fumaça do admin (navegador real)
-Os testes de Python batem na API e conferem o HTML servido, mas não provam que
-o JavaScript monta a tela. `tests/fumaca/smoke.mjs` sobe uma cópia do app num
-diretório temporário (nunca toca no `contatos.db` de quem está testando), entra
-com o login local, clica em **Reconfirmar**, abre a primeira linha da fila,
-**baixa o CSV** e confere as linhas do arquivo contra os contatos da tela,
-confere o gráfico de alterações por mês e mede a barra de ações em 390 px (o
-alvo de toque tem de continuar valendo no celular). O último passo reinicia a
-mesma cópia em `SIMULACAO_AUTO_APROVAR=0` — o modo que o `render.yaml` publica —
-e confere o que o visitante lê: um usuário sem escopo pede uma comarca e o
-cartão tem de trazer o chip **Aguardando Administrador** (desabilitado, com o
-motivo no `title` e no `aria-label`), o aviso do formulário tem de dizer somente
-leitura e a sessão não pode ganhar escopo nem aprovação automática — e nenhum
-card nem coluna Fonte do CSV pode carregar o rótulo neutro aposentado da
-procedência, enquanto quem tem documento mostra a fonte no texto. 44
-verificações, nenhuma dependência nova no app: o Playwright vive só em
-`tests/fumaca`.
-
-`tests/fumaca/acessibilidade.mjs` mede o que o teste de API e o olho de quem
-desenhou a tela não pegam: nome acessível de todo controle visível, anel de foco
-percorrido com **Tab** de verdade e contraste WCAG AA do texto nos dois temas
-(10 checagens). Nasceu medindo e corrigiu três contrastes do tema escuro que
-estavam abaixo do mínimo.
-
-`tests/fumaca/smoke-fila.mjs` cobre os dois estados que o caminho feliz não
-visita, numa cópia em que todo `vigente_desde` é apagado e existe um usuário de
-escopo parcial: com a fila vazia o **Reconfirmar** fica desabilitado, com o
-motivo no `title` e no `aria-label`, e o clique não abre caixa nenhuma; para o
-usuário de escopo parcial o botão não aparece — e o mesmo script prova pela API
-que o `conferir` dele responde 200 dentro do escopo e 403 fora, que é o motivo
-da regra.
-
-O teste pagou o próprio custo na primeira execução: o botão **Reconfirmar**
-pintava a fila e a fechava no mesmo clique — o listener de "clique fora" da
-busca global não distinguia o botão da área de resultados. O `stopPropagation`
-no handler está comentado no `admin.js` para ninguém refazer o caminho.
-
-### Cache dos estáticos (`?v=`)
-Cada asset referenciado nos HTML carrega `?v=` com os oito primeiros caracteres
-do sha256 do próprio arquivo. Editar um `.js`/`.css` e esquecer o `?v=` fazia o
-navegador servir a versão velha — e o teste manual concluir que "não funcionou".
-Quem cuida disso agora é `scripts/atualizar-cache-busting.py` (idempotente), o
-`tests/test_cache_busting.py` reprova o CI quando o HTML diverge do disco e
-`scripts/pre-commit` faz o recálculo antes do commit (copie para
-`.git/hooks/pre-commit`; hooks não são versionados). O servidor só responde
-`immutable` quando o `?v=` pedido bate com o conteúdo entregue — `?v=` velho
-volta sem cache — e o HTML nunca é cacheado, porque é ele que carrega a versão
-nova. `tests/test_cache_http.py` cobre os três casos.
+### Fumaça e acessibilidade (navegador real)
+Os testes de Python batem na API e conferem o HTML servido; não provam que o
+JavaScript monta a tela. Três scripts Playwright fazem isso num Chromium real, numa
+cópia temporária do app: o caminho completo (Reconfirmar → primeira linha da fila →
+CSV → gráfico) mais o que o visitante vê no modo somente leitura — **44
+verificações**; a fila vazia e o escopo parcial; e a acessibilidade medida — nome
+acessível, foco por Tab e contraste WCAG AA nos dois temas (10 checagens), que
+corrigiu três contrastes do tema escuro. O que cada script faz, o cache dos
+estáticos (`?v=`) e o bug que a fumaça pegou na primeira execução estão em
+[`docs/testes.md`](docs/testes.md).
 
 ## Hospedagem (pôr no ar)
-Só stdlib: sem `pip install`. No Render (gratuito): novo Web Service a partir
-do repo (`render.yaml` já traz `INTRANET_ONLY=0`, `LOCAL_LOGIN=0`,
-`SIMULACAO_AUTO_APROVAR=0` — somente leitura). `PORT` vem do ambiente. O health check do Render usa
-`/healthz`, que responde 200 sem tocar no banco: assim um seed lento não é lido como
-serviço morto (o que reiniciaria o processo e recriaria o banco). O banco é recriado do
-seed mascarado a cada boot limpo (disco efêmero, sem como persistir no plano
-gratuito) — como o demo é somente leitura, a vitrine sempre abre íntegra; só
-usuários, pedidos e aprovações não sobrevivem ao restart. O plano free dorme depois de 15 minutos sem tráfego e leva cerca de 1 minuto
-para acordar. A espera é **por serviço**: manter um único app no ar resolve a
-cota (750 h de instância por mês por workspace, e um serviço sempre ativo já
-consome ~730 h), não o cold start. Daí o aviso: o primeiro acesso pode levar um
-minuto — os seguintes são imediatos.
+Só stdlib: sem `pip install`. No Render (gratuito) o serviço nasce do
+`render.yaml` (`INTRANET_ONLY=0`, `LOCAL_LOGIN=0`, `SIMULACAO_AUTO_APROVAR=0`,
+`PORT` do ambiente, health check em `/healthz` — 200 sem tocar no banco, para seed
+lento não ser lido como serviço morto). O passo a passo completo, as decisões e o
+checklist de validação estão na [cartilha de deploy](docs/cartilha-deploy.html)
+(também em PDF); aqui fica só o que muda a leitura do demo.
 
 > **Sucessor:** quando o v3 (Laravel + TALL, com Postgres gerenciado e um único
 > serviço Docker) entrar no ar, este serviço será **suspenso** — não apagado — e o v3
 > ocupa o lugar. Este repositório continua público, e este README passará a
 > apontar para o v3.
 
-`ADMIN_EMAILS` (definir no dashboard; é o e-mail Google que vira admin): sem
-ela ninguém é admin — o primeiro login **não** ganha gestão. O link para
-divulgar é `/` (página pública, sem login); `/admin` depende de conta Google e,
-com a tela de consentimento OAuth em "Testing", só entram os usuários de teste
-cadastrados no projeto do Google Cloud.
-
-### Postura do demo público
-- `SIMULACAO_AUTO_APROVAR=0` no demo: o ambiente é **somente leitura** — pedido
-  de acesso fica pendente e só o dono aprova, em `/admin → Solicitações`. O `1`
-  existe para rodar localmente e para os testes, onde aprova na hora e a tela
-  sinaliza que foi automático.
-- Admin nunca vem de "primeiro login": só da allowlist `ADMIN_EMAILS`.
-- Privacidade é teste, não promessa: `tests/test_sem_telefone_real.py` varre o
-  seed e os arquivos versionados e falha o CI se aparecer telefone fora da
-  máscara `XXXX` (ou do bloco fictício `3333-00NN`) — a limpeza do repositório
-  se confere sozinha a cada push, em vez de depender de alguém lembrar.
-- Banco efêmero: `contatos.db` nasce do seed a cada boot e usuários/aprovações
-  não sobrevivem ao restart. No plano gratuito não há disco para persistir, e um
-  banco externo exigiria driver fora da biblioteca padrão.
-
-Login com Google em produção precisa de um client OAuth tipo **Web**:
-1. No [Google Cloud Console](https://console.cloud.google.com/) crie um ID do
-   cliente OAuth (tipo Web) com origem `https://<seu-app>.onrender.com` e
-   redirect `https://<seu-app>.onrender.com/oauth/callback`.
-2. No dashboard do Render, defina as variáveis `GOOGLE_CLIENT_JSON` (o JSON do
-   client) e `APP_BASE_URL` (a URL pública) — o `redirect_uri` já sai em
-   `https` atrás do proxy. Sem isso, o `/oauth/login` responde 500 explicando.
-   Tela de consentimento não verificada mostra aviso do Google — esperado fora de produção.
+- **Banco efêmero:** `contatos.db` nasce do seed mascarado a cada boot limpo;
+  usuários, pedidos e aprovações não sobrevivem ao restart, e como o demo é somente
+  leitura a vitrine sempre abre íntegra.
+- **Dorme:** 15 minutos sem tráfego e cerca de 1 minuto para acordar. A espera é por
+  serviço: um único app no ar resolve a cota (750 h de instância por mês por
+  workspace; um serviço sempre ativo já consome ~730 h), não o cold start. O
+  primeiro acesso pode levar um minuto; os seguintes são imediatos.
+- **Somente leitura:** pedido de acesso fica pendente e só o dono aprova em
+  `/admin → Solicitações`. Admin nunca vem de "primeiro login": só da allowlist
+  `ADMIN_EMAILS` — sem ela ninguém é admin. O link para divulgar é `/` (público,
+  sem login); `/admin` depende de conta Google e, com a tela de consentimento em
+  "Testing", só entram os usuários de teste do projeto — o client OAuth tipo Web
+  (origem + redirect `/oauth/callback`) está no passo 04 da cartilha.
+- **Privacidade é teste, não promessa:** `tests/test_sem_telefone_real.py` varre o
+  seed e os arquivos versionados e falha o CI se aparecer telefone fora da máscara
+  `XXXX` (ou do bloco fictício `3333-00NN`) — a limpeza se confere sozinha a cada
+  push, em vez de depender de alguém lembrar.
 
 ## Como avaliar (2 minutos)
 1. Abra a página pública `/` (sem login): clique no mapa, use a busca, favorite e imprima um contato.
@@ -338,17 +275,17 @@ Login com Google em produção precisa de um client OAuth tipo **Web**:
 Privacidade: o demo guarda o e-mail e o nome da sua conta Google só enquanto o servidor estiver ativo; o banco é recriado do seed a cada boot limpo, então esses dados somem no reinício.
 
 ## E-mail de verdade (opcional)
-Sem SMTP configurado, os avisos ficam só dentro do sistema. Para enviar de
-verdade (Gmail), crie uma **senha de app** em
-conta Google → Segurança → Verificação em 2 etapas → Senhas de app, e rode:
+Sem SMTP configurado, os avisos ficam só dentro do sistema. Para enviar de verdade
+(Gmail), crie uma **senha de app** em conta Google → Segurança → Verificação em 2
+etapas → Senhas de app e rode:
 ```bash
-SMTP_HOST=smtp.gmail.com SMTP_PORT=587 \
-SMTP_USER=seu@gmail.com SMTP_PASS=xxxx-xxxx-xxxx-xxxx \
-SMTP_FROM=seu@gmail.com NOTIFY_EMAILS=seu@gmail.com \
+SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USER=seu@gmail.com \
+SMTP_PASS=xxxx-xxxx-xxxx-xxxx SMTP_FROM=seu@gmail.com NOTIFY_EMAILS=seu@gmail.com \
 python3 app.py
 ```
-O que é enviado: pedido novo → admins (`NOTIFY_EMAILS` + contas admin);
-aprovação → solicitante. Falha de envio nunca quebra o fluxo.
+Pedido novo vai para os admins; aprovação, para o solicitante. Falha de envio nunca
+quebra o fluxo. No plano free do Render as portas SMTP são bloqueadas — lá o envio
+por API HTTP é pendência conhecida, e o demo simplesmente não manda e-mail.
 
 ## Login local (só dev/testes)
 O login por usuário/senha (`/api/login`, `admin`/`admin123`) existe para testes
