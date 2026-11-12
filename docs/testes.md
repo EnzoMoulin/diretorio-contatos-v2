@@ -82,3 +82,20 @@ discordam. `--medir` roda a suíte nas três pernas em vez de confiar no que est
 escrito. O CI roda essa conferência antes dos testes e, antes ainda, só
 `tests/test_integridade_dados.py`: base quebrada aparece em segundos, não no fim da
 suíte.
+
+### Quem cita a contagem
+
+O script alcança quatro lugares; o quinto está fora do repositório e só se confere
+a olho:
+
+| Onde | O script vê? |
+| :--- | :--- |
+| `README.md` (tabela das pernas, fumaça e "N casos") | sim |
+| `docs/cartilha-deploy.html` | sim |
+| `docs/cartilha-deploy.pdf` | sim — pulado, não reprovado, sem `pdftotext` |
+| rótulo `esperado:` do `medir-modos-testes.sh` | sim |
+| currículo PT e EN — `.docx`, `.pdf`, `.txt` (fora do repo) | **não** |
+
+Mexer no número é uma operação em cinco artefatos. Ordem que evita divergência:
+`scripts/contagens.json` → `medir-modos-testes.sh` → README → cartilha (HTML e PDF
+no mesmo commit) → currículo.
