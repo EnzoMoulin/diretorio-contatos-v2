@@ -578,6 +578,13 @@ body[data-theme="dark"] .tooltip-premium small{color:#cbd5e1}
 .fc-bar-btn--primary{border-color:#2563eb;background:#2563eb;color:#fff}
 .fc-bar-btn--primary:hover{border-color:#1d4ed8;background:#1d4ed8;color:#fff}
 .fc-bar-btn--primary:focus-visible{box-shadow:0 0 0 3px rgba(37,99,235,.35)}
+/* Alvo de toque: abaixo de 600 px a barra do painel cresce para 44 px de altura.
+   O height de 30 px é fixo de propósito (a pílula da contagem faria um botão
+   ficar 1 px mais alto que o outro) e serve bem ao mouse; no dedo, 30 px é
+   pequeno demais. min-height vence o height sem tocar no desktop. */
+@media(max-width:600px){
+  .fc-panel-bar .fc-bar-btn{height:44px;min-height:44px}
+}
 .fc-bar-count{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;padding:1px 6px;border-radius:999px;background:#e2e8f0;color:#334155}
 .fc-busca-cabecalho{padding:8px 12px 6px;font-size:11px;letter-spacing:.01em;color:#64748b;border-bottom:1px solid #e2e8f0}
 .fc-busca-fonte{color:#94a3b8}

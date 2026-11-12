@@ -258,7 +258,38 @@ async function main() {
     await pagina.screenshot({ path: join(pasta, 'registro.png'), fullPage: true });
     console.log('  evidência: ' + join(pasta, 'registro.png'));
 
-    console.log('\n7) console do navegador');
+    console.log('\n7) barra do painel em tela pequena');
+    // O @media(max-width:600px) é o primeiro ponto onde a barra muda de forma
+    // por largura — e o único jeito de o CI notar se uma regra futura desfizer
+    // o alvo de toque de 44 px, porque no desktop (o que a fumaça media até
+    // aqui) tudo continua idêntico.
+    await pagina.setViewportSize({ width: 390, height: 844 });
+    await pagina.goto(base + '/admin', { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('#fc-antigos:not([disabled])', { timeout: 20000 });
+    await pagina.locator('#fc-antigos').click();
+    await pagina.waitForSelector('#fc-busca-resultados [data-reconf-i="0"]', { timeout: 15000 });
+    await pagina.locator('#fc-busca-resultados [data-reconf-i="0"]').click();
+    await pagina.waitForFunction(
+      () => !!document.querySelector('#lista .fc-contato'),
+      null, { timeout: 15000 });
+    const medirBarra = () => pagina.evaluate(() => {
+      const alturas = ['fc-antigos', 'fc-exportar'].map(id =>
+        Math.round(document.getElementById(id).getBoundingClientRect().height));
+      return {
+        alturas,
+        estouro: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+      };
+    });
+    const pequena = await medirBarra();
+    conferir(pequena.alturas.every(h => h >= 44),
+      'em 390 px os botões da barra têm 44 px de altura (achou ' + pequena.alturas.join('/') + ')');
+    conferir(!pequena.estouro, 'em 390 px a barra não estoura a largura da tela');
+    await pagina.setViewportSize({ width: 800, height: 900 });
+    const grande = await medirBarra();
+    conferir(grande.alturas.every(h => h < 40),
+      'acima de 600 px a barra volta ao tamanho de desktop (achou ' + grande.alturas.join('/') + ')');
+
+    console.log('\n8) console do navegador');
     conferir(erros.length === 0, 'sem erro de JavaScript' + (erros.length ? ': ' + erros.slice(0, 3).join(' | ') : ''));
   } catch (e) {
     falha('exceção: ' + (e && e.message ? e.message : String(e)));
