@@ -25,15 +25,15 @@ são as mesmas; o que evolui é a fundação técnica:
 
 | Aspecto | v1 — MVP (privado) | v2 — reescrita (este repo) | v3 — direção |
 |---|---|---|---|
-| Runtime + dados | Apps Script + Sheets (planilha como banco, sem FKs) | Python stdlib + SQLite (FKs, zero dependências) | Migrações versionadas, Postgres opcional |
-| Concorrência | `LockService` por execução | `ThreadingHTTPServer` + lock em escrita | Servidor ASGI, pool de conexões |
+| Runtime + dados | Apps Script + Sheets (planilha como banco, sem FKs) | Python stdlib + SQLite (FKs, zero dependências) | Migrações versionadas + Postgres gerenciado (Neon) |
+| Concorrência | `LockService` por execução | `ThreadingHTTPServer` + lock em escrita | PHP-FPM atrás do nginx, pool de conexões no Postgres |
 | Busca | Substring no frontend | FTS5 no servidor + autocomplete com highlight | Ranking por relevância, tolerância a erro de digitação |
 | Auth | Sessão Google + planilha | Google OAuth + login local (só dev, flag `LOCAL_LOGIN`) com PBKDF2 | Expiração de sessão, papéis granulares |
 | Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
 | Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
 | Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 94 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright, nos dois modos) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
-| Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Front estático (Cloudflare Pages) + API FastAPI separada: a página abre na hora, a API acorda sozinha |
+| Testes | Sem testes automatizados | 94 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright: fluxo, fila e acessibilidade nos dois temas) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
+| Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Laravel + Blade/TALL num único serviço Docker no Render, com Postgres gerenciado: HTML e JSON saem do mesmo processo |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
 zero dentro do ecossistema onde os dados viviam; o v2 prova a mesma arquitetura
@@ -249,6 +249,12 @@ procedência, enquanto quem tem documento mostra a fonte no texto. 44
 verificações, nenhuma dependência nova no app: o Playwright vive só em
 `tests/fumaca`.
 
+`tests/fumaca/acessibilidade.mjs` mede o que o teste de API e o olho de quem
+desenhou a tela não pegam: nome acessível de todo controle visível, anel de foco
+percorrido com **Tab** de verdade e contraste WCAG AA do texto nos dois temas
+(10 checagens). Nasceu medindo e corrigiu três contrastes do tema escuro que
+estavam abaixo do mínimo.
+
 `tests/fumaca/smoke-fila.mjs` cobre os dois estados que o caminho feliz não
 visita, numa cópia em que todo `vigente_desde` é apagado e existe um usuário de
 escopo parcial: com a fila vazia o **Reconfirmar** fica desabilitado, com o
@@ -288,8 +294,8 @@ cota (750 h de instância por mês por workspace, e um serviço sempre ativo já
 consome ~730 h), não o cold start. Daí o aviso: o primeiro acesso pode levar um
 minuto — os seguintes são imediatos.
 
-> **Sucessor:** quando o v3 (FastAPI + Postgres, com o front estático separado
-> da API) entrar no ar, este serviço será **suspenso** — não apagado — e o v3
+> **Sucessor:** quando o v3 (Laravel + TALL, com Postgres gerenciado e um único
+> serviço Docker) entrar no ar, este serviço será **suspenso** — não apagado — e o v3
 > ocupa o lugar. Este repositório continua público, e este README passará a
 > apontar para o v3.
 
