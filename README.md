@@ -32,7 +32,7 @@ são as mesmas; o que evolui é a fundação técnica:
 | Backup | Versionamento nativo da planilha | `VACUUM INTO` com download no admin | Rotina agendada com retenção |
 | Cache | `CacheService` com TTL | `lru_cache` na hierarquia (invalidado em escrita) | Cache por escopo de usuário |
 | Saúde dos dados | Validador manual de integridade | Dashboard: alterações 30d + obsoletos 180d | Alertas automáticos de obsolescência |
-| Testes | Sem testes automatizados | 92 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright, nos dois modos) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
+| Testes | Sem testes automatizados | 94 casos (`unittest`, banco temporário) + fumaça do admin num Chromium real (Playwright, nos dois modos) + CI em duas pernas (modo 1 e modo 0) | Cobertura medida e testes de contrato da API |
 | Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Front estático (Cloudflare Pages) + API FastAPI separada: a página abre na hora, a API acorda sozinha |
 
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
@@ -83,7 +83,7 @@ flowchart LR
 
 - **Reescrito do zero:** backend Python só-stdlib (`http.server` + `sqlite3`), seed
   mascarado versionado, FTS5 com triggers, senhas em PBKDF2, backup `VACUUM INTO`,
-  `lru_cache` com invalidação, 92 casos de teste (`unittest`, banco temporário) e
+  `lru_cache` com invalidação, 94 casos de teste (`unittest`, banco temporário) e
   um teste de fumaça do admin que abre o Chromium e clica no fluxo (nos dois
   modos de aprovação).
 - **Portado fiel:** fluxo de navegação (Comarca → Fórum → Unidade → Setor), regras de
@@ -207,9 +207,9 @@ com Python 3.15.2:
 
 | Ambiente de quem roda | Resultado |
 |---|---|
-| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 92 rodando, 1 pulado (`Ran 93`) — o pulado é a classe `TestSomenteLeitura`, que só vale no modo 0 |
-| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 91 rodando, 2 pulados (`Ran 93`) — a classe acima e `test_admin_na_allowlist_recebe_admin` |
-| `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 92 rodando, 2 pulados (`Ran 94`) — `test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist` |
+| `SIMULACAO_AUTO_APROVAR=1` com `ADMIN_EMAILS` | 94 rodando, 1 pulado (`Ran 95`) — o pulado é a classe `TestSomenteLeitura`, que só vale no modo 0 |
+| `SIMULACAO_AUTO_APROVAR=1` sem `ADMIN_EMAILS` | 93 rodando, 2 pulados (`Ran 95`) — a classe acima e `test_admin_na_allowlist_recebe_admin` |
+| `SIMULACAO_AUTO_APROVAR=0` com `ADMIN_EMAILS` | 94 rodando, 2 pulados (`Ran 96`) — `test_cadeia_completa_com_limpeza` e a classe `TestAdminPorAllowlist` |
 
 No modo 0 pulam `test_cadeia_completa_com_limpeza` e a classe
 `TestAdminPorAllowlist` inteira — **mesmo com `ADMIN_EMAILS` exportado**, porque

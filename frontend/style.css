@@ -239,7 +239,7 @@ body[data-theme="dark"] .modal-box{background:#1e293b;color:#e2e8f0}
 body[data-theme="dark"] .modal-box label{color:#94a3b8}
 body[data-theme="dark"] #hist li,body[data-theme="dark"] #dash-ult li,body[data-theme="dark"] .rows li{border-color:#334155}
 body[data-theme="dark"] .btn-ghost.dark{color:#e2e8f0;border-color:#475569}
-body[data-theme="dark"] footer{color:#64748b}
+body[data-theme="dark"] footer{color:#94a3b8}
 body[data-theme="dark"] code{background:#0f172a}
 /* ================= original: sidebar ================= */
 :root{--bg-panel:#fff;--text-secondary:#64748b}
@@ -390,8 +390,12 @@ body[data-theme="dark"] .fc-page-head{border-color:#334155}
 .fc-map-head .fc-title{font-size:17px}
 .fc-map-legenda{padding:7px 9px;background:rgba(255,255,255,.94);border:1px solid #cbd5e1;border-radius:7px;box-shadow:0 2px 8px rgba(15,23,42,.12);font-size:11px;color:#334155}
 .fc-map-legenda span{display:block;margin:2px 0}
-.fc-map-legenda .tem-contato{color:#2563eb}
-.fc-map-legenda .sem-contato{color:#94a3b8}
+.fc-map-legenda .tem-contato{color:#1d4ed8}
+.fc-map-legenda .sem-contato{color:#475569}
+/* A legenda troca de fundo no tema escuro: os tons acima, pensados para fundo
+   branco, ficam ilegíveis sobre o slate escuro (1,6:1 e 1,9:1 medidos). */
+body[data-theme="dark"] .fc-map-legenda .tem-contato{color:#93c5fd}
+body[data-theme="dark"] .fc-map-legenda .sem-contato{color:#94a3b8}
 .tooltip-premium{font-weight:800;font-size:13px;color:#0f172a}
 .tooltip-premium small{display:block;font-weight:600;font-size:11px;color:#475569}
 .fc-bottom-nav{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:20px 0 4px;padding-top:14px;border-top:1px solid #e2e8f0;background:#fff;padding-bottom:4px}
@@ -542,7 +546,11 @@ body[data-theme="dark"] .fc-total-localidades{background:#1e3a8a;color:#bfdbfe}
 body[data-theme="dark"] .leaflet-tile-pane{filter:brightness(.78) contrast(.95) saturate(.85)}
 body[data-theme="dark"] .fc-map-legenda{background:rgba(30,41,59,.94);border-color:#475569;color:#cbd5e1}
 body[data-theme="dark"] .leaflet-bar a{background:#1e293b;color:#e2e8f0;border-color:#475569}
-body[data-theme="dark"] .leaflet-control-attribution{background:rgba(15,23,42,.8);color:#94a3b8}
+.leaflet-control-attribution{color:#334155}
+.leaflet-control-attribution a{color:#1d4ed8}
+/* .95 e não .8: a atribuição flutua sobre o mapa, e o fundo por baixo pode
+   ser o canvas claro (tiles bloqueadas) — com .8 o texto caía para 3,99:1. */
+body[data-theme="dark"] .leaflet-control-attribution{background:rgba(15,23,42,.95);color:#cbd5e1}
 body[data-theme="dark"] .leaflet-control-attribution a{color:#93c5fd}
 body[data-theme="dark"] .leaflet-tooltip{background:#1e293b;border-color:#475569;color:#e2e8f0}
 body[data-theme="dark"] .tooltip-premium{color:#f8fafc}

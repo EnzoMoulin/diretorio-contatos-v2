@@ -2101,7 +2101,14 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"erro": "sem permissão"}, 403)
                 import datetime as _dt, os as _os
                 _os.makedirs("backups", exist_ok=True)
-                nome = "diretorio-" + _dt.datetime.now().strftime("%Y%m%d-%H%M%S") + ".db"
+                base = "diretorio-" + _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+                nome, n = base + ".db", 1
+                # `VACUUM INTO` não sobrescreve: dois backups no mesmo segundo
+                # (admin clicando duas vezes, ou a suíte) morriam com "output
+                # file already exists" — e o arquivo é a única cópia disponível.
+                while _os.path.exists("backups/" + nome):
+                    n += 1
+                    nome = f"{base}-{n}.db"
                 alvo = ("backups/" + nome).replace("'", "''")
                 con.execute(f"VACUUM INTO '{alvo}'")
                 log(con, "backup", None, f"backup gerado: {nome}", uid)
