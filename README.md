@@ -180,7 +180,10 @@ granulares, paginação e ranking de busca tolerante a erro de digitação.
   testada pelo CI —, somente biblioteca padrão (`http.server` + `sqlite3`) — zero dependências
 - Frontend: HTML + CSS + JS puro (sem framework); mapa com Leaflet via CDN
 - Banco: SQLite local (`contatos.db`, criado na primeira execução) com 1.807 contatos
-  (1.521 nas 69 comarcas e 286 da estrutura central), vindos da base mascarada versionada
+  (1.521 nas 69 comarcas e 286 da estrutura central), vindos da base mascarada versionada.
+  Os dois blocos batem com o catálogo oficial da Corregedoria: 286 é o número de contatos da
+  Sede no catálogo de ramais de 28/08/2026 (179 nós), conferido em 12/11/2026 — a inclusão da
+  estrutura central em `/api/contatos` é decisão registrada, não regressão
 
 ## Como rodar
 ```bash
