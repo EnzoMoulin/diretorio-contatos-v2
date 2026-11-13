@@ -258,8 +258,9 @@ checklist de validação estão na [cartilha de deploy](docs/cartilha-deploy.htm
   (origem + redirect `/oauth/callback`) está no passo 04 da cartilha.
 - **Privacidade é teste, não promessa:** `tests/test_sem_telefone_real.py` varre o
   seed e os arquivos versionados e falha o CI se aparecer telefone fora da máscara
-  `XXXX` (ou do bloco fictício `3333-00NN`) — a limpeza se confere sozinha a cada
-  push, em vez de depender de alguém lembrar.
+  `XXXX` (ou do bloco fictício `3333-00NN`) — e, no seed, se um rótulo virar
+  **nome de pessoa** (a base de demonstração usa `Gabinete de Desembargador 01`).
+  A limpeza se confere sozinha a cada push, em vez de depender de alguém lembrar.
 
 ## Como avaliar (2 minutos)
 1. Abra a página pública `/` (sem login): clique no mapa, use a busca, favorite e imprima um contato.
