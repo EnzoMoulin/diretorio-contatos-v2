@@ -17,10 +17,10 @@ contagem diferente da esperada. O `medir-modos-testes.sh` roda as três pernas d
 uma vez e é a ferramenta certa quando o número precisa ser remedido de propósito,
 não para conferir o estado a cada mudança.
 
-Casos por arquivo: `test_api`, `test_regras`, `test_historico`,
-`test_integridade_dados`, `test_demonstracao`, `test_cache_busting`,
-`test_cache_http`, `test_sem_telefone_real`, `test_somente_leitura` e os de login
-local (`TestAdminPorAllowlist`, `TestSomenteLeitura`).
+Os módulos são os `tests/test_*.py` — 16 arquivos — mais `tests/base.py`, que traz
+o `setUp` de banco temporário compartilhado. A lista não é copiada aqui de
+propósito: a versão anterior desta linha ainda citava `test_api` e
+`test_historico`, que não existem há semanas. `ls tests/test_*.py` é a lista.
 
 ## Fumaça do admin (navegador real)
 
@@ -71,6 +71,44 @@ navegador servir a versão velha — e o teste manual concluir que "não funcion
 - `tests/test_cache_http.py` guarda os headers: `immutable` só quando o `?v=` bate
   com o conteúdo entregue; HTML nunca é cacheado, porque é ele que carrega a versão
   nova.
+
+## De onde vem o 94
+
+**94 é `Ran − skipped`, não a contagem de métodos no disco.** Quem conta
+`def test_` na árvore chega a **98** — e é aí que o número anunciado no currículo
+parece não fechar.
+
+A diferença não é código morto: são as duas classes que existem para provar a
+configuração oposta, e elas nunca rodam junto com o resto.
+
+| Classe | métodos | só roda com | na outra perna |
+| :--- | ---: | :--- | :--- |
+| `TestSomenteLeitura` | 3 | `SIMULACAO_AUTO_APROVAR=0` | a classe inteira é pulada |
+| `TestAdminPorAllowlist` | 2 | `SIMULACAO_AUTO_APROVAR=1` | a classe inteira é pulada |
+
+E aí entra a contabilidade do `unittest`: **classe pulada no `setUpClass` vira um
+objeto só**, não três nem dois. Por isso o rodapé imprime `Ran 95` numa perna e
+`Ran 96` na outra — nunca 98 —, e é `Ran − skipped` que fecha em 94.
+
+Medido no run do commit `5751b62` (`gh run list --commit 5751b62`):
+
+| Perna | objetos (`Ran`) | `skipped` | rodando |
+| :--- | ---: | ---: | ---: |
+| modo 1 + `ADMIN_EMAILS` | 95 | 1 | **94** |
+| modo 1 sem `ADMIN_EMAILS` | 95 | 2 | 93 |
+| modo 0 + `ADMIN_EMAILS` | 96 | 2 | **94** |
+
+Conta fechada: no modo 1, 98 métodos menos os três de `TestSomenteLeitura`, que a
+classe pulada absorve num objeto (95 objetos), menos esse objeto pulado = 94. No
+modo 0 são os dois de `TestAdminPorAllowlist` absorvidos (96 objetos), menos dois
+pulados — a classe e o caso que exige a flag em 1 — = 94. Ou seja: o "4 de
+diferença" até 98 não é o mesmo 4 nas duas pernas.
+
+**Regra prática:** o número publicável é **94** e ele só sai de `Ran − skipped`.
+`grep -c 'def test_'` dá 98 e não serve para conferir CV, README nem cartilha: a
+fonte é `scripts/contagens.json`, remedida pelo `medir-modos-testes.sh`. Este
+arquivo entra na varredura do `conferir-contagens.py`, então qualquer número
+seguido de "casos" aqui tem de ser 94.
 
 ## Conferência de contagens
 
