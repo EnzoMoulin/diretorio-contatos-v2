@@ -18,6 +18,15 @@ O PDF depende de `pdftotext` (poppler): sem ele o passo é *pulado*, não reprov
 — o runner do GitHub Actions não traz poppler, e reprovar por falta de ferramenta
 ensinaria a ignorar o script.
 
+Além dos números, o script confere os **links de documentação**: todo link relativo
+em `.md` e `.html` versionado — `href`, `src` e `[texto](alvo)` — tem de apontar para
+um alvo que existe, e, quando mira um `.md` com âncora, para um título que gere
+aquela âncora. Ficam de fora protocolo, âncora solta e caminho absoluto
+(`/oauth/login` é rota, não arquivo). Os casos que motivaram: a cartilha linka
+`testes.md#de-onde-vem-o-94`, o README mostra cinco imagens e o mp4 do demo, e o
+`frontend` carrega `admin.js`/`mapa.js`/`public.js` com `?v=` — renomear qualquer um
+deixava o link morto sem CI reclamar.
+
 **Quem consome a contagem:** os quatro lugares acima são os que este script
 alcança. Existe um quinto, **fora do repositório** — o currículo em português e em
 inglês (`.docx`/`.pdf`/`.txt`), que também anuncia os 94 casos. Mudar o número é
@@ -125,6 +134,54 @@ def arquivos_de_texto():
     return sorted(achados)
 
 
+def slug_de_titulo(titulo):
+    """Âncora que o GitHub gera para um título markdown (só o que este repo usa)."""
+    t = titulo.strip().lower()
+    t = re.sub(r"[^\w\s-]", "", t, flags=re.UNICODE)
+    return t.replace(" ", "-")
+
+
+def ancoras_do_md(rel):
+    """Conjunto de âncoras dos títulos de um markdown do repositório."""
+    texto = ler(rel) or ""
+    ancoras = set()
+    for linha in texto.splitlines():
+        m = re.match(r"^#{1,6}\s+(.+?)\s*#*\s*$", linha)
+        if m:
+            ancoras.add(slug_de_titulo(m.group(1)))
+    return ancoras
+
+
+def links_de_documentacao():
+    """(origem, alvo, âncora) dos links relativos em markdown e html versionado.
+
+    Fica de fora o que não aponta para arquivo do repositório: protocolo
+    (`https://`), âncora solta (`#secao`), `mailto:`/`data:` e caminho absoluto
+    (`/oauth/login`), que é rota do servidor — tratá-lo como arquivo daria falso
+    positivo. Bloco de código sai antes da varredura: exemplo dentro de cerca não
+    é link.
+    """
+    achados = []
+    for rel in arquivos_de_texto():
+        if not rel.endswith((".md", ".html")):
+            continue
+        texto = re.sub(r"```.*?```", "", ler(rel) or "", flags=re.S)
+        # Código inline também não é link: o `[texto](alvo)` que este repositório
+        # usa como exemplo em documentação aparecia como link para "alvo".
+        texto = re.sub(r"`[^`\n]*`", "", texto)
+        brutos = (re.findall(r'href="([^"]+)"', texto)
+                  + re.findall(r'src="([^"]+)"', texto)
+                  + re.findall(r"\]\(([^)\s]+)\)", texto))
+        for bruto in brutos:
+            if bruto.startswith(("http://", "https://", "mailto:", "data:", "/", "#")):
+                continue
+            caminho, _, ancora = bruto.partition("#")
+            caminho = caminho.split("?")[0]
+            if caminho:
+                achados.append((rel, caminho, ancora))
+    return achados
+
+
 class Checagem:
     def __init__(self):
         self.falhas = []
@@ -230,7 +287,22 @@ def main():
                 f.write(texto_skill)
             print("  .. bloco da skill regravado a partir de scripts/contagens.json")
 
-    # 6) Opcional: medir de verdade, em vez de conferir o que está escrito.
+    # 6) Links da documentação: todo link relativo em md/html — `href`, `src` e
+    #    `[texto](alvo)` — tem de apontar para um alvo que existe e, quando mira um
+    #    .md com âncora, para um título que gere aquela âncora. Os casos concretos:
+    #    a cartilha linka `testes.md#de-onde-vem-o-94`, o README mostra cinco imagens
+    #    e o mp4 do demo, e o frontend carrega `admin.js`/`mapa.js`/`public.js` com
+    #    `?v=` — renomear qualquer um deixava o link morto em silêncio.
+    quebrados = []
+    for origem, alvo, ancora in links_de_documentacao():
+        destino = os.path.normpath(os.path.join(os.path.dirname(origem), alvo))
+        if not os.path.exists(os.path.join(RAIZ, destino)):
+            quebrados.append(f"{origem} -> {alvo} (alvo não existe)")
+        elif ancora and destino.endswith(".md") and ancora not in ancoras_do_md(destino):
+            quebrados.append(f"{origem} -> {alvo}#{ancora} (título com essa âncora não existe)")
+    c.igual("links de documentação (alvo e âncora)", sorted(set(quebrados)), [])
+
+    # 7) Opcional: medir de verdade, em vez de conferir o que está escrito.
     if "--medir" in sys.argv:
         print("\nMedindo a suíte nas três pernas (leva ~2 min)...")
         saida = subprocess.run(["bash", MEDIR], capture_output=True, text=True).stdout
@@ -242,13 +314,14 @@ def main():
 
     print()
     if c.falhas:
-        print(f"{len(c.falhas)} divergência(s): os quatro lugares não contam a mesma coisa.")
+        print(f"{len(c.falhas)} divergência(s) na conferência de contagens e links.")
         for f in c.falhas:
             print("  -", f)
         print("Atualize scripts/contagens.json e os arquivos que discordaram dele.")
         return 1
     pulados = f" ({len(c.pulados)} pulado(s))" if c.pulados else ""
-    print(f"CONTAGENS OK — README, cartilha e rótulo do medir concordam{pulados}.")
+    print(f"CONTAGENS OK — README, cartilha e rótulo do medir concordam, e os links da"
+          f" documentação apontam para alvos existentes{pulados}.")
     return 0
 
 
