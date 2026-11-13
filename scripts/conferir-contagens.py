@@ -18,11 +18,12 @@ O PDF depende de `pdftotext` (poppler): sem ele o passo é *pulado*, não reprov
 — o runner do GitHub Actions não traz poppler, e reprovar por falta de ferramenta
 ensinaria a ignorar o script.
 
-Além dos números, o script confere os **links de documentação**: todo `href` de
-HTML versionado que aponta para um `.md` do repositório tem de encontrar o arquivo
-e, quando traz âncora, um título que gere aquela âncora. O caso que motivou a
-checagem: a cartilha linka `testes.md#de-onde-vem-o-94`, e renomear a seção deixava
-o link morto sem nenhum CI reclamar — o número continuava conferido.
+Além dos números, o script confere os **links de documentação**: todo link relativo
+em `.md` e `.html` versionado tem de apontar para um alvo que existe, e, quando mira
+um `.md` com âncora, para um título que gere aquela âncora. Ficam de fora protocolo,
+âncora solta e caminho absoluto (`/oauth/login` é rota, não arquivo). Os casos que
+motivaram: a cartilha linka `testes.md#de-onde-vem-o-94`, e o README mostra cinco
+imagens e o mp4 do demo — renomear qualquer um deixava o link morto sem CI reclamar.
 
 **Quem consome a contagem:** os quatro lugares acima são os que este script
 alcança. Existe um quinto, **fora do repositório** — o currículo em português e em
@@ -149,19 +150,29 @@ def ancoras_do_md(rel):
     return ancoras
 
 
-def links_para_md():
-    """(origem, alvo, âncora) de cada href de html versionado para um .md.
+def links_de_documentacao():
+    """(origem, alvo, âncora) dos links relativos em markdown e html versionado.
 
-    `:` fica de fora do alvo de propósito: link absoluto (`https://…/x.md`) não é
-    conferido aqui, e sim o que aponta para dentro do repositório.
+    Fica de fora o que não aponta para arquivo do repositório: protocolo
+    (`https://`), âncora solta (`#secao`), `mailto:`/`data:` e caminho absoluto
+    (`/oauth/login`), que é rota do servidor — tratá-lo como arquivo daria falso
+    positivo. Bloco de código sai antes da varredura: exemplo dentro de cerca não
+    é link.
     """
     achados = []
     for rel in arquivos_de_texto():
-        if not rel.endswith(".html"):
+        if not rel.endswith((".md", ".html")):
             continue
-        texto = ler(rel) or ""
-        for arq, ancora in re.findall(r'href="([^"#:]+\.md)(#[^"]*)?"', texto):
-            achados.append((rel, arq, ancora or ""))
+        texto = re.sub(r"```.*?```", "", ler(rel) or "", flags=re.S)
+        brutos = (re.findall(r'href="([^"]+)"', texto)
+                  + re.findall(r"\]\(([^)\s]+)\)", texto))
+        for bruto in brutos:
+            if bruto.startswith(("http://", "https://", "mailto:", "data:", "/", "#")):
+                continue
+            caminho, _, ancora = bruto.partition("#")
+            caminho = caminho.split("?")[0]
+            if caminho:
+                achados.append((rel, caminho, ancora))
     return achados
 
 
@@ -270,18 +281,19 @@ def main():
                 f.write(texto_skill)
             print("  .. bloco da skill regravado a partir de scripts/contagens.json")
 
-    # 6) Links da documentação: html que aponta para um .md tem de apontar para
-    #    arquivo existente e, quando traz âncora, para um título real. O caso
-    #    concreto: a cartilha linka `testes.md#de-onde-vem-o-94`, e renomear essa
-    #    seção quebrava o link em silêncio — o número continuava conferido.
+    # 6) Links da documentação: todo link relativo em md/html tem de apontar para
+    #    um alvo que existe e, quando mira um .md com âncora, para um título que
+    #    gere aquela âncora. Os casos concretos: a cartilha linka
+    #    `testes.md#de-onde-vem-o-94` e o README aponta para cinco imagens e o mp4
+    #    do demo — renomear qualquer um deles deixava o link morto em silêncio.
     quebrados = []
-    for origem, alvo, ancora in links_para_md():
+    for origem, alvo, ancora in links_de_documentacao():
         destino = os.path.normpath(os.path.join(os.path.dirname(origem), alvo))
         if not os.path.exists(os.path.join(RAIZ, destino)):
-            quebrados.append(f"{origem} -> {alvo} (arquivo ausente)")
-        elif ancora and ancora.lstrip("#") not in ancoras_do_md(destino):
-            quebrados.append(f"{origem} -> {alvo}{ancora} (título com essa âncora não existe)")
-    c.igual("links html -> md (arquivo e âncora)", sorted(set(quebrados)), [])
+            quebrados.append(f"{origem} -> {alvo} (alvo não existe)")
+        elif ancora and destino.endswith(".md") and ancora not in ancoras_do_md(destino):
+            quebrados.append(f"{origem} -> {alvo}#{ancora} (título com essa âncora não existe)")
+    c.igual("links de documentação (alvo e âncora)", sorted(set(quebrados)), [])
 
     # 7) Opcional: medir de verdade, em vez de conferir o que está escrito.
     if "--medir" in sys.argv:
@@ -302,7 +314,7 @@ def main():
         return 1
     pulados = f" ({len(c.pulados)} pulado(s))" if c.pulados else ""
     print(f"CONTAGENS OK — README, cartilha e rótulo do medir concordam, e os links da"
-          f" documentação apontam para títulos existentes{pulados}.")
+          f" documentação apontam para alvos existentes{pulados}.")
     return 0
 
 
