@@ -68,14 +68,17 @@
     <tr><td><span class="mono">ADMIN_EMAILS</span></td><td>Define quem é administrador</td><td>O sistema abre, mas ninguém administra</td></tr>
     <tr><td><span class="mono">APP_BASE_URL</span></td><td>Monta links de e-mail e o retorno do login</td><td>Links apontam para <span class="mono">localhost</span></td></tr>
   </table>
-  <div class="callout"><b>O que já está pronto:</b> 94 casos de teste automatizados e um teste de fumaça
+  <div class="callout"><b>O que já está pronto:</b> <a href="testes.md#de-onde-vem-o-94">94 casos de teste
+  automatizados</a> — e o doc explica de onde vem esse número, porque o rodapé do
+  <span class="mono">unittest</span> não conta métodos — e um teste de fumaça
   que abre o navegador e clica no fluxo do admin — e que no fim reinicia em somente
   leitura para conferir o que o visitante lê —, com integração contínua
   verde no GitHub Actions nos <b>dois modos</b> (aprovação automática e somente leitura), <span class="mono">render.yaml</span> versionado, banco mascarado para demonstração
   (<span class="mono">seed_mascarado.json</span>) e login local desligado em produção
   (<span class="mono">LOCAL_LOGIN=0</span>). Falta apenas a configuração de painel descrita aqui.<br>
   <b>Os três scripts de teste, um a um:</b> <a href="testes.md">docs/testes.md</a> — o que cada um
-  cobre, o cache <span class="mono">?v=</span> e a conferência de contagens que roda antes dos testes.</div>
+  cobre, o cache <span class="mono">?v=</span>, a conferência de contagens que roda antes
+  dos testes e a conta de onde vêm os 94.</div>
 </section>
 
 <!-- ================= 1 ================= -->
