@@ -116,7 +116,10 @@ seguido de "casos" aqui tem de ser 94.
 **todo** `*.md` e `*.html` versionado atrás de "N casos" — documento novo entra na
 conferência sozinho —, confere a tabela das três pernas no `README`, o número da
 fumaça, o PDF da cartilha e os rótulos do `medir-modos-testes.sh`, e falha quando
-discordam. `--medir` roda a suíte nas três pernas em vez de confiar no que está
+discordam. Na mesma passada ele confere os **links de documentação** (HTML →
+`.md#âncora`): renomear a seção *De onde vem o 94* reprova o CI, em vez de deixar a
+cartilha apontando para o vazio. `--medir` roda a suíte nas três pernas em vez de
+confiar no que está
 escrito. O CI roda essa conferência antes dos testes e, antes ainda, só
 `tests/test_integridade_dados.py`: base quebrada aparece em segundos, não no fim da
 suíte.

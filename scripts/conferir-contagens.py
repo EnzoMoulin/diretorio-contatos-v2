@@ -18,6 +18,12 @@ O PDF depende de `pdftotext` (poppler): sem ele o passo é *pulado*, não reprov
 — o runner do GitHub Actions não traz poppler, e reprovar por falta de ferramenta
 ensinaria a ignorar o script.
 
+Além dos números, o script confere os **links de documentação**: todo `href` de
+HTML versionado que aponta para um `.md` do repositório tem de encontrar o arquivo
+e, quando traz âncora, um título que gere aquela âncora. O caso que motivou a
+checagem: a cartilha linka `testes.md#de-onde-vem-o-94`, e renomear a seção deixava
+o link morto sem nenhum CI reclamar — o número continuava conferido.
+
 **Quem consome a contagem:** os quatro lugares acima são os que este script
 alcança. Existe um quinto, **fora do repositório** — o currículo em português e em
 inglês (`.docx`/`.pdf`/`.txt`), que também anuncia os 94 casos. Mudar o número é
@@ -125,6 +131,40 @@ def arquivos_de_texto():
     return sorted(achados)
 
 
+def slug_de_titulo(titulo):
+    """Âncora que o GitHub gera para um título markdown (só o que este repo usa)."""
+    t = titulo.strip().lower()
+    t = re.sub(r"[^\w\s-]", "", t, flags=re.UNICODE)
+    return t.replace(" ", "-")
+
+
+def ancoras_do_md(rel):
+    """Conjunto de âncoras dos títulos de um markdown do repositório."""
+    texto = ler(rel) or ""
+    ancoras = set()
+    for linha in texto.splitlines():
+        m = re.match(r"^#{1,6}\s+(.+?)\s*#*\s*$", linha)
+        if m:
+            ancoras.add(slug_de_titulo(m.group(1)))
+    return ancoras
+
+
+def links_para_md():
+    """(origem, alvo, âncora) de cada href de html versionado para um .md.
+
+    `:` fica de fora do alvo de propósito: link absoluto (`https://…/x.md`) não é
+    conferido aqui, e sim o que aponta para dentro do repositório.
+    """
+    achados = []
+    for rel in arquivos_de_texto():
+        if not rel.endswith(".html"):
+            continue
+        texto = ler(rel) or ""
+        for arq, ancora in re.findall(r'href="([^"#:]+\.md)(#[^"]*)?"', texto):
+            achados.append((rel, arq, ancora or ""))
+    return achados
+
+
 class Checagem:
     def __init__(self):
         self.falhas = []
@@ -230,7 +270,20 @@ def main():
                 f.write(texto_skill)
             print("  .. bloco da skill regravado a partir de scripts/contagens.json")
 
-    # 6) Opcional: medir de verdade, em vez de conferir o que está escrito.
+    # 6) Links da documentação: html que aponta para um .md tem de apontar para
+    #    arquivo existente e, quando traz âncora, para um título real. O caso
+    #    concreto: a cartilha linka `testes.md#de-onde-vem-o-94`, e renomear essa
+    #    seção quebrava o link em silêncio — o número continuava conferido.
+    quebrados = []
+    for origem, alvo, ancora in links_para_md():
+        destino = os.path.normpath(os.path.join(os.path.dirname(origem), alvo))
+        if not os.path.exists(os.path.join(RAIZ, destino)):
+            quebrados.append(f"{origem} -> {alvo} (arquivo ausente)")
+        elif ancora and ancora.lstrip("#") not in ancoras_do_md(destino):
+            quebrados.append(f"{origem} -> {alvo}{ancora} (título com essa âncora não existe)")
+    c.igual("links html -> md (arquivo e âncora)", sorted(set(quebrados)), [])
+
+    # 7) Opcional: medir de verdade, em vez de conferir o que está escrito.
     if "--medir" in sys.argv:
         print("\nMedindo a suíte nas três pernas (leva ~2 min)...")
         saida = subprocess.run(["bash", MEDIR], capture_output=True, text=True).stdout
@@ -242,13 +295,14 @@ def main():
 
     print()
     if c.falhas:
-        print(f"{len(c.falhas)} divergência(s): os quatro lugares não contam a mesma coisa.")
+        print(f"{len(c.falhas)} divergência(s) na conferência de contagens e links.")
         for f in c.falhas:
             print("  -", f)
         print("Atualize scripts/contagens.json e os arquivos que discordaram dele.")
         return 1
     pulados = f" ({len(c.pulados)} pulado(s))" if c.pulados else ""
-    print(f"CONTAGENS OK — README, cartilha e rótulo do medir concordam{pulados}.")
+    print(f"CONTAGENS OK — README, cartilha e rótulo do medir concordam, e os links da"
+          f" documentação apontam para títulos existentes{pulados}.")
     return 0
 
 
