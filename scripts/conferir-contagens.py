@@ -19,11 +19,13 @@ O PDF depende de `pdftotext` (poppler): sem ele o passo é *pulado*, não reprov
 ensinaria a ignorar o script.
 
 Além dos números, o script confere os **links de documentação**: todo link relativo
-em `.md` e `.html` versionado tem de apontar para um alvo que existe, e, quando mira
-um `.md` com âncora, para um título que gere aquela âncora. Ficam de fora protocolo,
-âncora solta e caminho absoluto (`/oauth/login` é rota, não arquivo). Os casos que
-motivaram: a cartilha linka `testes.md#de-onde-vem-o-94`, e o README mostra cinco
-imagens e o mp4 do demo — renomear qualquer um deixava o link morto sem CI reclamar.
+em `.md` e `.html` versionado — `href`, `src` e `[texto](alvo)` — tem de apontar para
+um alvo que existe, e, quando mira um `.md` com âncora, para um título que gere
+aquela âncora. Ficam de fora protocolo, âncora solta e caminho absoluto
+(`/oauth/login` é rota, não arquivo). Os casos que motivaram: a cartilha linka
+`testes.md#de-onde-vem-o-94`, o README mostra cinco imagens e o mp4 do demo, e o
+`frontend` carrega `admin.js`/`mapa.js`/`public.js` com `?v=` — renomear qualquer um
+deixava o link morto sem CI reclamar.
 
 **Quem consome a contagem:** os quatro lugares acima são os que este script
 alcança. Existe um quinto, **fora do repositório** — o currículo em português e em
@@ -164,7 +166,11 @@ def links_de_documentacao():
         if not rel.endswith((".md", ".html")):
             continue
         texto = re.sub(r"```.*?```", "", ler(rel) or "", flags=re.S)
+        # Código inline também não é link: o `[texto](alvo)` que este repositório
+        # usa como exemplo em documentação aparecia como link para "alvo".
+        texto = re.sub(r"`[^`\n]*`", "", texto)
         brutos = (re.findall(r'href="([^"]+)"', texto)
+                  + re.findall(r'src="([^"]+)"', texto)
                   + re.findall(r"\]\(([^)\s]+)\)", texto))
         for bruto in brutos:
             if bruto.startswith(("http://", "https://", "mailto:", "data:", "/", "#")):
@@ -281,11 +287,12 @@ def main():
                 f.write(texto_skill)
             print("  .. bloco da skill regravado a partir de scripts/contagens.json")
 
-    # 6) Links da documentação: todo link relativo em md/html tem de apontar para
-    #    um alvo que existe e, quando mira um .md com âncora, para um título que
-    #    gere aquela âncora. Os casos concretos: a cartilha linka
-    #    `testes.md#de-onde-vem-o-94` e o README aponta para cinco imagens e o mp4
-    #    do demo — renomear qualquer um deles deixava o link morto em silêncio.
+    # 6) Links da documentação: todo link relativo em md/html — `href`, `src` e
+    #    `[texto](alvo)` — tem de apontar para um alvo que existe e, quando mira um
+    #    .md com âncora, para um título que gere aquela âncora. Os casos concretos:
+    #    a cartilha linka `testes.md#de-onde-vem-o-94`, o README mostra cinco imagens
+    #    e o mp4 do demo, e o frontend carrega `admin.js`/`mapa.js`/`public.js` com
+    #    `?v=` — renomear qualquer um deixava o link morto em silêncio.
     quebrados = []
     for origem, alvo, ancora in links_de_documentacao():
         destino = os.path.normpath(os.path.join(os.path.dirname(origem), alvo))

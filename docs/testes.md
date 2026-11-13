@@ -117,11 +117,12 @@ seguido de "casos" aqui tem de ser 94.
 conferência sozinho —, confere a tabela das três pernas no `README`, o número da
 fumaça, o PDF da cartilha e os rótulos do `medir-modos-testes.sh`, e falha quando
 discordam. Na mesma passada ele confere os **links de documentação**: todo link
-relativo em `.md` e `.html` versionado tem de apontar para alvo existente e, quando
-mira um `.md` com âncora, para um título que gere aquela âncora. Renomear a seção
-*De onde vem o 94*, ou uma captura que o README mostra, reprova o CI em vez de
-deixar o link apontando para o vazio. `--medir` roda a suíte nas três pernas em vez
-de confiar no que está
+relativo em `.md` e `.html` versionado — `href`, `src` e `[texto](alvo)` — tem de
+apontar para alvo existente e, quando mira um `.md` com âncora, para um título que
+gere aquela âncora. Renomear a seção *De onde vem o 94*, uma captura que o README
+mostra ou o `admin.js` que o `frontend` carrega reprova o CI em vez de deixar o link
+apontando para o vazio. `--medir` roda a suíte nas três pernas em vez de confiar no
+que está
 escrito. O CI roda essa conferência antes dos testes e, antes ainda, só
 `tests/test_integridade_dados.py`: base quebrada aparece em segundos, não no fim da
 suíte.
