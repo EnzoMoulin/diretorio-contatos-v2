@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         **Dado pessoal não entra em issue.** Telefone, e-mail e nome de pessoa, mesmo mascarado,
-        ficam fora: use valor inventado (`(27) 0000-0000`, `fulano@exemplo.jus.br`).
+        ficam fora: use valor inventado (`(27) 3333-0007`, `fulano@exemplo.jus.br`).
   - type: textarea
     id: esperado
     attributes:
