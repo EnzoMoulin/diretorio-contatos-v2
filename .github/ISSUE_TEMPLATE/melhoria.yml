@@ -1,0 +1,35 @@
+name: Ideia ou melhoria
+description: Funcionalidade, refatoração ou dívida técnica que ainda não virou código
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Este repositório está **fechado** (12/11/2026): a evolução do produto acontece no
+        v3 (Laravel). Aqui entram correção, teste que falta na evidência e ajuste que
+        não muda o desenho — mudança de escopo é avisada no `PROJETOS-FUTUROS` do workspace
+        e depois no v3.
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema
+      description: O que hoje não existe, trava ou incomoda. Descreva o uso, não a solução.
+    validations:
+      required: true
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Proposta
+      description: O que fazer, em linhas gerais. Se houver mais de um caminho, liste os dois.
+    validations:
+      required: true
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Trade-offs e custo
+      description: O que fica pior e o que isso custa em tempo; o que depende de outra entrega.
+  - type: textarea
+    id: pronto
+    attributes:
+      label: Definição de pronto
+      description: Como saber que terminou — teste que passa, número medido, documento atualizado.

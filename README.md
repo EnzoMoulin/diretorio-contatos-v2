@@ -230,6 +230,42 @@ corrigiu três contrastes do tema escuro. O que cada script faz, o cache dos
 estáticos (`?v=`) e o bug que a fumaça pegou na primeira execução estão em
 [`docs/testes.md`](docs/testes.md).
 
+## Fluxo de contribuição e CI
+
+Nada entra na `master` por push direto. O caminho é sempre:
+
+```
+issue (problema) → branch → commits semânticos → PR ("Closes #N") → CI verde → squash merge
+```
+
+- **Issue primeiro.** Os formulários de bug e de ideia pedem problema, trade-off e definição de
+  pronto; issue em branco não existe. Ideia registrada aqui não é compromisso — este repositório
+  está fechado e a evolução acontece no [v3](https://github.com/EnzoMoulin/diretorio-contatos-v3).
+- **PR com `Closes #N`.** O merge fecha a issue sozinho: o problema e o código que o resolveu ficam
+  no mesmo fio do histórico. `Refs #N` quando a mudança só encosta na issue.
+- **Descrição do PR com trade-offs**, não só a lista de arquivos.
+- **Checks obrigatórios no ruleset `protege-default`** — PR vermelho não tem botão de merge.
+
+| Job / passo de `.github/workflows/testes.yml` | O que prova |
+| :--- | :--- |
+| job `testes (SIMULACAO_AUTO_APROVAR=1)` | os 94 casos no modo de avaliação, com fila e aprovação ativas |
+| job `testes (SIMULACAO_AUTO_APROVAR=0)` | os mesmos casos no modo do demo publicado (somente leitura) |
+| job `fumaça do admin (navegador real)` | 44 checagens em Chromium de verdade: Reconfirmar, fila vazia, escopo parcial |
+| passo `acessibilidade medida`, no mesmo job | 10 checagens de nome acessível, foco por Tab e contraste WCAG AA nos dois temas |
+
+O workflow também confere o hash do screencast e as contagens declaradas antes de rodar a suíte:
+número errado em documento não é problema que teste de comportamento resolva.
+
+## Roadmap
+
+O que ainda não existe está nas [issues](https://github.com/EnzoMoulin/diretorio-contatos-v2/issues),
+com o motivo e a definição de pronto de cada item. As abertas hoje são as lacunas de evidência que
+impedem afirmar mais do que foi medido: cobertura de linha, teste de carga, e-mail por API HTTP
+(SMTP é bloqueado no Render free) e a publicação do demo.
+
+A evolução de produto — busca com sinônimos, mapa, `/ramais`, paridade de contrato — está no
+repositório da v3, não aqui.
+
 ## Hospedagem (pôr no ar)
 Só stdlib: sem `pip install`. No Render (gratuito) o serviço nasce do
 `render.yaml` (`INTRANET_ONLY=0`, `LOCAL_LOGIN=0`, `SIMULACAO_AUTO_APROVAR=0`,
