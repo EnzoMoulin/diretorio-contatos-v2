@@ -519,6 +519,8 @@ class TestHistoricoAutor(unittest.TestCase):
                             ).fetchone()[0]
         admin_id = con.execute(
             "SELECT id FROM usuarios WHERE usuario='admin'").fetchone()[0]
+        forum = con.execute("SELECT id FROM foruns ORDER BY id LIMIT 1"
+                            ).fetchone()[0]
         con.close()
         marco = notif_marco()
         st, corpo = api("POST", "/api/contatos",
@@ -526,6 +528,13 @@ class TestHistoricoAutor(unittest.TestCase):
                         token=self.tok)
         self.assertEqual(st, 201, corpo)
         cid = corpo["id"]
+        # Contato geral sem setor_id: o formulário manda o fórum e o servidor
+        # resolve o setor virtual por baixo.
+        st, geral = api("POST", "/api/contatos",
+                        {"nome": "Teste Geral", "forum_id": forum},
+                        token=self.tok)
+        self.assertEqual(st, 201, geral)
+        gid = geral["id"]
         try:
             con = sqlite3.connect(DB)
             con.row_factory = sqlite3.Row
@@ -546,12 +555,19 @@ class TestHistoricoAutor(unittest.TestCase):
             item = [h for h in hist if h.get("contato_id") == cid]
             self.assertTrue(item, "a criação não apareceu no histórico")
             self.assertEqual(item[0]["autor"], "admin")
+            st, arvore = api("GET", "/api/hierarquia")
+            no_forum = next(f for c in arvore["comarcas"] for f in c["foruns"]
+                            if f["id"] == forum)
+            self.assertIn(gid, {c["id"] for c in no_forum["contatos"]},
+                          "contato criado por forum_id não subiu para os gerais")
         finally:
             api("DELETE", "/api/contatos/" + cid, token=self.tok)
+            api("DELETE", "/api/contatos/" + gid, token=self.tok)
             # Limpeza cirúrgica: só as linhas de auditoria deste contato de
             # teste (o histórico real é append-only e não se toca).
             con = sqlite3.connect(DB)
-            con.execute("DELETE FROM historico WHERE contato_id=?", (cid,))
+            con.execute("DELETE FROM historico WHERE contato_id IN (?,?)",
+                        (cid, gid))
             con.commit()
             con.close()
             notif_limpar(marco)

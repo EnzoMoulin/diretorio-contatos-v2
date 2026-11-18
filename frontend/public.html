@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
-<link rel="stylesheet" href="style.css?v=ae8472dc">
+<link rel="stylesheet" href="style.css?v=5f9418db">
 </head>
 <body>
 <div class="app-container">
@@ -45,8 +45,10 @@
         </section>
         <div class="consulta-direita">
           <div class="fc-busca">
-            <input id="fc-busca" class="fc-busca-input" type="search" title="Buscar (atalho: /)" placeholder="Buscar contato, setor, unidade…" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="fc-busca-resultados">
-            <div id="fc-busca-resultados" class="fc-busca-resultados" role="listbox" aria-label="Resultados da busca" hidden></div>
+            <div class="fc-busca-campo">
+              <input id="fc-busca" class="fc-busca-input" type="search" title="Buscar (atalho: /)" placeholder="Buscar contato, setor, unidade…" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="fc-busca-resultados">
+              <div id="fc-busca-resultados" class="fc-busca-resultados" role="listbox" aria-label="Resultados da busca" hidden></div>
+            </div>
           </div>
         <div class="fc-panel">
           <div id="lista"><div class="fc-empty">Carregando contatos...</div></div>
@@ -166,6 +168,6 @@
   </main>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="public.js?v=0d930b66"></script>
+<script src="public.js?v=0d956c33"></script>
 </body>
 </html>
