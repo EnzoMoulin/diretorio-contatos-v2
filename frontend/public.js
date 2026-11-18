@@ -620,6 +620,7 @@ function fmtTipoContato(tipo) {
         itens.push({ tipo: "NO", id: item.id, nome: item.nome });
       });
     }
+    if (itens.length < 2) return '';
     return '<nav class="fc-breadcrumb" aria-label="Caminho da estrutura">' + itens.map(function (item, indice) {
       var ultimo = indice === itens.length - 1;
       var conteudo = ultimo
@@ -814,7 +815,11 @@ function fmtTipoContato(tipo) {
   }
 
   function barraNavegacaoInferior(rotuloVoltar, semLinha) {
-    return '<div class="fc-bottom-nav' + (semLinha ? " fc-bottom-nav--colado" : "") + '"><button type="button" class="fc-btn" id="fc-back-bottom">← ' + esc(rotuloVoltar || "Voltar") + '</button>' +
+    // `false` = tela sem volta (Sede): sem botão, e o "Voltar ao topo" vai para a direita
+    var semVoltar = rotuloVoltar === false;
+    return '<div class="fc-bottom-nav' + (semLinha ? " fc-bottom-nav--colado" : "") +
+      (semVoltar ? " fc-bottom-nav--sem-voltar" : "") + '">' +
+      (semVoltar ? '' : '<button type="button" class="fc-btn" id="fc-back-bottom">← ' + esc(rotuloVoltar || "Voltar") + '</button>') +
       '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
   }
 
@@ -926,8 +931,7 @@ function fmtTipoContato(tipo) {
       cardContatosGerais(m.contatos || [], true) +
       '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
       ((m.nos || []).length ? (m.nos || []).map(cardNo).join("") : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
-      "</div>" + barraNavegacaoInferior("Comarcas", true);
-    document.getElementById("fc-back-bottom").onclick = renderInicio;
+      "</div>" + barraNavegacaoInferior(false, true);
     (function () {
       var bp = document.querySelector("[data-gerais-print]");
       if (bp) bp.onclick = function (e) { if (e && e.stopPropagation) e.stopPropagation(); imprimirOrgao(); };
