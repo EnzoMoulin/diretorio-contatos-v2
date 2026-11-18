@@ -31,6 +31,7 @@ html,body{margin:0;padding:0;width:100%;height:100vh;overflow:hidden;
 .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px 24px;
   margin-bottom:20px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
 .card h1{margin:0 0 14px;font-size:22px;color:#0f172a}
+.card h2{margin:18px 0 8px;font-size:16px;color:#0f172a}
 .card .hint{color:#64748b}
 input[type=search],.form-grid input{border:1px solid #cbd5e1;border-radius:8px;
   padding:10px 12px;font-size:15px;color:#1f2937;background:#f8fafc}
@@ -175,17 +176,23 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 .fc-toggle svg{width:16px;height:16px;transition:transform .15s ease}
 .fc-card--toggle.aberto .fc-toggle svg{transform:rotate(180deg)}
 .fc-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.fc-card h4{margin:0 0 6px;font-size:15px;color:#0f172a}
-.fc-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.fc-pill{font-size:11px;background:#f1f5f9;color:#334155;border-radius:999px;padding:4px 8px}
+.fc-card h4,.fc-card h3{margin:0 0 6px;font-size:15px;color:#0f172a}
+.fc-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.fc-pill{display:inline-flex;align-items:center;font-size:11px;line-height:1.2;background:#f1f5f9;color:#334155;border-radius:999px;padding:4px 8px}
 .fc-back{border:0;background:transparent;color:#1d4ed8;font-weight:700;padding:0;margin:0 0 12px;cursor:pointer}
-.fc-address-inline{display:inline-flex;align-items:center;gap:6px;max-width:100%;vertical-align:middle}
-.fc-endereco{display:inline-block;color:#1d4ed8;font-size:13px;line-height:1.45;text-decoration:none;overflow-wrap:anywhere}
+.fc-endereco{color:#1d4ed8;font-size:13px;line-height:1.45;text-decoration:none;overflow-wrap:anywhere}
 .fc-endereco:hover{text-decoration:underline}
 .fc-muted{color:#64748b;font-size:13px}
 .fc-address-row{margin-top:10px}
-.fc-inherit{margin-top:10px;padding:10px 12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;color:#475569;font-size:12px}
-.fc-address-row .fc-inherit{margin-top:0}
+/* Endereço em duas linhas no máximo: o texto inteiro fica no `title` do link e
+   no botão de copiar. Antes, endereço longo + CEP + "herdado da Unidade"
+   ocupavam quatro linhas e comiam a altura do painel. */
+.fc-inherit{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;color:#475569;font-size:12px;line-height:1.45}
+.fc-inherit-texto{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;flex:1 1 auto}
+.fc-inherit .fc-muted{font-size:12px}
+.fc-cep{flex:0 0 auto;font-size:11px;line-height:1.7;color:#475569;background:#eef2f7;border-radius:999px;padding:0 8px;white-space:nowrap}
+.fc-copy-btn{flex:0 0 auto}
+.fc-address-row + .fc-section{margin-top:12px}
 .fc-breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:0 0 10px;color:#64748b;font-size:13px;line-height:1.5}
 .fc-breadcrumb button{appearance:none;border:0;background:transparent;padding:0;color:#1d4ed8;font:inherit;font-weight:700;cursor:pointer}
 .fc-breadcrumb button:hover{text-decoration:underline}
@@ -193,7 +200,7 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 .fc-copy-btn{border:1px solid #dbe3ed;background:#fff;border-radius:8px;padding:5px 7px;cursor:pointer;font-size:12px;color:#1d4ed8;font-weight:800}
 .fc-copy-btn:hover{background:#f1f5f9}
 .fc-contato{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:#f8fafc;border:1px solid #dbe3ed;border-radius:10px;margin-top:9px}
-.fc-contato-main{min-width:0}
+.fc-contato-main{min-width:96px}
 .fc-contato h4{margin:4px 0 0;font-size:14px;color:#0f172a}
 .fc-contato-tipo{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#475569}
 /* procedência do dado: fonte + vigência, discreta sob o contato */
@@ -208,15 +215,33 @@ body[data-theme="dark"] .fc-contato-fonte-data{color:#64748b}
 .fc-contato-side{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .fc-contato-valor{color:#1d4ed8;font-size:14px;font-weight:700;text-decoration:none;overflow-wrap:anywhere}
 .fc-contato-actions{display:flex;gap:5px}
-.fc-icon-btn{border:1px solid #dbe3ed;background:#fff;border-radius:8px;padding:5px 7px;cursor:pointer;font-size:12px}
+.fc-contato-actions .fc-icon-btn{padding:4px 6px;gap:4px}
+.fc-icon-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid #dbe3ed;background:#fff;border-radius:8px;padding:5px 7px;cursor:pointer;font-size:12px}
 .fc-icon-btn:hover{background:#f1f5f9}
 .fc-icon-btn--danger{color:#b91c1c;border-color:#fecaca}
 .fc-icon-btn--ok{color:#15803d;border-color:#bbf7d0}
 .fc-icon-btn--ok:hover{background:#f0fdf4}
 .fc-empty{padding:20px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;text-align:center}
 @media(max-width:680px){.fc-contato{align-items:flex-start;flex-direction:column}.fc-contato-side{justify-content:flex-start}}
+/* Painel estreito: as ações viram só ícones, numa linha só. São sete botões
+   (copiar, favoritar, vCard, link, Conferi, Editar, Remover) e o painel rola
+   no eixo Y — o que faz o X virar `auto` e cortar o "Remover" pela borda.
+   O rótulo continua no DOM como texto só para leitor de tela; o nome do
+   botão vem do `aria-label` de cada um. Os rótulos só cabem em painel bem
+   largo: a linha com eles pede ~413px e o cartão ainda precisa de ~96px para
+   o tipo do contato — daí o corte em 560px, não em 400. */
+@container (max-width:560px){
+  .fc-contato-actions{flex-wrap:nowrap;justify-content:flex-end;gap:4px}
+  .fc-contato-actions .fc-rotulo{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .fc-contato-actions>.fc-icon-btn{min-width:30px;min-height:30px;padding:0;justify-content:center}
+}
+@container (max-width:400px){
+  .fc-inherit-texto{-webkit-line-clamp:3}
+  .fc-contato{flex-wrap:wrap;row-gap:6px}
+  .fc-contato-side{flex:1 1 100%;min-width:0}
+}
 body[data-theme="dark"] .fc-card{background:#1e293b;border-color:#334155}
-body[data-theme="dark"] .fc-card h4,body[data-theme="dark"] .fc-contato h4{color:#f8fafc}
+body[data-theme="dark"] .fc-card h4,body[data-theme="dark"] .fc-card h3,body[data-theme="dark"] .fc-contato h4{color:#f8fafc}
 body[data-theme="dark"] .fc-pill{background:#0f172a;color:#cbd5e1}
 body[data-theme="dark"] .fc-contato{background:#0f172a;border-color:#334155}
 body[data-theme="dark"] .fc-contato-tipo{color:#94a3b8}
@@ -224,6 +249,7 @@ body[data-theme="dark"] .fc-icon-btn{background:#1e293b;border-color:#475569;col
 body[data-theme="dark"] .fc-back{color:#93c5fd}
 body[data-theme="dark"] .fc-endereco{color:#93c5fd}
 body[data-theme="dark"] .fc-inherit{background:#0f172a;border-color:#475569;color:#cbd5e1}
+body[data-theme="dark"] .fc-cep{background:#1e293b;color:#cbd5e1}
 /* ---- tema escuro ---- */
 body[data-theme="dark"]{background:#0f172a;color:#e2e8f0}
 body[data-theme="dark"] .card{background:#1e293b;color:#e2e8f0}
@@ -321,7 +347,7 @@ html{scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent}
 #consulta-mapa{height:100%;min-height:0}
 #view-consulta #map{min-height:0}
 #map-msg{margin:6px 0 0}
-.fc-panel{width:100%;min-height:0;overflow-y:auto;background:#fff;border:1px solid #cbd5e1;border-radius:16px;padding:clamp(16px,2vw,24px);box-shadow:0 6px 18px rgba(15,23,42,.11);display:flex;flex-direction:column}
+.fc-panel{width:100%;min-height:0;overflow-y:auto;background:#fff;border:1px solid #cbd5e1;border-radius:16px;padding:clamp(16px,2vw,24px);box-shadow:0 6px 18px rgba(15,23,42,.11);display:flex;flex-direction:column;container-type:inline-size}
 .fc-panel #lista{padding-bottom:16px}
 .fc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
 .fc-title{font-size:21px;font-weight:800;color:#0f172a;margin:0 0 5px}
@@ -335,8 +361,10 @@ body[data-theme="dark"] .fc-page-head{border-color:#334155}
 .fc-page-head .fc-title{font-size:20px;letter-spacing:.04em;text-transform:uppercase;color:#1d4ed8}
 .fc-page-head h1{margin:0;font-size:22px;font-weight:800;color:#0f172a;font-family:Arial,Helvetica,sans-serif;line-height:1.2}
 .fc-busca{position:relative;flex:1 1 auto;max-width:340px;margin:0 8px}
+.fc-busca-campo{position:relative;flex:1 1 240px;min-width:180px}
 .consulta-direita{display:flex;flex-direction:column;min-width:0;min-height:0}
-#view-consulta .consulta-direita>.fc-busca{max-width:none;width:100%;margin:0 0 8px;flex:none;box-sizing:border-box}
+#view-consulta .consulta-direita>.fc-busca{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:none;width:100%;margin:0 0 8px;flex:none;box-sizing:border-box}
+#view-consulta .consulta-direita>.fc-busca>.fc-panel-bar{flex:0 0 auto;margin-top:0;flex-wrap:nowrap}
 #view-consulta .consulta-direita .fc-busca-input{max-width:none;margin-bottom:0}
 .consulta-direita>.fc-panel{flex:1 1 auto;min-height:0}
 .fc-busca-input{width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#f8fafc;color:#0f172a}
@@ -402,6 +430,7 @@ body[data-theme="dark"] .fc-map-legenda .sem-contato{color:#94a3b8}
 body[data-theme="dark"] .fc-bottom-nav{background:#1e293b;border-color:#334155}
 .fc-bottom-nav .nav-group{display:flex;gap:8px}
 .fc-bottom-nav--colado{border-top:0;margin-top:10px;padding-top:0}
+.fc-bottom-nav--sem-voltar{justify-content:flex-end}
 .fc-bottom-nav .fc-btn{max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fc-icon-btn{border:1px solid #cbd5e1;background:#fff;border-radius:8px;min-width:34px;min-height:34px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px}
 .fc-icon-btn:hover{background:#f1f5f9}
@@ -559,7 +588,6 @@ body[data-theme="dark"] .tooltip-premium small{color:#cbd5e1}
 
 .fc-catalog-counts{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:12px 0 8px}
 .fc-total-comarcas{display:inline-flex;background:#dbeafe;color:#1e40af;font-weight:800}
-.fc-total-orgaos{display:inline-flex;background:#ede9fe;color:#5b21b6;font-weight:800}
 .fc-municipios-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
 .fc-municipios-grid .fc-card{margin-top:0}
 .fc-btn{appearance:none;border:1px solid #cbd5e1;background:#fff;color:#0f172a;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}

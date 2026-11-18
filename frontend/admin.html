@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
-<link rel="stylesheet" href="style.css?v=cda5232b">
+<link rel="stylesheet" href="style.css?v=5f9418db">
 </head>
 <body>
 <div class="app-container">
@@ -63,8 +63,10 @@
         </section>
         <div class="consulta-direita">
           <div class="fc-busca">
-            <input id="fc-busca" class="fc-busca-input" type="search" title="Buscar (atalho: /)" placeholder="Buscar contato, setor, unidade…" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="fc-busca-resultados">
-            <div id="fc-busca-resultados" class="fc-busca-resultados" role="listbox" aria-label="Resultados da busca" hidden></div>
+            <div class="fc-busca-campo">
+              <input id="fc-busca" class="fc-busca-input" type="search" title="Buscar (atalho: /)" placeholder="Buscar contato, setor, unidade…" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="fc-busca-resultados">
+              <div id="fc-busca-resultados" class="fc-busca-resultados" role="listbox" aria-label="Resultados da busca" hidden></div>
+            </div>
             <div class="fc-panel-bar">
               <button type="button" id="fc-antigos" class="fc-bar-btn" aria-expanded="false" title="Fila de revisão: quem nunca foi conferido primeiro, depois a conferência mais antiga"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg> <span id="fc-antigos-txt">Reconfirmar</span> <span class="fc-bar-count hidden" id="fc-antigos-n"></span></button>
               <button type="button" id="fc-exportar" class="fc-bar-btn hidden" title="Exportar os contatos visíveis em CSV, com fonte e data de vigência"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar CSV</button>
@@ -117,9 +119,9 @@
       <button class="btn-ghost dark noprint" onclick="window.print()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>
       <p class="hint" id="dash-sub">Somente seus escopos.</p>
       <div class="dash-grid" id="dash-cards"></div>
-      <h3>Contatos por comarca (seu acesso)</h3>
+      <h2>Contatos por comarca (seu acesso)</h2>
       <div id="dash-mun"></div>
-      <h3>Últimas alterações</h3>
+      <h2>Últimas alterações</h2>
       <ul id="dash-ult"></ul>
     </section>
     <section class="card hidden" id="view-solicitacoes">
@@ -415,6 +417,6 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="mapa.js?v=66df4135"></script>
-<script src="admin.js?v=7ae5b86c"></script>
+<script src="admin.js?v=a283f358"></script>
 </body>
 </html>

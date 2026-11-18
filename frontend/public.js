@@ -48,6 +48,12 @@ function obsVisivel(c) {
   var t = String((c && c.observacao) || "").trim();
   if (!t) return "";
   if (c && c.fonte && OBS_GENERICA.test(t)) return "";
+  // A observação que repete a fonte aparecia duas vezes no cartão (uma em
+  // cima, grande, e a linha de procedência embaixo). Fica só a de baixo.
+  if (c && c.fonte) {
+    var norm = function (s) { return String(s).toLocaleLowerCase("pt-BR").replace(/\s+/g, " ").trim(); };
+    if (norm(t) === norm(c.fonte)) return "";
+  }
   return t;
 }
 
@@ -96,10 +102,14 @@ function fmtTipoContato(tipo) {
   function linkEndereco(endereco) {
     var texto = String(endereco || "").trim();
     if (!texto) return '<span class="fc-muted">Endereço não informado</span>';
-    return '<span class="fc-address-inline"><a class="fc-endereco" href="https://www.google.com/maps/search/?api=1&query=' +
-      encodeURIComponent(texto) + '" target="_blank" rel="noopener noreferrer">📍 ' + esc(texto) + "</a>" +
-      '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(texto) +
-      '" data-copy-label="Endereço" title="Copiar endereço" aria-label="Copiar endereço"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></span>';
+    return '<a class="fc-endereco" title="' + esc(texto) + '" href="https://www.google.com/maps/search/?api=1&query=' +
+      encodeURIComponent(texto) + '" target="_blank" rel="noopener noreferrer">📍 ' + esc(texto) + "</a>";
+  }
+  function botaoCopiarEndereco(endereco) {
+    var texto = String(endereco || "").trim();
+    if (!texto) return "";
+    return '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(texto) +
+      '" data-copy-label="Endereço" title="Copiar endereço" aria-label="Copiar endereço"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>';
   }
 
   function copiarTexto(texto) {
@@ -381,6 +391,17 @@ function fmtTipoContato(tipo) {
         return;
       }
     }
+    // Telefone útil não está no índice de contatos: abre a tela dele e
+    // destaca o cartão. Sem isso o link copiado no cartão não levava a lugar
+    // nenhum.
+    var uteis = (estado.dados && estado.dados.uteis) || [];
+    for (var j = 0; j < uteis.length; j++) {
+      if (String(uteis[j].id) === String(id)) {
+        renderUteis();
+        destacarContato(uteis[j].id);
+        return;
+      }
+    }
   }
   function construirIndiceBusca() {
     var indice = [];
@@ -616,6 +637,7 @@ function fmtTipoContato(tipo) {
         itens.push({ tipo: "NO", id: item.id, nome: item.nome });
       });
     }
+    if (itens.length < 2) return '';
     return '<nav class="fc-breadcrumb" aria-label="Caminho da estrutura">' + itens.map(function (item, indice) {
       var ultimo = indice === itens.length - 1;
       var conteudo = ultimo
@@ -656,15 +678,6 @@ function fmtTipoContato(tipo) {
     }).join("");
   }
 
-  function botaoImpressaoLocalidade(tipo, tipoNo) {
-    var rotulo = tipo === "COMARCA" ? "Sede" : (tipo === "FORUM" ? "Fórum" : (tipoNo === "Setor" ? "Setor" : "Unidade"));
-    var artigo = rotulo === "Unidade" ? "da" : "do";
-    var id = tipo === "FORUM" ? "fc-print-forum" : (tipo === "COMARCA" ? "fc-print-comarca" : "fc-print-unit");
-    return '<div class="fc-print-footer">' +
-      '<button type="button" class="fc-btn" id="' + id + '" title="Imprimir / Salvar PDF dos contatos ' +
-      artigo + " " + rotulo + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button></div>';
-  }
-
   function contatosCards(contatos) {
     if (!contatos || !contatos.length) return '<div class="fc-empty">Nenhum contato cadastrado.</div>';
     return '<div class="fc-contatos">' + contatos.map(function (c) {
@@ -699,7 +712,7 @@ function fmtTipoContato(tipo) {
   function cardContatosGerais(contatos, comPrint) {
     var lista = contatos || [];
     return '<div class="fc-section"><div class="fc-card fc-card--toggle" data-gerais-toggle title="Expandir/recolher contatos gerais">' +
-      '<div class="fc-card-head"><div><h4>Contatos Gerais</h4></div>' +
+      '<div class="fc-card-head"><div><h3>Contatos Gerais</h3></div>' +
       '<div class="fc-meta">' + badgeQuantidade(lista.length, "Contato", "Contatos") +
       (comPrint ? '<button type="button" class="fc-icon-btn" data-gerais-print title="Imprimir / Salvar PDF dos Contatos Gerais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>' : "") +
       '<span class="fc-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 12 15 18 9"/></svg></span></div></div></div>' +
@@ -810,7 +823,11 @@ function fmtTipoContato(tipo) {
   }
 
   function barraNavegacaoInferior(rotuloVoltar, semLinha) {
-    return '<div class="fc-bottom-nav' + (semLinha ? " fc-bottom-nav--colado" : "") + '"><button type="button" class="fc-btn" id="fc-back-bottom">← ' + esc(rotuloVoltar || "Voltar") + '</button>' +
+    // `false` = tela sem volta (Sede): sem botão, e o "Voltar ao topo" vai para a direita
+    var semVoltar = rotuloVoltar === false;
+    return '<div class="fc-bottom-nav' + (semLinha ? " fc-bottom-nav--colado" : "") +
+      (semVoltar ? " fc-bottom-nav--sem-voltar" : "") + '">' +
+      (semVoltar ? '' : '<button type="button" class="fc-btn" id="fc-back-bottom">← ' + esc(rotuloVoltar || "Voltar") + '</button>') +
       '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
   }
 
@@ -826,14 +843,14 @@ function fmtTipoContato(tipo) {
     var cardsComarcas = comarcas.map(function (m) {
       var setores = (m.foruns || []).reduce(function (total, f) { return total + qtdSetores(f.nos || []); }, 0);
       return '<div class="fc-card" data-nav="comarca" data-comarca="' + esc(m.id) + '">' +
-        '<div class="fc-card-head"><div><h4>' + esc(m.nome) + "</h4></div></div>" +
+        '<div class="fc-card-head"><div><h3>' + esc(m.nome) + "</h3></div></div>" +
         '<div class="fc-meta">' +
         badgeQuantidade(m.qtdForuns, "Fórum", "Fóruns") +
         badgeQuantidade(m.qtdUnidades, "Unidade", "Unidades") +
         badgeQuantidade(setores, "Setor", "Setores") +
         badgeQuantidade(m.qtdContatos, "Contato", "Contatos") + "</div></div>";
     }).join("");
-    c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Contatos da Sede</h2>' +
+    c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Comarcas</h2>' +
       '<p class="fc-subtitle fc-subtitle--intro">Consulte a estrutura completa por Comarca, Fórum, Unidade e Setor. Selecione uma Comarca no mapa, no menu suspenso ou na lista abaixo.</p></div></div>' +
       (comarcas.length ? '<div class="fc-catalog-counts">' +
         (totalComarcas ? '<span class="fc-pill fc-total-comarcas">' + esc(rotuloQuantidade(totalComarcas, "Comarca", "Comarcas")) + "</span>" : "") + "</div>" : "") +
@@ -883,7 +900,7 @@ function fmtTipoContato(tipo) {
       '<div class="fc-section"><h3>Fóruns</h3>' +
       (m.foruns || []).map(function (f) {
         return '<div class="fc-card" data-nav="forum" data-forum="' + esc(f.id) + '">' +
-          '<div class="fc-card-head"><div><h4>' + esc(f.nome) + "</h4>" + linkEndereco(f.endereco) +
+          '<div class="fc-card-head"><div><h3>' + esc(f.nome) + "</h3>" + linkEndereco(f.endereco) +
           "</div></div>" +
           '<div class="fc-meta">' + badgeQuantidade(f.qtdUnidades, "Unidade", "Unidades") +
           badgeQuantidade(qtdSetores(f.nos || []), "Setor", "Setores") +
@@ -912,28 +929,18 @@ function fmtTipoContato(tipo) {
       rotuloQuantidade(qtdSetores(m.nos || []), "Setor", "Setores"),
       rotuloQuantidade(m.qtdContatos, "Contato", "Contatos")
     ]);
-    c.innerHTML = '<button type="button" class="fc-back" id="fc-back-home">← Comarcas</button>' +
-      '<div class="fc-head"><div><h2 class="fc-title">' + esc(m.nome) + "</h2>" +
+    c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">' + esc(m.nome) + "</h2>" +
       '<p class="fc-subtitle">' + esc(resumo) + "</p>" + breadcrumbHtml(m, null, null) + "</div></div>" +
-      '<select id="fc-comarca" class="fc-select">' + opcoesComarcas(estado.dados.comarcas || [], m.id) + "</select>" +
-      '<div class="fc-meta"><span class="fc-pill fc-total-orgaos">Sede</span>' +
-      badgeQuantidade(m.qtdUnidades, "Unidade", "Unidades") + "</div>" +
-      '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço da Sede:</strong> ' + linkEndereco(m.endereco) +
-      (m.cep ? " • CEP " + esc(m.cep) : "") + "</div></div>" +
+      '<div class="fc-address-row"><div class="fc-inherit"><span class="fc-inherit-texto"><strong>Endereço da Sede:</strong> ' + linkEndereco(m.endereco) + "</span>" +
+      (m.cep ? '<span class="fc-cep" title="CEP da Sede">CEP ' + esc(m.cep) + "</span>" : "") + botaoCopiarEndereco(m.endereco) + "</div></div>" +
       cardContatosGerais(m.contatos || [], true) +
       '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
       ((m.nos || []).length ? (m.nos || []).map(cardNo).join("") : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
-      "</div>" + barraNavegacaoInferior("Comarcas", true);
-    document.getElementById("fc-back-home").onclick = renderInicio;
-    document.getElementById("fc-back-bottom").onclick = renderInicio;
+      "</div>" + barraNavegacaoInferior(false, true);
     (function () {
       var bp = document.querySelector("[data-gerais-print]");
       if (bp) bp.onclick = function (e) { if (e && e.stopPropagation) e.stopPropagation(); imprimirOrgao(); };
     })();
-    var seletor = document.getElementById("fc-comarca");
-    if (seletor) seletor.onchange = function () {
-      if (this.value && String(this.value) !== String(estado.comarcaId)) abrirComarca(this.value);
-    };
     var cards = document.querySelectorAll("[data-no]");
     for (var i = 0; i < cards.length; i++) {
       (function (el) {
@@ -968,12 +975,13 @@ function fmtTipoContato(tipo) {
       (uteis.length ? '<div class="fc-contatos">' + uteis.map(function (u) {
         var href = hrefContato(u.tipo, u.valor);
         var valorHtml = href ? '<a class="fc-contato-valor" href="' + esc(href) + '">' + esc(u.valor) + "</a>" : '<span class="fc-contato-valor">' + esc(u.valor) + "</span>";
-        return '<article class="fc-contato"><div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(fmtTipoContato(u.tipo)) + "</span><h4>" + esc(u.nome || u.valor) + "</h4></div>" +
+        return '<article class="fc-contato" data-contato="' + esc(u.id) + '"><div class="fc-contato-main"><span class="fc-contato-tipo">' + esc(fmtTipoContato(u.tipo)) + "</span><h4>" + esc(u.nome || u.valor) + "</h4></div>" +
           '<div class="fc-contato-side">' + valorHtml +
           '<div class="fc-contato-actions"><button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(u.valor) +
           '" data-copy-label="' + esc(fmtTipoContato(u.tipo)) + '" title="Copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
           botaoFav({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) +
-          botaoVcf({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) + '</div>' +
+          botaoVcf({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) +
+          botaoLink(u.id, u.nome || u.valor) + '</div>' +
           "</div></article>";
       }).join("") + "</div>" : '<div class="fc-empty">Nenhum telefone útil cadastrado.</div>') +
       '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
@@ -1009,8 +1017,8 @@ function fmtTipoContato(tipo) {
       breadcrumbHtml(m, f, null) + "</div></div>" +
       '<div class="fc-meta"><span class="fc-pill fc-pill-type">Fórum</span>' +
       badgeQuantidade(f.qtdUnidades, "Unidade", "Unidades") + "</div>" +
-      '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço do Fórum:</strong> ' + linkEndereco(f.endereco) +
-      (f.cep ? " • CEP " + esc(f.cep) : "") + "</div></div>" +
+      '<div class="fc-address-row"><div class="fc-inherit"><span class="fc-inherit-texto"><strong>Endereço do Fórum:</strong> ' + linkEndereco(f.endereco) + "</span>" +
+      (f.cep ? '<span class="fc-cep" title="CEP do Fórum">CEP ' + esc(f.cep) + "</span>" : "") + botaoCopiarEndereco(f.endereco) + "</div></div>" +
       cardContatosGerais(f.contatos || [], true) +
       '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
       ((f.nos || []).length ? (f.nos || []).map(cardNo).join("") : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
@@ -1062,9 +1070,10 @@ function fmtTipoContato(tipo) {
       breadcrumbHtml(m, f, no) + "</div></div>" +
       '<div class="fc-meta"><span class="fc-pill fc-pill-type">' + esc(tipo) + "</span>" +
       badgeQuantidade(qtdSetores(no.filhos || []), "Setor", "Setores") + "</div>" +
-      '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço:</strong> ' + linkEndereco(no.enderecoExibicao) +
-      (no.cepExibicao ? " • CEP " + esc(no.cepExibicao) : "") +
-      (no.endereco ? "" : ' <span class="fc-muted">(' + (pai ? "herdado da Unidade" : (ehOrgao(m) ? "herdado da Sede" : "herdado do Fórum")) + ")</span>") + "</div></div>" +
+      '<div class="fc-address-row"><div class="fc-inherit"><span class="fc-inherit-texto"><strong>Endereço:</strong> ' + linkEndereco(no.enderecoExibicao) +
+      (no.endereco ? "" : ' <span class="fc-muted">(' + (pai ? "herdado da Unidade" : (ehOrgao(m) ? "herdado da Sede" : "herdado do Fórum")) + ")</span>") + "</span>" +
+      (no.cepExibicao ? '<span class="fc-cep" title="CEP do endereço exibido">CEP ' + esc(no.cepExibicao) + "</span>" : "") +
+      botaoCopiarEndereco(no.enderecoExibicao) + "</div></div>" +
       '<div class="fc-section"><div class="fc-section-title"><h3>Contatos ' + (tipoTela === "Setor" ? "deste Setor" : "desta Unidade") + "</h3></div>" +
       contatosCards(no.contatos || []) + "</div>" +
       ((no.filhos || []).length
@@ -1112,17 +1121,6 @@ function fmtTipoContato(tipo) {
       (no.cepExibicao ? " • CEP " + esc(no.cepExibicao) : "") + "</p>" +
       contatos + (no.filhos || []).map(function (filho) { return noPrint(filho, nivel + 1); }).join("") +
       "</section>";
-  }
-
-  function forumPrint(f, comarcaNome) {
-    var contatos = (f.contatos || []).length
-      ? "<ul>" + (f.contatos || []).map(contatoPrint).join("") + "</ul>"
-      : '<p class="muted">Sem contatos gerais.</p>';
-    return '<section class="forum"><h2>' + esc(f.nome) + "</h2>" +
-      '<p class="meta">' + esc(comarcaNome || "") + " • " +
-      esc(f.endereco || "Endereço não informado") +
-      (f.cep ? " • CEP " + esc(f.cep) : "") + "</p>" +
-      contatos + (f.nos || []).map(function (no) { return noPrint(no, 0); }).join("") + "</section>";
   }
 
   function abrirImpressao(titulo, corpo) {
