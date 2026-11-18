@@ -398,7 +398,7 @@ body[data-theme="dark"] .fc-page-head{border-color:#334155}
 .fc-section h3{font-size:15px;margin:8px 0 4px;color:#0f172a}
 .fc-section-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .fc-section-title h3{margin:8px 0 4px}
-.fc-section-title .btn-novo{font-size:13px;padding:6px 14px;border-radius:7px}
+.fc-section-title .btn-novo,.fc-card-head .btn-novo,#btn-novo-util{font-size:13px;padding:6px 14px;border-radius:7px}
 .fc-section--comarcas{margin-top:10px}
 .fc-section--comarcas h3{margin:0 0 10px}
 .main-content{display:flex;flex-direction:column}

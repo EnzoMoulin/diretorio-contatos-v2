@@ -521,8 +521,12 @@ class TestHistoricoAutor(unittest.TestCase):
             "SELECT id FROM usuarios WHERE usuario='admin'").fetchone()[0]
         forum = con.execute("SELECT id FROM foruns ORDER BY id LIMIT 1"
                             ).fetchone()[0]
+        unidade = con.execute(
+            "SELECT id FROM unidades WHERE virtual=0 AND forum_id IS NOT NULL"
+            " ORDER BY id LIMIT 1").fetchone()[0]
         con.close()
         marco = notif_marco()
+        ucid = util_id = util_hist = None
         st, corpo = api("POST", "/api/contatos",
                         {"nome": "Teste Autor", "setor_id": setor},
                         token=self.tok)
@@ -535,6 +539,19 @@ class TestHistoricoAutor(unittest.TestCase):
                         token=self.tok)
         self.assertEqual(st, 201, geral)
         gid = geral["id"]
+        # Contato preso direto à unidade: o formulário manda unidade_id e o
+        # servidor resolve o setor virtual que a árvore esconde.
+        st, da_unidade = api("POST", "/api/contatos",
+                             {"nome": "Teste Unidade", "unidade_id": unidade},
+                             token=self.tok)
+        self.assertEqual(st, 201, da_unidade)
+        ucid = da_unidade["id"]
+        # Telefones Úteis: CRUD global, reservado ao administrador.
+        st, util = api("POST", "/api/uteis",
+                       {"nome": "Teste Util", "tipo": "Telefone",
+                        "valor": "(27) 90000-0000"}, token=self.tok)
+        self.assertEqual(st, 201, util)
+        util_id = util_hist = util["id"]
         try:
             con = sqlite3.connect(DB)
             con.row_factory = sqlite3.Row
@@ -560,14 +577,40 @@ class TestHistoricoAutor(unittest.TestCase):
                             if f["id"] == forum)
             self.assertIn(gid, {c["id"] for c in no_forum["contatos"]},
                           "contato criado por forum_id não subiu para os gerais")
+            no_unidade = next(n for c in arvore["comarcas"] for f in c["foruns"]
+                              for n in f.get("nos", []) if n["id"] == unidade)
+            self.assertIn(ucid, {c["id"] for c in no_unidade["contatos"]},
+                          "contato criado por unidade_id não apareceu na unidade")
+            st, _ = api("PUT", "/api/uteis/" + util_id,
+                        {"nome": "Teste Util Editado", "tipo": "Telefone",
+                         "valor": "(27) 90000-0001"}, token=self.tok)
+            self.assertEqual(st, 200)
+            st, conf = api("POST", "/api/uteis/" + util_id + "/conferir", {},
+                           token=self.tok)
+            self.assertEqual(st, 200)
+            self.assertTrue(conf.get("conferidoEm"))
+            st, arvore2 = api("GET", "/api/hierarquia")
+            util2 = next(u for u in arvore2["uteis"] if u["id"] == util_id)
+            self.assertEqual(util2["nome"], "Teste Util Editado")
+            self.assertTrue(util2["conferidoEm"])
+            st, _ = api("DELETE", "/api/uteis/" + util_id, token=self.tok)
+            self.assertEqual(st, 200)
+            st, _ = api("PUT", "/api/uteis/" + util_id,
+                        {"nome": "Sumiu", "valor": "x"}, token=self.tok)
+            self.assertEqual(st, 404, "telefone útil removido continuou editável")
+            util_id = None
         finally:
             api("DELETE", "/api/contatos/" + cid, token=self.tok)
             api("DELETE", "/api/contatos/" + gid, token=self.tok)
+            if ucid:
+                api("DELETE", "/api/contatos/" + ucid, token=self.tok)
+            if util_id:
+                api("DELETE", "/api/uteis/" + util_id, token=self.tok)
             # Limpeza cirúrgica: só as linhas de auditoria deste contato de
             # teste (o histórico real é append-only e não se toca).
             con = sqlite3.connect(DB)
-            con.execute("DELETE FROM historico WHERE contato_id IN (?,?)",
-                        (cid, gid))
+            con.execute("DELETE FROM historico WHERE contato_id IN (?,?,?,?)",
+                        (cid, gid, ucid or "", util_hist or ""))
             con.commit()
             con.close()
             notif_limpar(marco)
