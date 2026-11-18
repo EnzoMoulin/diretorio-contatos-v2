@@ -978,7 +978,6 @@ function renderOrgao() {
   ]);
   c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">' + esc(m.nome) + '</h2>' +
     '<p class="fc-subtitle">' + esc(resumo) + '</p>' + breadcrumbHtml(m, null, null) + '</div></div>' +
-    '<select id="fc-comarca" class="fc-select">' + opcoesComarcas(H.comarcas || [], m.id) + '</select>' +
     '<div class="fc-meta"><span class="fc-pill fc-total-orgaos">Sede</span>' +
     badgeQuantidade(m.qtdUnidades, 'Unidade', 'Unidades') + '</div>' +
     '<div class="fc-address-row"><div class="fc-inherit"><span class="fc-inherit-texto"><strong>Endereço da Sede:</strong> ' + linkEndereco(m.endereco) + '</span>' +
@@ -989,9 +988,6 @@ function renderOrgao() {
     '</div>' + barraNavegacaoInferior(false, true);
   const bp = document.querySelector('[data-gerais-print]');
   if (bp) bp.onclick = (e) => { if (e && e.stopPropagation) e.stopPropagation(); imprimirOrgao(); };
-  $('fc-comarca').onchange = function () {
-    if (this.value && String(this.value) !== String(estado.comarcaId)) abrirComarca(this.value);
-  };
   c.querySelectorAll('[data-no]').forEach(el => {
     el.onclick = () => abrirNo(el.getAttribute('data-no'));
   });
