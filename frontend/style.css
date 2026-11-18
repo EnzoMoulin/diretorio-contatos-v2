@@ -110,6 +110,9 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 .modal-box label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:#475569}
 .modal-box input,.modal-box select{padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px}
+/* `.btn-ghost` nasceu para a barra escura: no modal claro o texto sumia. */
+.modal-box .btn-ghost{color:#334155;border-color:#cbd5e1}
+body[data-theme="dark"] .modal-box .btn-ghost{color:#e2e8f0;border-color:#475569}
 .modal-box--wide{width:min(760px,94vw)}
 .modal-box--clean{background:transparent;border:0;box-shadow:none;padding:0;overflow:visible}
 .fa-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 10px 25px -8px rgba(15,23,42,.12);overflow:hidden}

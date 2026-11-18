@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
-<link rel="stylesheet" href="style.css?v=d7165328">
+<link rel="stylesheet" href="style.css?v=a51808c1">
 </head>
 <body>
 <div class="app-container">
@@ -304,7 +304,7 @@
         <section id="m-gerenciar" class="panel manual-section">
           <div class="manual-section-head"><div><h3>☎️ 04 — Gerenciar contatos</h3><p>Criar, editar e remover dentro do seu escopo, direto na consulta.</p></div></div>
           <ol class="manual-steps">
-            <li><span class="manual-step-num">1</span><div><strong>Criar</strong><p>Selecione o setor coberto e clique em <span class="manual-kbd">Novo contato</span>, na seção <em>Contatos deste Setor</em>. O formulário nasce fechado para não empurrar a lista; o <code>×</code> fecha de novo. Ele pede o que o card mostra: <em>tipo</em> (Telefone, Ramal, WhatsApp, E-mail, Fax), <em>valor</em> (o número ou o e-mail) e <em>quem atende</em> (opcional — "Geral" quando vazio). Fora do escopo, nem o botão aparece.</p></div></li>
+            <li><span class="manual-step-num">1</span><div><strong>Criar</strong><p>Selecione o setor coberto e clique em <span class="manual-kbd">Novo contato</span>, na seção <em>Contatos deste Setor</em>. O formulário nasce fechado para não empurrar a lista; o <code>×</code> fecha de novo. Ele pede o que o card mostra: <em>tipo</em> (Telefone, Ramal, WhatsApp, E-mail), <em>valor</em> (o número ou o e-mail) e <em>quem atende</em> (opcional — "Geral" quando vazio). Fora do escopo, nem o botão aparece.</p></div></li>
             <li><span class="manual-step-num">2</span><div><strong>Editar / remover</strong><p>Botões em cada linha, só onde há cobertura. O servidor barra o resto (403).</p></div></li>
             <li><span class="manual-step-num">3</span><div><strong>Conferir</strong><p><span class="manual-kbd">✓ Conferi</span> registra que o dado continua valendo hoje — grava quem conferiu e quando, sem mexer no valor nem na procedência. O card passa a mostrar <em>✓ conferido</em> ao lado da fonte. Em <span class="manual-kbd">Reconfirmar</span>, a fila abre com os nunca conferidos na frente; o <code>✓</code> de cada linha marca sem sair da fila. A fila é da administração — ela cobre a base inteira e só aparece para quem enxerga todos os locais.</p></div></li>
           </ol>
@@ -393,7 +393,7 @@
   <div class="modal-box">
     <h2>Editar contato</h2>
     <label>Nome*<input id="e-nome"></label>
-    <label>Tipo (Telefone, Ramal, WhatsApp, E-mail, Fax)<input id="e-cargo"></label>
+    <label>Tipo (Telefone, Ramal, WhatsApp, E-mail)<input id="e-cargo"></label>
     <label>Telefone<input id="e-tel"></label>
     <label>E-mail<input id="e-email"></label>
     <div class="modal-actions">
@@ -407,7 +407,11 @@
   <div class="modal-box">
     <h2>Telefone útil</h2>
     <label>Nome*<input id="u-nome"></label>
-    <label>Tipo (Telefone, WhatsApp, E-mail, Fax)<input id="u-tipo"></label>
+    <label>Tipo (Telefone, WhatsApp)*
+      <select id="u-tipo" required>
+        <option value="Telefone">Telefone</option>
+        <option value="WhatsApp">WhatsApp</option>
+      </select></label>
     <label>Número ou e-mail*<input id="u-valor"></label>
     <div class="modal-actions">
       <button id="u-cancel" class="btn-ghost">Cancelar</button>
@@ -430,6 +434,6 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="mapa.js?v=66df4135"></script>
-<script src="admin.js?v=ad5f8ca9"></script>
+<script src="admin.js?v=68130067"></script>
 </body>
 </html>

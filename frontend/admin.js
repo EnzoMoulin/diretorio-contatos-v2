@@ -131,7 +131,6 @@ function fmtTipoContato(tipo) {
   if (t === 'E_MAIL' || t === 'EMAIL' || t === 'E-MAIL') return 'E-mail';
   if (t === 'WHATSAPP') return 'WhatsApp';
   if (t === 'RAMAL') return 'Ramal';
-  if (t === 'FAX') return 'Fax';
   if (t === 'TELEFONE') return 'Telefone';
   return tipo || 'Contato';
 }
@@ -1199,7 +1198,8 @@ function renderNo() {
    `descricao` diz quem atende. O formulário pede exatamente essas três coisas —
    antes pedia "Nome" e "Cargo", e o card (que mostra tipo + valor + descrição)
    saía sem o que a pessoa tinha digitado. */
-const TIPOS_CONTATO = ['Telefone', 'Ramal', 'WhatsApp', 'E-mail', 'Fax'];
+const TIPOS_CONTATO = ['Telefone', 'Ramal', 'WhatsApp', 'E-mail'];
+const TIPOS_UTIL = ['Telefone', 'WhatsApp'];   // o formulário do útil só oferece estes dois
 
 function criarBoxHtml(aberto, titulo) {
   return '<div class="create-box' + (aberto ? '' : ' hidden') + '" id="create-box">' +
@@ -1684,9 +1684,10 @@ function abrirFormUtil(id) {
 }
 $('u-cancel').onclick = () => $('modal-util').classList.add('hidden');
 $('u-salvar').onclick = async () => {
-  const corpo = { nome: $('u-nome').value.trim(), tipo: $('u-tipo').value.trim() || 'Telefone',
+  const corpo = { nome: $('u-nome').value.trim(), tipo: $('u-tipo').value,
                   valor: $('u-valor').value.trim() };
   if (!corpo.nome || !corpo.valor) { $('u-status').textContent = 'Informe o nome e o número.'; return; }
+  if (!TIPOS_UTIL.includes(corpo.tipo)) { $('u-status').textContent = 'Escolha o tipo: Telefone ou WhatsApp.'; return; }
   const r = await fetch('/api/uteis' + (utilEditando ? '/' + encodeURIComponent(utilEditando) : ''),
     { method: utilEditando ? 'PUT' : 'POST', headers: auth(), body: JSON.stringify(corpo) });
   if (!r.ok) { $('u-status').textContent = 'Erro: ' + await r.text(); return; }
