@@ -215,6 +215,18 @@ body[data-theme="dark"] .fc-contato-fonte-data{color:#64748b}
 .fc-icon-btn--ok:hover{background:#f0fdf4}
 .fc-empty{padding:20px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;text-align:center}
 @media(max-width:680px){.fc-contato{align-items:flex-start;flex-direction:column}.fc-contato-side{justify-content:flex-start}}
+/* Painel estreito: as ações do contato refluem em vez de estourar o cartão.
+   São sete botões que não encolhem (ícones de 34px + Conferi/Editar/Remover),
+   e o painel rola no eixo Y — o que faz o X virar auto e cortar o "Remover"
+   pela borda, com barra horizontal no rodapé. Abaixo de 400px de conteúdo, os
+   ícones ficam numa linha e as ações rotuladas na seguinte; em painel largo
+   nada muda. O `flex-basis:100%` do Conferi força a quebra sem mexer no DOM. */
+@container (max-width:400px){
+  .fc-contato{flex-wrap:wrap;row-gap:6px}
+  .fc-contato-side{flex:1 1 100%;min-width:0}
+  .fc-contato-actions{flex-wrap:wrap;justify-content:flex-end;row-gap:5px}
+  .fc-contato-actions>.fc-icon-btn--ok{flex:0 0 100%;max-width:max-content;margin-left:auto}
+}
 body[data-theme="dark"] .fc-card{background:#1e293b;border-color:#334155}
 body[data-theme="dark"] .fc-card h4,body[data-theme="dark"] .fc-contato h4{color:#f8fafc}
 body[data-theme="dark"] .fc-pill{background:#0f172a;color:#cbd5e1}
@@ -321,7 +333,7 @@ html{scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent}
 #consulta-mapa{height:100%;min-height:0}
 #view-consulta #map{min-height:0}
 #map-msg{margin:6px 0 0}
-.fc-panel{width:100%;min-height:0;overflow-y:auto;background:#fff;border:1px solid #cbd5e1;border-radius:16px;padding:clamp(16px,2vw,24px);box-shadow:0 6px 18px rgba(15,23,42,.11);display:flex;flex-direction:column}
+.fc-panel{width:100%;min-height:0;overflow-y:auto;background:#fff;border:1px solid #cbd5e1;border-radius:16px;padding:clamp(16px,2vw,24px);box-shadow:0 6px 18px rgba(15,23,42,.11);display:flex;flex-direction:column;container-type:inline-size}
 .fc-panel #lista{padding-bottom:16px}
 .fc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
 .fc-title{font-size:21px;font-weight:800;color:#0f172a;margin:0 0 5px}
