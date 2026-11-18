@@ -923,7 +923,6 @@ function fmtTipoContato(tipo) {
     ]);
     c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">' + esc(m.nome) + "</h2>" +
       '<p class="fc-subtitle">' + esc(resumo) + "</p>" + breadcrumbHtml(m, null, null) + "</div></div>" +
-      '<select id="fc-comarca" class="fc-select">' + opcoesComarcas(estado.dados.comarcas || [], m.id) + "</select>" +
       '<div class="fc-meta"><span class="fc-pill fc-total-orgaos">Sede</span>' +
       badgeQuantidade(m.qtdUnidades, "Unidade", "Unidades") + "</div>" +
       '<div class="fc-address-row"><div class="fc-inherit"><span class="fc-inherit-texto"><strong>Endereço da Sede:</strong> ' + linkEndereco(m.endereco) + "</span>" +
@@ -936,10 +935,6 @@ function fmtTipoContato(tipo) {
       var bp = document.querySelector("[data-gerais-print]");
       if (bp) bp.onclick = function (e) { if (e && e.stopPropagation) e.stopPropagation(); imprimirOrgao(); };
     })();
-    var seletor = document.getElementById("fc-comarca");
-    if (seletor) seletor.onchange = function () {
-      if (this.value && String(this.value) !== String(estado.comarcaId)) abrirComarca(this.value);
-    };
     var cards = document.querySelectorAll("[data-no]");
     for (var i = 0; i < cards.length; i++) {
       (function (el) {
