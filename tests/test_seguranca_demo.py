@@ -9,8 +9,9 @@ import hashlib
 import os
 import sqlite3
 import unittest
+import urllib.request
 
-from tests.test_regras import DB, api, notif_marco, notif_limpar
+from tests.test_regras import BASE, DB, api, notif_marco, notif_limpar
 
 SENHA = "senha-teste-123"
 
@@ -214,6 +215,15 @@ class TestGestaoFechada(unittest.TestCase):
         for rota in ("/api/meus-pedidos", "/api/notificacoes"):
             st, corpo = api("GET", rota, token=self.visit_tok)
             self.assertEqual(st, 200, f"{rota} bloqueou o próprio usuário: {corpo}")
+        # Cabeçalhos de segurança em toda resposta: página, JSON e estático.
+        for rota in ("/", "/api/hierarquia", "/public.js"):
+            with urllib.request.urlopen(BASE + rota) as r:
+                self.assertEqual(r.headers.get("X-Content-Type-Options"), "nosniff",
+                                 f"{rota} sem nosniff")
+                self.assertEqual(r.headers.get("X-Frame-Options"), "SAMEORIGIN",
+                                 f"{rota} sem X-Frame-Options")
+                self.assertEqual(r.headers.get("Referrer-Policy"), "same-origin",
+                                 f"{rota} sem Referrer-Policy")
 
     def test_admin_continua_lendo_tudo(self):
         for rota in ("/api/usuarios", "/api/historico", "/api/pedidos",

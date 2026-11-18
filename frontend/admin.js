@@ -16,6 +16,7 @@ let mapSetorUnidade = {};   // setorId -> unidadeId
 let indiceBusca = null;
 let fullCache = null;       // id -> contato completo de /api/contatos (p/ edição)
 let setorAlvo = null;       // setor_id do create-box atual
+let geraisAlvo = null;      // {campo:'forum_id'|'comarca_id', id} quando o box é dos Contatos Gerais
 let editId = null;
 let confPed = null;         // {nivel, alvo_id}
 
@@ -36,6 +37,13 @@ function obsVisivel(c) {
   var t = String((c && c.observacao) || "").trim();
   if (!t) return "";
   if (c && c.fonte && OBS_GENERICA.test(t)) return "";
+  // A fonte já aparece na linha de procedência, menor e com data. Quando a
+  // observação repete o mesmo texto, o cartão mostra a mesma frase duas vezes
+  // ("Catálogo de ramais — agosto/2026" em cima e embaixo): fica só a de baixo.
+  if (c && c.fonte) {
+    var norm = function (s) { return String(s).toLocaleLowerCase("pt-BR").replace(/\s+/g, " ").trim(); };
+    if (norm(t) === norm(c.fonte)) return "";
+  }
   return t;
 }
 
@@ -451,19 +459,6 @@ function acharUnidade(id) {
   }
   return null;
 }
-// setor (filho) por id, em qualquer lugar
-function acharSetor(id) {
-  for (const m of (H.comarcas || [])) {
-    const cands = [];
-    (m.foruns || []).forEach(f => (f.nos || []).forEach(n => cands.push({ pai: n, forum: f })));
-    (m.nos || []).forEach(n => cands.push({ pai: n, forum: null }));
-    for (const c of cands) {
-      const s = (c.pai.filhos || []).filter(x => String(x.id) === String(id))[0];
-      if (s) return { setor: s, pai: c.pai, forum: c.forum, comarca: m };
-    }
-  }
-  return null;
-}
 function comarcaAtual() { return encontrarComarca(estado.comarcaId); }
 function forumAtual() { return encontrarForum(estado.forumId); }
 function raizAtual() {
@@ -637,14 +632,22 @@ function contatosCards(contatos, ctxOk) {
       '<div class="fc-contato-side">' + valorHtml + '<div class="fc-contato-actions">' + acoes + '</div></div></article>';
   }).join('') + '</div>';
 }
-function cardContatosGerais(contatos, comPrint, ctxOk) {
+function cardContatosGerais(contatos, comPrint, ctxOk, alvo) {
   const lista = contatos || [];
+  // Gerais também aceita contato novo: antes o botão só existia dentro de
+  // Setor, então fórum e comarca ficavam sem como cadastrar o contato geral.
+  const podeNovo = !!(alvo && logado() && ctxOk);
   return '<div class="fc-section"><div class="fc-card fc-card--toggle" data-gerais-toggle title="Expandir/recolher contatos gerais">' +
-    '<div class="fc-card-head"><div><h4>Contatos Gerais</h4></div>' +
-    '<div class="fc-meta">' + badgeQuantidade(lista.length, 'Contato', 'Contatos') +
+    '<div class="fc-card-head"><div><h3>Contatos Gerais</h3></div>' +
+    '<div class="fc-meta">' +
+    (podeNovo ? '<button type="button" class="btn-primary btn-novo" data-gerais-novo="' + esc(alvo.campo) +
+      '" data-alvo-id="' + esc(String(alvo.id)) + '">Novo contato</button>' : '') +
+    badgeQuantidade(lista.length, 'Contato', 'Contatos') +
     (comPrint ? '<button type="button" class="fc-icon-btn" data-gerais-print title="Imprimir / Salvar PDF dos Contatos Gerais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>' : '') +
     '<span class="fc-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 12 15 18 9"/></svg></span></div></div></div>' +
-    '<div data-gerais-body hidden>' + (lista.length ? contatosCards(lista, ctxOk) : '<div class="fc-empty">Sem contatos gerais.</div>') + '</div></div>';
+    '<div data-gerais-body hidden>' +
+    (podeNovo ? criarBoxHtml(false, 'Novo contato nos Contatos Gerais') : '') +
+    (lista.length ? contatosCards(lista, ctxOk) : '<div class="fc-empty">Sem contatos gerais.</div>') + '</div></div>';
 }
 function cardNo(no) {
   const tipo = fmtTipoNo(no.tipo);
@@ -799,6 +802,36 @@ function vincularAcoes() {
       if (pr) pr.classList.toggle('hidden', !abrir);
     };
   });
+  document.querySelectorAll('[data-gerais-novo]').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      setorAlvo = null;
+      geraisAlvo = { campo: btn.getAttribute('data-gerais-novo'),
+                     id: btn.getAttribute('data-alvo-id') };
+      const card = btn.closest('[data-gerais-toggle]');
+      const body = card ? card.nextElementSibling : null;
+      if (body) body.removeAttribute('hidden');
+      if (card) card.classList.add('aberto');
+      const pr = card ? card.querySelector('[data-gerais-print]') : null;
+      if (pr) pr.classList.remove('hidden');
+      const box = $('create-box');
+      if (box) box.classList.remove('hidden');
+      const st = $('save-status');
+      if (st) st.textContent = '';
+      const campo = $('f-valor');
+      if (campo) campo.focus();
+    };
+  });
+  // O formulário dos Gerais nasce dentro do cartão, fora do renderNo — os
+  // botões são religados aqui, junto com o resto das ações da lista.
+  const salvarGerais = $('salvar');
+  if (salvarGerais) salvarGerais.onclick = salvarContato;
+  const fecharGerais = $('fechar-create');
+  if (fecharGerais) fecharGerais.onclick = () => {
+    esconderCreate();
+    const st = $('save-status');
+    if (st) st.textContent = '';
+  };
   document.querySelectorAll('[data-scroll-top]').forEach(btn => {
     if (btn.dataset.stOk) return;
     btn.dataset.stOk = '1';
@@ -900,7 +933,7 @@ function renderInicio() {
   const cardsComarcas = comarcas.map(m => {
     const setores = (m.foruns || []).reduce((t, f) => t + qtdSetores(f.nos || []), 0);
     return '<div class="fc-card" data-nav="comarca" data-comarca="' + esc(m.id) + '">' +
-      '<div class="fc-card-head"><div><h4>' + esc(m.nome) + covMark('comarca', m.id) + '</h4></div></div>' +
+      '<div class="fc-card-head"><div><h3>' + esc(m.nome) + covMark('comarca', m.id) + '</h3></div></div>' +
       '<div class="fc-meta">' +
       badgeQuantidade(m.qtdForuns, 'Fórum', 'Fóruns') +
       badgeQuantidade(m.qtdUnidades, 'Unidade', 'Unidades') +
@@ -951,7 +984,7 @@ function renderForuns() {
     '<div class="fc-section"><h3>Fóruns</h3>' +
     (m.foruns || []).map(f =>
       '<div class="fc-card" data-nav="forum" data-forum="' + esc(f.id) + '">' +
-      '<div class="fc-card-head"><div><h4>' + esc(f.nome) + covMark('forum', f.id) + '</h4>' + linkEndereco(f.endereco) + '</div></div>' +
+      '<div class="fc-card-head"><div><h3>' + esc(f.nome) + covMark('forum', f.id) + '</h3>' + linkEndereco(f.endereco) + '</div></div>' +
       '<div class="fc-meta">' + badgeQuantidade(f.qtdUnidades, 'Unidade', 'Unidades') +
       badgeQuantidade(qtdSetores(f.nos || []), 'Setor', 'Setores') +
       badgeQuantidade(f.qtdContatos, 'Contato', 'Contatos') + solBtn('forum', f.id) + gestBtn('forum', f.id) + '</div></div>'
@@ -978,11 +1011,9 @@ function renderOrgao() {
   ]);
   c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">' + esc(m.nome) + '</h2>' +
     '<p class="fc-subtitle">' + esc(resumo) + '</p>' + breadcrumbHtml(m, null, null) + '</div></div>' +
-    '<div class="fc-meta"><span class="fc-pill fc-total-orgaos">Sede</span>' +
-    badgeQuantidade(m.qtdUnidades, 'Unidade', 'Unidades') + '</div>' +
     '<div class="fc-address-row"><div class="fc-inherit"><span class="fc-inherit-texto"><strong>Endereço da Sede:</strong> ' + linkEndereco(m.endereco) + '</span>' +
     (m.cep ? '<span class="fc-cep" title="CEP da Sede">CEP ' + esc(m.cep) + '</span>' : '') + botaoCopiarEndereco(m.endereco) + '</div></div>' +
-    cardContatosGerais(m.contatos || [], true, ctxOk) +
+    cardContatosGerais(m.contatos || [], true, ctxOk, { campo: 'comarca_id', id: m.id }) +
     '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
     ((m.nos || []).length ? (m.nos || []).map(cardNo).join('') : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
     '</div>' + barraNavegacaoInferior(false, true);
@@ -1013,11 +1044,14 @@ function renderUteis() {
       const href = hrefContato(u.tipo, u.valor);
       const valorHtml = href ? '<a class="fc-contato-valor" href="' + esc(href) + '">' + esc(u.valor) + '</a>'
         : '<span class="fc-contato-valor">' + esc(u.valor) + '</span>';
-      return '<article class="fc-contato"><div class="fc-contato-main"><span class="fc-contato-tipo">' +
+      return '<article class="fc-contato" data-contato="' + esc(u.id) + '"><div class="fc-contato-main"><span class="fc-contato-tipo">' +
         esc(fmtTipoContato(u.tipo)) + '</span><h4>' + esc(u.nome || u.valor) + '</h4></div>' +
         '<div class="fc-contato-side">' + valorHtml +
         '<div class="fc-contato-actions"><button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(u.valor) +
-        '" data-copy-label="' + esc(fmtTipoContato(u.tipo)) + '" title="Copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>' +
+        '" data-copy-label="' + esc(fmtTipoContato(u.tipo)) + '" title="Copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
+        botaoFav({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) +
+        botaoVcf({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) +
+        botaoLink(u.id, u.nome || u.valor) + '</div>' +
         '</div></article>';
     }).join('') + '</div>' : '<div class="fc-empty">Nenhum telefone útil cadastrado.</div>') +
     '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
@@ -1047,7 +1081,7 @@ function renderForum() {
     badgeQuantidade(f.qtdUnidades, 'Unidade', 'Unidades') + '</div>' +
     '<div class="fc-address-row"><div class="fc-inherit"><span class="fc-inherit-texto"><strong>Endereço do Fórum:</strong> ' + linkEndereco(f.endereco) + '</span>' +
     (f.cep ? '<span class="fc-cep" title="CEP do Fórum">CEP ' + esc(f.cep) + '</span>' : '') + botaoCopiarEndereco(f.endereco) + '</div></div>' +
-    cardContatosGerais(f.contatos || [], true, ctxOk) +
+    cardContatosGerais(f.contatos || [], true, ctxOk, { campo: 'forum_id', id: f.id }) +
     '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
     ((f.nos || []).length ? (f.nos || []).map(cardNo).join('') : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
     '</div>' + barraNavegacaoInferior('Fóruns', true);
@@ -1120,9 +1154,10 @@ function renderNo() {
   if (podeNovo) {
     $('btn-novo-contato').onclick = () => {
       setorAlvo = no.id;
+      geraisAlvo = null;
       $('create-box').classList.remove('hidden');
       $('save-status').textContent = '';
-      $('f-nome').focus();
+      $('f-valor').focus();
     };
     $('fechar-create').onclick = () => { esconderCreate(); $('save-status').textContent = ''; };
     $('salvar').onclick = salvarContato;
@@ -1137,9 +1172,9 @@ function renderNo() {
    saía sem o que a pessoa tinha digitado. */
 const TIPOS_CONTATO = ['Telefone', 'Ramal', 'WhatsApp', 'E-mail', 'Fax'];
 
-function criarBoxHtml(aberto) {
+function criarBoxHtml(aberto, titulo) {
   return '<div class="create-box' + (aberto ? '' : ' hidden') + '" id="create-box">' +
-    '<div class="create-box-head"><h3>Novo contato neste setor</h3>' +
+    '<div class="create-box-head"><h3>' + esc(titulo || 'Novo contato neste setor') + '</h3>' +
     '<button type="button" class="create-close" id="fechar-create" aria-label="Fechar o formulário de novo contato">×</button></div>' +
     '<div class="form-grid">' +
     '<select id="f-tipo" class="fc-select" aria-label="Tipo do contato">' +
@@ -1152,6 +1187,7 @@ function criarBoxHtml(aberto) {
 }
 function esconderCreate() {
   setorAlvo = null;
+  geraisAlvo = null;
   const box = $('create-box');
   if (box) box.classList.add('hidden');
 }
@@ -1525,6 +1561,13 @@ function abrirLinkContato() {
       return;
     }
   }
+  // Telefone útil: não está no índice de contatos; abre a tela e destaca.
+  const util = (H.uteis || []).find(u => String(u.id) === String(id));
+  if (util) {
+    mostrarConsulta();
+    renderUteis();
+    destacarContato(util.id);
+  }
 }
 /* ---- carga da hierarquia (IDs únicos M/F/U/S/C direto do banco) ---- */
 async function recarregarHierarquia(preservar) {
@@ -1595,17 +1638,20 @@ async function excluirContato(id) {
   if (!r.ok) toast('Erro: ' + await r.text(), 'erro');
   await recarregarHierarquia(true);
 }
-// `setorAlvo` é o setor cujo formulário está aberto; quem o define é o botão
-// "Novo contato" (os handlers são religados em `renderNo`).
+// `setorAlvo`/`geraisAlvo` dizem qual formulário está aberto; quem os define é
+// o botão "Novo contato" (setor, fórum ou comarca). O POST leva o nível certo:
+// contato geral é gravado no setor virtual, sem o formulário saber disso.
 async function salvarContato() {
-  if (!setorAlvo) { $('save-status').textContent = 'Setor inválido.'; return; }
+  const alvo = setorAlvo ? { setor_id: setorAlvo }
+    : (geraisAlvo ? { [geraisAlvo.campo]: geraisAlvo.id } : null);
+  if (!alvo) { $('save-status').textContent = 'Local inválido.'; return; }
   const tipo = $('f-tipo').value;
   const valor = $('f-valor').value.trim();
   const quem = $('f-desc').value.trim() || 'Geral';
   if (!valor) { $('save-status').textContent = 'Informe o número ou o e-mail.'; return; }
   const ehEmail = String(tipo).toUpperCase() === 'E-MAIL';
-  const corpo = { setor_id: setorAlvo, cargo: tipo, nome: quem, descricao: quem,
-                  telefone: ehEmail ? '' : valor, email: ehEmail ? valor : '' };
+  const corpo = Object.assign({ cargo: tipo, nome: quem, descricao: quem,
+                  telefone: ehEmail ? '' : valor, email: ehEmail ? valor : '' }, alvo);
   const r = await fetch('/api/contatos', { method: 'POST', headers: auth(), body: JSON.stringify(corpo) });
   if (r.ok) {
     $('save-status').textContent = '';
