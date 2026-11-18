@@ -837,7 +837,7 @@ function fmtTipoContato(tipo) {
         badgeQuantidade(setores, "Setor", "Setores") +
         badgeQuantidade(m.qtdContatos, "Contato", "Contatos") + "</div></div>";
     }).join("");
-    c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Contatos da Sede</h2>' +
+    c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Comarcas</h2>' +
       '<p class="fc-subtitle fc-subtitle--intro">Consulte a estrutura completa por Comarca, Fórum, Unidade e Setor. Selecione uma Comarca no mapa, no menu suspenso ou na lista abaixo.</p></div></div>' +
       (comarcas.length ? '<div class="fc-catalog-counts">' +
         (totalComarcas ? '<span class="fc-pill fc-total-comarcas">' + esc(rotuloQuantidade(totalComarcas, "Comarca", "Comarcas")) + "</span>" : "") + "</div>" : "") +
@@ -916,8 +916,7 @@ function fmtTipoContato(tipo) {
       rotuloQuantidade(qtdSetores(m.nos || []), "Setor", "Setores"),
       rotuloQuantidade(m.qtdContatos, "Contato", "Contatos")
     ]);
-    c.innerHTML = '<button type="button" class="fc-back" id="fc-back-home">← Comarcas</button>' +
-      '<div class="fc-head"><div><h2 class="fc-title">' + esc(m.nome) + "</h2>" +
+    c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">' + esc(m.nome) + "</h2>" +
       '<p class="fc-subtitle">' + esc(resumo) + "</p>" + breadcrumbHtml(m, null, null) + "</div></div>" +
       '<select id="fc-comarca" class="fc-select">' + opcoesComarcas(estado.dados.comarcas || [], m.id) + "</select>" +
       '<div class="fc-meta"><span class="fc-pill fc-total-orgaos">Sede</span>' +
@@ -928,7 +927,6 @@ function fmtTipoContato(tipo) {
       '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
       ((m.nos || []).length ? (m.nos || []).map(cardNo).join("") : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
       "</div>" + barraNavegacaoInferior("Comarcas", true);
-    document.getElementById("fc-back-home").onclick = renderInicio;
     document.getElementById("fc-back-bottom").onclick = renderInicio;
     (function () {
       var bp = document.querySelector("[data-gerais-print]");
