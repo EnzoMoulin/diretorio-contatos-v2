@@ -158,10 +158,16 @@ function hrefContato(tipo, valor) {
 function linkEndereco(endereco) {
   const texto = String(endereco || '').trim();
   if (!texto) return '<span class="fc-muted">Endereço não informado</span>';
-  return '<span class="fc-address-inline"><a class="fc-endereco" href="https://www.google.com/maps/search/?api=1&query=' +
-    encodeURIComponent(texto) + '" target="_blank" rel="noopener noreferrer">📍 ' + esc(texto) + '</a>' +
-    '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(texto) +
-    '" data-copy-label="Endereço" title="Copiar endereço" aria-label="Copiar endereço"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></span>';
+  return '<a class="fc-endereco" title="' + esc(texto) + '" href="https://www.google.com/maps/search/?api=1&query=' +
+    encodeURIComponent(texto) + '" target="_blank" rel="noopener noreferrer">📍 ' + esc(texto) + '</a>';
+}
+/* O botão de copiar fica fora do texto truncado: dentro dele, o `line-clamp`
+   do endereço esconderia o botão justamente quando o endereço é longo. */
+function botaoCopiarEndereco(endereco) {
+  const texto = String(endereco || '').trim();
+  if (!texto) return '';
+  return '<button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(texto) +
+    '" data-copy-label="Endereço" title="Copiar endereço" aria-label="Copiar endereço"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>';
 }
 function copiarTexto(texto) {
   const valor = String(texto || '').trim();
@@ -609,11 +615,11 @@ function contatosCards(contatos, ctxOk) {
       botaoLink(c.id, String(c.descricao || '').trim() || tipo);
     if (ctxOk) {
       acoes += '<button type="button" class="fc-icon-btn fc-icon-btn--ok" data-conf="' + esc(c.id) +
-        '" title="Marcar como conferido hoje" aria-label="Marcar como conferido hoje">✓ Conferi</button>' +
+        '" title="Marcar como conferido hoje" aria-label="Marcar como conferido hoje"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="20 6 9 17 4 12"/></svg><span class="fc-rotulo">Conferi</span></button>' +
         '<button type="button" class="fc-icon-btn" data-edit="' + esc(c.id) +
-        '" title="Editar contato">✏️ Editar</button>' +
+        '" title="Editar contato" aria-label="Editar contato"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span class="fc-rotulo">Editar</span></button>' +
         '<button type="button" class="fc-icon-btn fc-icon-btn--danger" data-del="' + esc(c.id) +
-        '" title="Remover contato"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button>';
+        '" title="Remover contato" aria-label="Remover contato"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span class="fc-rotulo">Remover</span></button>';
     }
     const descricao = String(c.descricao || '').trim();
     const descricaoHtml = descricao && descricao.toLocaleLowerCase('pt-BR') !== String(tipo).toLocaleLowerCase('pt-BR')
@@ -972,8 +978,8 @@ function renderOrgao() {
     '<select id="fc-comarca" class="fc-select">' + opcoesComarcas(H.comarcas || [], m.id) + '</select>' +
     '<div class="fc-meta"><span class="fc-pill fc-total-orgaos">Sede</span>' +
     badgeQuantidade(m.qtdUnidades, 'Unidade', 'Unidades') + '</div>' +
-    '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço da Sede:</strong> ' + linkEndereco(m.endereco) +
-    (m.cep ? ' • CEP ' + esc(m.cep) : '') + '</div></div>' +
+    '<div class="fc-address-row"><div class="fc-inherit"><span class="fc-inherit-texto"><strong>Endereço da Sede:</strong> ' + linkEndereco(m.endereco) + '</span>' +
+    (m.cep ? '<span class="fc-cep" title="CEP da Sede">CEP ' + esc(m.cep) + '</span>' : '') + botaoCopiarEndereco(m.endereco) + '</div></div>' +
     cardContatosGerais(m.contatos || [], true, ctxOk) +
     '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
     ((m.nos || []).length ? (m.nos || []).map(cardNo).join('') : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
@@ -1042,8 +1048,8 @@ function renderForum() {
     breadcrumbHtml(m, f, null) + '</div></div>' +
     '<div class="fc-meta"><span class="fc-pill fc-pill-type">Fórum</span>' +
     badgeQuantidade(f.qtdUnidades, 'Unidade', 'Unidades') + '</div>' +
-    '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço do Fórum:</strong> ' + linkEndereco(f.endereco) +
-    (f.cep ? ' • CEP ' + esc(f.cep) : '') + '</div></div>' +
+    '<div class="fc-address-row"><div class="fc-inherit"><span class="fc-inherit-texto"><strong>Endereço do Fórum:</strong> ' + linkEndereco(f.endereco) + '</span>' +
+    (f.cep ? '<span class="fc-cep" title="CEP do Fórum">CEP ' + esc(f.cep) + '</span>' : '') + botaoCopiarEndereco(f.endereco) + '</div></div>' +
     cardContatosGerais(f.contatos || [], true, ctxOk) +
     '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
     ((f.nos || []).length ? (f.nos || []).map(cardNo).join('') : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
@@ -1088,9 +1094,10 @@ function renderNo() {
     breadcrumbHtml(m, f, no) + '</div></div>' +
     '<div class="fc-meta"><span class="fc-pill fc-pill-type">' + esc(tipo) + '</span>' +
     badgeQuantidade(qtdSetores(no.filhos || []), 'Setor', 'Setores') + solBtn(nivelNo, no.id) + '</div>' +
-    '<div class="fc-address-row"><div class="fc-inherit"><strong>Endereço:</strong> ' + linkEndereco(no.enderecoExibicao) +
-    (no.cepExibicao ? ' • CEP ' + esc(no.cepExibicao) : '') +
-    (no.endereco ? '' : ' <span class="fc-muted">(' + (pai ? 'herdado da Unidade' : (ehOrgao(m) ? 'herdado da Sede' : 'herdado do Fórum')) + ')</span>') + '</div></div>' +
+    '<div class="fc-address-row"><div class="fc-inherit"><span class="fc-inherit-texto"><strong>Endereço:</strong> ' + linkEndereco(no.enderecoExibicao) +
+    (no.endereco ? '' : ' <span class="fc-muted">(' + (pai ? 'herdado da Unidade' : (ehOrgao(m) ? 'herdado da Sede' : 'herdado do Fórum')) + ')</span>') + '</span>' +
+    (no.cepExibicao ? '<span class="fc-cep" title="CEP do endereço exibido">CEP ' + esc(no.cepExibicao) + '</span>' : '') +
+    botaoCopiarEndereco(no.enderecoExibicao) + '</div></div>' +
     '<div class="fc-section"><div class="fc-section-title"><h3>Contatos ' + (tipoTela === 'Setor' ? 'deste Setor' : 'desta Unidade') + '</h3>' +
     (podeNovo
       ? '<button type="button" class="btn-primary btn-novo" id="btn-novo-contato">Novo contato</button>' : '') + '</div>' +

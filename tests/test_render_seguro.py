@@ -22,7 +22,7 @@ FRONTEND = os.path.join(RAIZ, "frontend")
 SAFE_CALLS = {
     "esc", "Number", "badgeQuantidade", "contatosCards", "cardNo",
     "cardContatosGerais", "breadcrumbHtml", "opcoesComarcas", "realcarBusca",
-    "fmtTipoContato", "fmtTipoNo", "fmtValor", "linkEndereco",
+    "fmtTipoContato", "fmtTipoNo", "fmtValor", "linkEndereco", "botaoCopiarEndereco",
     "criarBoxHtml",
     "barraAcoesUnidade", "barraNavegacaoInferior", "acaoSolicitar", "solBtn",
     "covMark", "gestBtn", "linhaFavorito", "cardComarca", "botaoVcf",

@@ -176,16 +176,22 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 .fc-card--toggle.aberto .fc-toggle svg{transform:rotate(180deg)}
 .fc-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .fc-card h4{margin:0 0 6px;font-size:15px;color:#0f172a}
-.fc-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.fc-pill{font-size:11px;background:#f1f5f9;color:#334155;border-radius:999px;padding:4px 8px}
+.fc-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.fc-pill{display:inline-flex;align-items:center;font-size:11px;line-height:1.2;background:#f1f5f9;color:#334155;border-radius:999px;padding:4px 8px}
 .fc-back{border:0;background:transparent;color:#1d4ed8;font-weight:700;padding:0;margin:0 0 12px;cursor:pointer}
-.fc-address-inline{display:inline-flex;align-items:center;gap:6px;max-width:100%;vertical-align:middle}
-.fc-endereco{display:inline-block;color:#1d4ed8;font-size:13px;line-height:1.45;text-decoration:none;overflow-wrap:anywhere}
+.fc-endereco{color:#1d4ed8;font-size:13px;line-height:1.45;text-decoration:none;overflow-wrap:anywhere}
 .fc-endereco:hover{text-decoration:underline}
 .fc-muted{color:#64748b;font-size:13px}
 .fc-address-row{margin-top:10px}
-.fc-inherit{margin-top:10px;padding:10px 12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;color:#475569;font-size:12px}
-.fc-address-row .fc-inherit{margin-top:0}
+/* Endereço em duas linhas no máximo: o texto inteiro fica no `title` do link e
+   no botão de copiar. Antes, endereço longo + CEP + "herdado da Unidade"
+   ocupavam quatro linhas e comiam a altura do painel. */
+.fc-inherit{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;color:#475569;font-size:12px;line-height:1.45}
+.fc-inherit-texto{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;flex:1 1 auto}
+.fc-inherit .fc-muted{font-size:12px}
+.fc-cep{flex:0 0 auto;font-size:11px;line-height:1.7;color:#475569;background:#eef2f7;border-radius:999px;padding:0 8px;white-space:nowrap}
+.fc-copy-btn{flex:0 0 auto}
+.fc-address-row + .fc-section{margin-top:12px}
 .fc-breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:0 0 10px;color:#64748b;font-size:13px;line-height:1.5}
 .fc-breadcrumb button{appearance:none;border:0;background:transparent;padding:0;color:#1d4ed8;font:inherit;font-weight:700;cursor:pointer}
 .fc-breadcrumb button:hover{text-decoration:underline}
@@ -193,7 +199,7 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 .fc-copy-btn{border:1px solid #dbe3ed;background:#fff;border-radius:8px;padding:5px 7px;cursor:pointer;font-size:12px;color:#1d4ed8;font-weight:800}
 .fc-copy-btn:hover{background:#f1f5f9}
 .fc-contato{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:#f8fafc;border:1px solid #dbe3ed;border-radius:10px;margin-top:9px}
-.fc-contato-main{min-width:0}
+.fc-contato-main{min-width:96px}
 .fc-contato h4{margin:4px 0 0;font-size:14px;color:#0f172a}
 .fc-contato-tipo{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#475569}
 /* procedência do dado: fonte + vigência, discreta sob o contato */
@@ -208,24 +214,29 @@ body[data-theme="dark"] .fc-contato-fonte-data{color:#64748b}
 .fc-contato-side{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .fc-contato-valor{color:#1d4ed8;font-size:14px;font-weight:700;text-decoration:none;overflow-wrap:anywhere}
 .fc-contato-actions{display:flex;gap:5px}
-.fc-icon-btn{border:1px solid #dbe3ed;background:#fff;border-radius:8px;padding:5px 7px;cursor:pointer;font-size:12px}
+.fc-contato-actions .fc-icon-btn{padding:4px 6px;gap:4px}
+.fc-icon-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid #dbe3ed;background:#fff;border-radius:8px;padding:5px 7px;cursor:pointer;font-size:12px}
 .fc-icon-btn:hover{background:#f1f5f9}
 .fc-icon-btn--danger{color:#b91c1c;border-color:#fecaca}
 .fc-icon-btn--ok{color:#15803d;border-color:#bbf7d0}
 .fc-icon-btn--ok:hover{background:#f0fdf4}
 .fc-empty{padding:20px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;text-align:center}
 @media(max-width:680px){.fc-contato{align-items:flex-start;flex-direction:column}.fc-contato-side{justify-content:flex-start}}
-/* Painel estreito: as ações do contato refluem em vez de estourar o cartão.
-   São sete botões que não encolhem (ícones de 34px + Conferi/Editar/Remover),
-   e o painel rola no eixo Y — o que faz o X virar auto e cortar o "Remover"
-   pela borda, com barra horizontal no rodapé. Abaixo de 400px de conteúdo, os
-   ícones ficam numa linha e as ações rotuladas na seguinte; em painel largo
-   nada muda. O `flex-basis:100%` do Conferi força a quebra sem mexer no DOM. */
+/* Painel estreito: as ações viram só ícones, numa linha só. São sete botões
+   (copiar, favoritar, vCard, link, Conferi, Editar, Remover) e o painel rola
+   no eixo Y — o que faz o X virar `auto` e cortar o "Remover" pela borda.
+   O rótulo continua no DOM como texto só para leitor de tela; o nome do
+   botão vem do `aria-label` de cada um. Os rótulos só cabem em painel bem
+   largo: a linha com eles pede ~413px e o cartão ainda precisa de ~96px para
+   o tipo do contato — daí o corte em 560px, não em 400. */
+@container (max-width:560px){
+  .fc-contato-actions{flex-wrap:nowrap;justify-content:flex-end;gap:4px}
+  .fc-contato-actions .fc-rotulo{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .fc-contato-actions>.fc-icon-btn{min-width:30px;min-height:30px;padding:0;justify-content:center}
+}
 @container (max-width:400px){
   .fc-contato{flex-wrap:wrap;row-gap:6px}
   .fc-contato-side{flex:1 1 100%;min-width:0}
-  .fc-contato-actions{flex-wrap:wrap;justify-content:flex-end;row-gap:5px}
-  .fc-contato-actions>.fc-icon-btn--ok{flex:0 0 100%;max-width:max-content;margin-left:auto}
 }
 body[data-theme="dark"] .fc-card{background:#1e293b;border-color:#334155}
 body[data-theme="dark"] .fc-card h4,body[data-theme="dark"] .fc-contato h4{color:#f8fafc}
@@ -236,6 +247,7 @@ body[data-theme="dark"] .fc-icon-btn{background:#1e293b;border-color:#475569;col
 body[data-theme="dark"] .fc-back{color:#93c5fd}
 body[data-theme="dark"] .fc-endereco{color:#93c5fd}
 body[data-theme="dark"] .fc-inherit{background:#0f172a;border-color:#475569;color:#cbd5e1}
+body[data-theme="dark"] .fc-cep{background:#1e293b;color:#cbd5e1}
 /* ---- tema escuro ---- */
 body[data-theme="dark"]{background:#0f172a;color:#e2e8f0}
 body[data-theme="dark"] .card{background:#1e293b;color:#e2e8f0}
