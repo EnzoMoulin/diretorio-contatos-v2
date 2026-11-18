@@ -62,7 +62,6 @@ function fmtTipoContato(tipo) {
     if (t === "E_MAIL" || t === "EMAIL" || t === "E-MAIL") return "E-mail";
     if (t === "WHATSAPP") return "WhatsApp";
     if (t === "RAMAL") return "Ramal";
-    if (t === "FAX") return "Fax";
     if (t === "TELEFONE") return "Telefone";
     return tipo || "Contato";
   }
