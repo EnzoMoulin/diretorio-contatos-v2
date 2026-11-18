@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
-<link rel="stylesheet" href="style.css?v=5f9418db">
+<link rel="stylesheet" href="style.css?v=d7165328">
 </head>
 <body>
 <div class="app-container">
@@ -403,6 +403,19 @@
     <p class="hint" id="e-status"></p>
   </div>
 </div>
+<div class="modal hidden" id="modal-util">
+  <div class="modal-box">
+    <h2>Telefone útil</h2>
+    <label>Nome*<input id="u-nome"></label>
+    <label>Tipo (Telefone, WhatsApp, E-mail, Fax)<input id="u-tipo"></label>
+    <label>Número ou e-mail*<input id="u-valor"></label>
+    <div class="modal-actions">
+      <button id="u-cancel" class="btn-ghost">Cancelar</button>
+      <button id="u-salvar" class="btn-primary">Salvar</button>
+    </div>
+    <p class="hint" id="u-status"></p>
+  </div>
+</div>
 <div class="modal hidden" id="modal-conf">
   <div class="modal-box">
     <h2>Solicitar acesso</h2>
@@ -417,6 +430,6 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="mapa.js?v=66df4135"></script>
-<script src="admin.js?v=a283f358"></script>
+<script src="admin.js?v=ad5f8ca9"></script>
 </body>
 </html>
