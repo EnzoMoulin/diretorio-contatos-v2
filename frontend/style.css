@@ -426,6 +426,7 @@ body[data-theme="dark"] .fc-map-legenda .sem-contato{color:#94a3b8}
 body[data-theme="dark"] .fc-bottom-nav{background:#1e293b;border-color:#334155}
 .fc-bottom-nav .nav-group{display:flex;gap:8px}
 .fc-bottom-nav--colado{border-top:0;margin-top:10px;padding-top:0}
+.fc-bottom-nav--sem-voltar{justify-content:flex-end}
 .fc-bottom-nav .fc-btn{max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fc-icon-btn{border:1px solid #cbd5e1;background:#fff;border-radius:8px;min-width:34px;min-height:34px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px}
 .fc-icon-btn:hover{background:#f1f5f9}
