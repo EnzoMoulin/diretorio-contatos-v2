@@ -205,6 +205,10 @@ class TestSemTelefoneReal(unittest.TestCase):
                 for achado in TELEFONE.finditer(texto):
                     if mascarado(achado.group()):
                         continue
+                    # ?v=68130067 é hash de cache-busting, não telefone: o
+                    # scanner não pode confundir os dois (8 dígitos hex).
+                    if re.search(r"[?&]v=$", texto[max(0, achado.start() - 4):achado.start()]):
+                        continue
                     linha = texto.count("\n", 0, achado.start()) + 1
                     achados.append("%s:%d: %s" % (
                         os.path.relpath(caminho, RAIZ), linha, achado.group()))
