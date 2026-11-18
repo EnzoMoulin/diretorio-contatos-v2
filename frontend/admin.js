@@ -17,6 +17,7 @@ let indiceBusca = null;
 let fullCache = null;       // id -> contato completo de /api/contatos (p/ edição)
 let setorAlvo = null;       // setor_id do create-box atual
 let geraisAlvo = null;      // {campo:'forum_id'|'comarca_id', id} quando o box é dos Contatos Gerais
+let unidadeAlvo = null;     // id da Unidade quando o box é "Contatos desta Unidade"
 let editId = null;
 let confPed = null;         // {nivel, alvo_id}
 
@@ -1038,20 +1039,32 @@ function renderUteis() {
   estado.comarcaId = ''; estado.forumId = ''; estado.noId = '';
   esconderCreate();
   const uteis = H.uteis || [];
+  // Telefones Úteis são globais (não têm escopo): só o administrador edita.
+  const podeGerir = logado() && !!(me && me.admin);
   c.innerHTML = '<div class="fc-head"><div><h2 class="fc-title">Telefones Úteis</h2>' +
-    '<p class="fc-subtitle">Canais de atendimento e serviços de apoio.</p></div></div>' +
+    '<p class="fc-subtitle">Canais de atendimento e serviços de apoio.</p></div>' +
+    (podeGerir ? '<button type="button" class="btn-primary btn-novo" id="btn-novo-util">Novo contato</button>' : '') + '</div>' +
     (uteis.length ? '<div class="fc-contatos">' + uteis.map(u => {
       const href = hrefContato(u.tipo, u.valor);
       const valorHtml = href ? '<a class="fc-contato-valor" href="' + esc(href) + '">' + esc(u.valor) + '</a>'
         : '<span class="fc-contato-valor">' + esc(u.valor) + '</span>';
       return '<article class="fc-contato" data-contato="' + esc(u.id) + '"><div class="fc-contato-main"><span class="fc-contato-tipo">' +
-        esc(fmtTipoContato(u.tipo)) + '</span><h4>' + esc(u.nome || u.valor) + '</h4></div>' +
+        esc(fmtTipoContato(u.tipo)) + '</span><h4>' + esc(u.nome || u.valor) + '</h4>' +
+        (u.conferidoEm ? '<p class="fc-contato-observacao">conferido em ' +
+          esc(String(u.conferidoEm).slice(0, 10).split('-').reverse().join('/')) + '</p>' : '') + '</div>' +
         '<div class="fc-contato-side">' + valorHtml +
         '<div class="fc-contato-actions"><button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(u.valor) +
         '" data-copy-label="' + esc(fmtTipoContato(u.tipo)) + '" title="Copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
         botaoFav({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) +
         botaoVcf({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) +
-        botaoLink(u.id, u.nome || u.valor) + '</div>' +
+        botaoLink(u.id, u.nome || u.valor) +
+        (podeGerir ? '<button type="button" class="fc-icon-btn fc-icon-btn--ok" data-util-conf="' + esc(u.id) +
+          '" title="Marcar como conferido hoje" aria-label="Marcar como conferido hoje"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="20 6 9 17 4 12"/></svg><span class="fc-rotulo">Conferi</span></button>' +
+          '<button type="button" class="fc-icon-btn" data-util-edit="' + esc(u.id) +
+          '" title="Editar telefone útil" aria-label="Editar telefone útil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span class="fc-rotulo">Editar</span></button>' +
+          '<button type="button" class="fc-icon-btn fc-icon-btn--danger" data-util-del="' + esc(u.id) +
+          '" title="Remover telefone útil" aria-label="Remover telefone útil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span class="fc-rotulo">Remover</span></button>' : '') +
+        '</div>' +
         '</div></article>';
     }).join('') + '</div>' : '<div class="fc-empty">Nenhum telefone útil cadastrado.</div>') +
     '<div class="fc-print-footer"><button type="button" class="fc-btn" id="fc-print-uteis" title="Imprimir / Salvar PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir / Salvar PDF</button>' +
@@ -1060,6 +1073,17 @@ function renderUteis() {
     abrirImpressao('Telefones Úteis', '<ul>' + uteis.map(u =>
       contatoPrint({ tipo: u.tipo, descricao: u.nome, valor: u.valor })).join('') + '</ul>');
   };
+  const novoUtil = $('btn-novo-util');
+  if (novoUtil) novoUtil.onclick = () => abrirFormUtil(null);
+  c.querySelectorAll('[data-util-conf]').forEach(b => {
+    b.onclick = () => conferirUtil(b.getAttribute('data-util-conf'), b);
+  });
+  c.querySelectorAll('[data-util-edit]').forEach(b => {
+    b.onclick = () => abrirFormUtil(b.getAttribute('data-util-edit'));
+  });
+  c.querySelectorAll('[data-util-del]').forEach(b => {
+    b.onclick = () => excluirUtil(b.getAttribute('data-util-del'));
+  });
   vincularAcoes();
 }
 function abrirForum(id) {
@@ -1116,9 +1140,12 @@ function renderNo() {
   // ele já foi um bloco fixo no topo do painel, e o clique no botão abria o
   // formulário lá em cima, longe de onde a pessoa clicou. Nasce fechado, para
   // não empurrar a lista de quem só veio consultar, e o `×` fecha de novo.
-  const podeNovo = logado() && tipoTela === 'Setor' && ctxOk;
-  if (!podeNovo) setorAlvo = null;
-  const boxAberto = podeNovo && setorAlvo === no.id;
+  // Unidade também aceita contato próprio: o POST leva `unidade_id` e o
+  // servidor resolve o setor virtual que a tela esconde.
+  const podeNovo = logado() && ctxOk;
+  if (!podeNovo) { setorAlvo = null; unidadeAlvo = null; }
+  const alvoNo = tipoTela === 'Setor' ? setorAlvo : unidadeAlvo;
+  const boxAberto = podeNovo && alvoNo === no.id;
   c.innerHTML =
     '<button type="button" class="fc-back" id="fc-back-no">← ' + esc(pai ? pai.nome : raiz.nome) + '</button>' +
     '<div class="fc-head"><div><h2 class="fc-title">' + esc(no.nome) + covMark(nivelNo, no.id) + '</h2>' +
@@ -1132,7 +1159,8 @@ function renderNo() {
     '<div class="fc-section"><div class="fc-section-title"><h3>Contatos ' + (tipoTela === 'Setor' ? 'deste Setor' : 'desta Unidade') + '</h3>' +
     (podeNovo
       ? '<button type="button" class="btn-primary btn-novo" id="btn-novo-contato">Novo contato</button>' : '') + '</div>' +
-    (podeNovo ? criarBoxHtml(boxAberto) : '') +
+    (podeNovo ? criarBoxHtml(boxAberto, tipoTela === 'Setor'
+      ? 'Novo contato neste setor' : 'Novo contato nesta unidade') : '') +
     contatosCards(no.contatos || [], ctxOk) + '</div>' +
     ((no.filhos || []).length
       ? '<div class="fc-section"><div class="fc-section-title"><h3>Setores</h3></div>' +
@@ -1153,7 +1181,8 @@ function renderNo() {
   destacarMapaAdmin(m.nome);
   if (podeNovo) {
     $('btn-novo-contato').onclick = () => {
-      setorAlvo = no.id;
+      if (tipoTela === 'Setor') { setorAlvo = no.id; unidadeAlvo = null; }
+      else { unidadeAlvo = no.id; setorAlvo = null; }
       geraisAlvo = null;
       $('create-box').classList.remove('hidden');
       $('save-status').textContent = '';
@@ -1187,6 +1216,7 @@ function criarBoxHtml(aberto, titulo) {
 }
 function esconderCreate() {
   setorAlvo = null;
+  unidadeAlvo = null;
   geraisAlvo = null;
   const box = $('create-box');
   if (box) box.classList.add('hidden');
@@ -1638,12 +1668,64 @@ async function excluirContato(id) {
   if (!r.ok) toast('Erro: ' + await r.text(), 'erro');
   await recarregarHierarquia(true);
 }
+// Telefones Úteis: dados globais, sem escopo de setor. Só o administrador vê
+// os botões e o servidor recusa quem não for admin.
+let utilEditando = null;
+function abrirFormUtil(id) {
+  const u = id ? (H.uteis || []).find(x => x.id === id) : null;
+  if (id && !u) { mostrarToast('Telefone útil não encontrado.', 'erro'); return; }
+  utilEditando = u ? u.id : null;
+  $('u-nome').value = u ? (u.nome || '') : '';
+  $('u-tipo').value = u ? (u.tipo || 'Telefone') : 'Telefone';
+  $('u-valor').value = u ? (u.valor || '') : '';
+  $('u-status').textContent = '';
+  $('modal-util').classList.remove('hidden');
+  $('u-nome').focus();
+}
+$('u-cancel').onclick = () => $('modal-util').classList.add('hidden');
+$('u-salvar').onclick = async () => {
+  const corpo = { nome: $('u-nome').value.trim(), tipo: $('u-tipo').value.trim() || 'Telefone',
+                  valor: $('u-valor').value.trim() };
+  if (!corpo.nome || !corpo.valor) { $('u-status').textContent = 'Informe o nome e o número.'; return; }
+  const r = await fetch('/api/uteis' + (utilEditando ? '/' + encodeURIComponent(utilEditando) : ''),
+    { method: utilEditando ? 'PUT' : 'POST', headers: auth(), body: JSON.stringify(corpo) });
+  if (!r.ok) { $('u-status').textContent = 'Erro: ' + await r.text(); return; }
+  $('modal-util').classList.add('hidden');
+  const criando = !utilEditando;
+  utilEditando = null;
+  await recarregarHierarquia(true);
+  renderUteis();
+  mostrarToast(criando ? 'Telefone criado.' : 'Telefone atualizado.');
+};
+async function conferirUtil(id, botao) {
+  if (!id) return;
+  if (botao) botao.disabled = true;
+  const r = await fetch('/api/uteis/' + encodeURIComponent(id) + '/conferir',
+    { method: 'POST', headers: auth(), body: '{}' });
+  if (!r.ok) {
+    if (botao) botao.disabled = false;
+    mostrarToast('Não foi possível conferir: ' + await r.text(), 'erro');
+    return;
+  }
+  await recarregarHierarquia(true);
+  renderUteis();
+  mostrarToast('Conferido hoje.');
+}
+async function excluirUtil(id) {
+  if (!id || !confirm('Remover este telefone útil?')) return;
+  const r = await fetch('/api/uteis/' + encodeURIComponent(id), { method: 'DELETE', headers: auth() });
+  if (!r.ok) { mostrarToast('Erro: ' + await r.text(), 'erro'); return; }
+  await recarregarHierarquia(true);
+  renderUteis();
+  mostrarToast('Telefone removido.');
+}
 // `setorAlvo`/`geraisAlvo` dizem qual formulário está aberto; quem os define é
 // o botão "Novo contato" (setor, fórum ou comarca). O POST leva o nível certo:
 // contato geral é gravado no setor virtual, sem o formulário saber disso.
 async function salvarContato() {
   const alvo = setorAlvo ? { setor_id: setorAlvo }
-    : (geraisAlvo ? { [geraisAlvo.campo]: geraisAlvo.id } : null);
+    : (unidadeAlvo ? { unidade_id: unidadeAlvo }
+    : (geraisAlvo ? { [geraisAlvo.campo]: geraisAlvo.id } : null));
   if (!alvo) { $('save-status').textContent = 'Local inválido.'; return; }
   const tipo = $('f-tipo').value;
   const valor = $('f-valor').value.trim();
