@@ -90,7 +90,7 @@ E aí entra a contabilidade do `unittest`: **classe pulada no `setUpClass` vira 
 objeto só**, não três nem dois. Por isso o rodapé imprime `Ran 95` numa perna e
 `Ran 96` na outra — nunca 98 —, e é `Ran − skipped` que fecha em 94.
 
-Medido no run do commit `5751b62` (`gh run list --commit 5751b62`):
+Medido no run do commit `0e8f19e` (`gh run list --commit 0e8f19e`):
 
 | Perna | objetos (`Ran`) | `skipped` | rodando |
 | :--- | ---: | ---: | ---: |
