@@ -26,7 +26,7 @@ SAFE_CALLS = {
     "criarBoxHtml",
     "barraAcoesUnidade", "barraNavegacaoInferior", "acaoSolicitar", "solBtn",
     "covMark", "gestBtn", "linhaFavorito", "cardComarca", "botaoVcf",
-    "botaoFav", "botaoLink", "botaoImpressaoLocalidade",
+    "botaoFav", "botaoLink",
 }
 # Variáveis locais que já carregam HTML montado com escape.
 SAFE_VARS = {

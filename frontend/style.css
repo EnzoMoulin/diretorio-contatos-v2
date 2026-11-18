@@ -31,6 +31,7 @@ html,body{margin:0;padding:0;width:100%;height:100vh;overflow:hidden;
 .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px 24px;
   margin-bottom:20px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
 .card h1{margin:0 0 14px;font-size:22px;color:#0f172a}
+.card h2{margin:18px 0 8px;font-size:16px;color:#0f172a}
 .card .hint{color:#64748b}
 input[type=search],.form-grid input{border:1px solid #cbd5e1;border-radius:8px;
   padding:10px 12px;font-size:15px;color:#1f2937;background:#f8fafc}
@@ -175,7 +176,7 @@ body[data-theme="dark"] .rows li.nao-lida{background:#1e3a8a33}
 .fc-toggle svg{width:16px;height:16px;transition:transform .15s ease}
 .fc-card--toggle.aberto .fc-toggle svg{transform:rotate(180deg)}
 .fc-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.fc-card h4{margin:0 0 6px;font-size:15px;color:#0f172a}
+.fc-card h4,.fc-card h3{margin:0 0 6px;font-size:15px;color:#0f172a}
 .fc-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
 .fc-pill{display:inline-flex;align-items:center;font-size:11px;line-height:1.2;background:#f1f5f9;color:#334155;border-radius:999px;padding:4px 8px}
 .fc-back{border:0;background:transparent;color:#1d4ed8;font-weight:700;padding:0;margin:0 0 12px;cursor:pointer}
@@ -235,11 +236,12 @@ body[data-theme="dark"] .fc-contato-fonte-data{color:#64748b}
   .fc-contato-actions>.fc-icon-btn{min-width:30px;min-height:30px;padding:0;justify-content:center}
 }
 @container (max-width:400px){
+  .fc-inherit-texto{-webkit-line-clamp:3}
   .fc-contato{flex-wrap:wrap;row-gap:6px}
   .fc-contato-side{flex:1 1 100%;min-width:0}
 }
 body[data-theme="dark"] .fc-card{background:#1e293b;border-color:#334155}
-body[data-theme="dark"] .fc-card h4,body[data-theme="dark"] .fc-contato h4{color:#f8fafc}
+body[data-theme="dark"] .fc-card h4,body[data-theme="dark"] .fc-card h3,body[data-theme="dark"] .fc-contato h4{color:#f8fafc}
 body[data-theme="dark"] .fc-pill{background:#0f172a;color:#cbd5e1}
 body[data-theme="dark"] .fc-contato{background:#0f172a;border-color:#334155}
 body[data-theme="dark"] .fc-contato-tipo{color:#94a3b8}
@@ -359,8 +361,10 @@ body[data-theme="dark"] .fc-page-head{border-color:#334155}
 .fc-page-head .fc-title{font-size:20px;letter-spacing:.04em;text-transform:uppercase;color:#1d4ed8}
 .fc-page-head h1{margin:0;font-size:22px;font-weight:800;color:#0f172a;font-family:Arial,Helvetica,sans-serif;line-height:1.2}
 .fc-busca{position:relative;flex:1 1 auto;max-width:340px;margin:0 8px}
+.fc-busca-campo{position:relative;flex:1 1 240px;min-width:180px}
 .consulta-direita{display:flex;flex-direction:column;min-width:0;min-height:0}
-#view-consulta .consulta-direita>.fc-busca{max-width:none;width:100%;margin:0 0 8px;flex:none;box-sizing:border-box}
+#view-consulta .consulta-direita>.fc-busca{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:none;width:100%;margin:0 0 8px;flex:none;box-sizing:border-box}
+#view-consulta .consulta-direita>.fc-busca>.fc-panel-bar{flex:0 0 auto;margin-top:0;flex-wrap:nowrap}
 #view-consulta .consulta-direita .fc-busca-input{max-width:none;margin-bottom:0}
 .consulta-direita>.fc-panel{flex:1 1 auto;min-height:0}
 .fc-busca-input{width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#f8fafc;color:#0f172a}
@@ -584,7 +588,6 @@ body[data-theme="dark"] .tooltip-premium small{color:#cbd5e1}
 
 .fc-catalog-counts{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:12px 0 8px}
 .fc-total-comarcas{display:inline-flex;background:#dbeafe;color:#1e40af;font-weight:800}
-.fc-total-orgaos{display:inline-flex;background:#ede9fe;color:#5b21b6;font-weight:800}
 .fc-municipios-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
 .fc-municipios-grid .fc-card{margin-top:0}
 .fc-btn{appearance:none;border:1px solid #cbd5e1;background:#fff;color:#0f172a;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}

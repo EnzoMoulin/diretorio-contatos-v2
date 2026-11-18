@@ -22,7 +22,7 @@ ninguém é admin). Intranet representada: /admin só abre de localhost/rede loc
 (INTRANET_ONLY=1). Credencial em GOOGLE_CLIENT_FILE
 (padrão: ~/.hermes/google_client_secret.json).
 
-Endpoints (JSON):
+Endpoints principais (tabela completa e campos: README.md › Endpoints):
     GET  /oauth/login                         inicia login com Google
     GET  /oauth/callback                      retorno do Google -> sessão
     POST /api/logout                          encerra sessão (token)
@@ -773,6 +773,42 @@ def _ordem(r):
         return (2, r["ordem_idx"])
 
 
+def setor_gerais(con, forum_id=None, comarca_id=None):
+    """Setor virtual "Contatos Gerais" do fórum/comarca, criando se faltar.
+
+    A árvore esconde esse nó e mostra os contatos no pai (fórum ou comarca),
+    mas todo contato continua preso a um setor no banco. Sem isso, um contato
+    geral só existiria em localidade que já tivesse um — o que trava justamente
+    o fórum que ainda não tem contato nenhum.
+    """
+    if forum_id:
+        unidade = con.execute(
+            "SELECT id FROM unidades WHERE virtual=1 AND forum_id=?"
+            " AND comarca_id IS NULL ORDER BY id LIMIT 1", (forum_id,)).fetchone()
+    else:
+        unidade = con.execute(
+            "SELECT id FROM unidades WHERE virtual=1 AND forum_id IS NULL"
+            " AND comarca_id=? ORDER BY id LIMIT 1", (comarca_id,)).fetchone()
+    if unidade:
+        uid_unidade = unidade[0]
+    else:
+        uid_unidade = novo_id(con, "unidades", "U")
+        con.execute(
+            "INSERT INTO unidades (id, forum_id, comarca_id, nome, ordem_num,"
+            " virtual) VALUES (?,?,?,?,NULL,1)",
+            (uid_unidade, forum_id, comarca_id, "Atendimento geral"))
+    setor = con.execute(
+        "SELECT id FROM setores WHERE virtual=1 AND unidade_id=?"
+        " ORDER BY id LIMIT 1", (uid_unidade,)).fetchone()
+    if setor:
+        return setor[0]
+    sid = novo_id(con, "setores", "S")
+    con.execute(
+        "INSERT INTO setores (id, unidade_id, nome, ordem_num, virtual)"
+        " VALUES (?,?,?,NULL,1)", (sid, uid_unidade, "Contatos Gerais"))
+    return sid
+
+
 def build_hierarquia(con):
     """Monta o JSON aninhado no formato do backend original (GAS)."""
     coms = [dict(r) for r in con.execute("SELECT * FROM comarcas")]
@@ -1198,6 +1234,20 @@ CAMPOS_CONTATO = (
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "DiretorioContatos/3.0"
+
+    # Cabeçalhos de segurança em toda resposta, inclusive nos erros: o servidor
+    # não tem template central por onde passar, então o gancho é o envio.
+    def handle_one_request(self):
+        self._cabecalhos_seguranca = False
+        super().handle_one_request()
+
+    def end_headers(self):
+        if not getattr(self, "_cabecalhos_seguranca", False):
+            self._cabecalhos_seguranca = True
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Referrer-Policy", "same-origin")
+            self.send_header("X-Frame-Options", "SAMEORIGIN")
+        super().end_headers()
 
     def _json(self, obj, status=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -2190,13 +2240,38 @@ class Handler(BaseHTTPRequestHandler):
             if not uid:
                 return self._json({"erro": "não autenticado"}, 403)
             data = self._body()
-            if not data.get("nome") or not data.get("setor_id"):
-                return self._json({"erro": "'nome' e 'setor_id' são obrigatórios"}, 400)
+            if not data.get("nome"):
+                return self._json({"erro": "'nome' é obrigatório"}, 400)
             con = get_db()
             sid = str(data.get("setor_id") or "").strip()
             if not sid:
-                con.close()
-                return self._json({"erro": "setor inválido"}, 400)
+                # Contato geral: o formulário manda o fórum ou a comarca, não o
+                # setor — o setor virtual é detalhe de armazenamento.
+                fid = str(data.get("forum_id") or "").strip()
+                mid = str(data.get("comarca_id") or "").strip()
+                if fid:
+                    if not con.execute("SELECT 1 FROM foruns WHERE id=?",
+                                       (fid,)).fetchone():
+                        con.close()
+                        return self._json({"erro": "fórum não encontrado"}, 404)
+                    if not self._cobre(con, uid, "forum", fid):
+                        con.close()
+                        return self._json({"erro": "sem acesso a este local"}, 403)
+                    sid = setor_gerais(con, forum_id=fid)
+                elif mid:
+                    if not con.execute("SELECT 1 FROM comarcas WHERE id=?",
+                                       (mid,)).fetchone():
+                        con.close()
+                        return self._json({"erro": "comarca não encontrada"}, 404)
+                    if not self._cobre(con, uid, "comarca", mid):
+                        con.close()
+                        return self._json({"erro": "sem acesso a este local"}, 403)
+                    sid = setor_gerais(con, comarca_id=mid)
+                else:
+                    con.close()
+                    return self._json(
+                        {"erro": "'nome' e ('setor_id' ou 'forum_id'/'comarca_id')"
+                                 " são obrigatórios"}, 400)
             if not self._cobre(con, uid, "setor", sid):
                 con.close()
                 return self._json({"erro": "sem acesso a este local"}, 403)
@@ -2205,7 +2280,7 @@ class Handler(BaseHTTPRequestHandler):
                 "INSERT INTO contatos (id, setor_id, nome, cargo, telefone, email,"
                 " descricao, fonte, vigente_desde)"
                 " VALUES (?,?,?,?,?,?,?,?,?)",
-                (nid, data.get("setor_id"), data.get("nome"), data.get("cargo", ""),
+                (nid, sid, data.get("nome"), data.get("cargo", ""),
                  data.get("telefone", ""), data.get("email", ""),
                  data.get("descricao") or data.get("nome") or "",
                  "criação manual", time.strftime("%Y-%m-%d")))
