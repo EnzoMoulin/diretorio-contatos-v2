@@ -1,0 +1,32 @@
+name: Bug
+description: Algo não funciona como deveria
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Dado pessoal não entra em issue.** Telefone, e-mail e nome de pessoa, mesmo mascarado,
+        ficam fora: use valor inventado (`(27) 3333-0007`, `fulano@exemplo.jus.br`).
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que deveria acontecer
+    validations:
+      required: true
+  - type: textarea
+    id: aconteceu
+    attributes:
+      label: O que aconteceu
+      description: Passo a passo mínimo para reproduzir e a mensagem de erro completa.
+    validations:
+      required: true
+  - type: input
+    id: onde
+    attributes:
+      label: Onde
+      description: Rota (`/`, `/admin`, `/api/...`), arquivo, job do CI ou modo (avaliação `SIMULACAO_AUTO_APROVAR=1` × somente leitura `=0`).
+  - type: textarea
+    id: hipotese
+    attributes:
+      label: Hipótese de causa
+      description: Se já se sabe, diga se o conserto é pequeno ou se pede mudança de desenho.
