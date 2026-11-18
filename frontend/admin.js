@@ -559,6 +559,7 @@ function breadcrumbHtml(comarca, forum, no) {
       itens.push({ tipo: 'NO', id: item.id, nome: item.nome });
     });
   }
+  if (itens.length < 2) return '';
   return '<nav class="fc-breadcrumb" aria-label="Caminho da estrutura">' + itens.map((item, i) => {
     const ultimo = i === itens.length - 1;
     const conteudo = ultimo
@@ -861,8 +862,11 @@ function barraAcoesUnidade(tipoNo, rotuloVoltar) {
     '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
 }
 function barraNavegacaoInferior(rotuloVoltar, semLinha) {
-  return '<div class="fc-bottom-nav' + (semLinha ? ' fc-bottom-nav--colado' : '') + '">' +
-    '<button type="button" class="fc-btn" id="fc-back-bottom">← ' + esc(rotuloVoltar || 'Voltar') + '</button>' +
+  // `false` = tela sem volta (Sede): sem botão, e o "Voltar ao topo" vai para a direita
+  const semVoltar = rotuloVoltar === false;
+  return '<div class="fc-bottom-nav' + (semLinha ? ' fc-bottom-nav--colado' : '') +
+    (semVoltar ? ' fc-bottom-nav--sem-voltar' : '') + '">' +
+    (semVoltar ? '' : '<button type="button" class="fc-btn" id="fc-back-bottom">← ' + esc(rotuloVoltar || 'Voltar') + '</button>') +
     '<button type="button" class="fc-btn" data-scroll-top title="Voltar ao topo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Voltar ao topo</button></div>';
 }
 function destacarMapaAdmin(nome) {
@@ -982,8 +986,7 @@ function renderOrgao() {
     cardContatosGerais(m.contatos || [], true, ctxOk) +
     '<div class="fc-section"><div class="fc-section-title"><h3>Unidades</h3></div>' +
     ((m.nos || []).length ? (m.nos || []).map(cardNo).join('') : '<div class="fc-empty">Nenhuma Unidade cadastrada.</div>') +
-    '</div>' + barraNavegacaoInferior('Comarcas', true);
-  $('fc-back-bottom').onclick = renderInicio;
+    '</div>' + barraNavegacaoInferior(false, true);
   const bp = document.querySelector('[data-gerais-print]');
   if (bp) bp.onclick = (e) => { if (e && e.stopPropagation) e.stopPropagation(); imprimirOrgao(); };
   $('fc-comarca').onchange = function () {
