@@ -549,7 +549,7 @@ class TestHistoricoAutor(unittest.TestCase):
         # Telefones Úteis: CRUD global, reservado ao administrador.
         st, util = api("POST", "/api/uteis",
                        {"nome": "Teste Util", "tipo": "Telefone",
-                        "valor": "(27) 90000-0000"}, token=self.tok)
+                        "valor": "(27) 9000-XXXX"}, token=self.tok)
         self.assertEqual(st, 201, util)
         util_id = util_hist = util["id"]
         try:
@@ -583,7 +583,7 @@ class TestHistoricoAutor(unittest.TestCase):
                           "contato criado por unidade_id não apareceu na unidade")
             st, _ = api("PUT", "/api/uteis/" + util_id,
                         {"nome": "Teste Util Editado", "tipo": "Telefone",
-                         "valor": "(27) 90000-0001"}, token=self.tok)
+                         "valor": "(27) 9001-XXXX"}, token=self.tok)
             self.assertEqual(st, 200)
             st, conf = api("POST", "/api/uteis/" + util_id + "/conferir", {},
                            token=self.tok)
