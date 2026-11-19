@@ -222,7 +222,7 @@ class TestGestaoFechada(unittest.TestCase):
                                  f"{rota} sem nosniff")
                 self.assertEqual(r.headers.get("X-Frame-Options"), "SAMEORIGIN",
                                  f"{rota} sem X-Frame-Options")
-                self.assertEqual(r.headers.get("Referrer-Policy"), "same-origin",
+                self.assertEqual(r.headers.get("Referrer-Policy"), "strict-origin-when-cross-origin",
                                  f"{rota} sem Referrer-Policy")
 
     def test_admin_continua_lendo_tudo(self):

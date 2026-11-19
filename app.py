@@ -1267,7 +1267,7 @@ class Handler(BaseHTTPRequestHandler):
         if not getattr(self, "_cabecalhos_seguranca", False):
             self._cabecalhos_seguranca = True
             self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("Referrer-Policy", "same-origin")
+            self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
             self.send_header("X-Frame-Options", "SAMEORIGIN")
         super().end_headers()
 
