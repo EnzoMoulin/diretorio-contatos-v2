@@ -1048,18 +1048,14 @@ function renderUteis() {
       const valorHtml = href ? '<a class="fc-contato-valor" href="' + esc(href) + '">' + esc(u.valor) + '</a>'
         : '<span class="fc-contato-valor">' + esc(u.valor) + '</span>';
       return '<article class="fc-contato" data-contato="' + esc(u.id) + '"><div class="fc-contato-main"><span class="fc-contato-tipo">' +
-        esc(fmtTipoContato(u.tipo)) + '</span><h4>' + esc(u.nome || u.valor) + '</h4>' +
-        (u.conferidoEm ? '<p class="fc-contato-observacao">conferido em ' +
-          esc(String(u.conferidoEm).slice(0, 10).split('-').reverse().join('/')) + '</p>' : '') + '</div>' +
+        esc(fmtTipoContato(u.tipo)) + '</span><h4>' + esc(u.nome || u.valor) + '</h4></div>' +
         '<div class="fc-contato-side">' + valorHtml +
         '<div class="fc-contato-actions"><button type="button" class="fc-icon-btn fc-copy-btn" data-copy-value="' + esc(u.valor) +
         '" data-copy-label="' + esc(fmtTipoContato(u.tipo)) + '" title="Copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
         botaoFav({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) +
         botaoVcf({ tipo: u.tipo, valor: u.valor }, u.nome || u.valor) +
         botaoLink(u.id, u.nome || u.valor) +
-        (podeGerir ? '<button type="button" class="fc-icon-btn fc-icon-btn--ok" data-util-conf="' + esc(u.id) +
-          '" title="Marcar como conferido hoje" aria-label="Marcar como conferido hoje"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="20 6 9 17 4 12"/></svg><span class="fc-rotulo">Conferi</span></button>' +
-          '<button type="button" class="fc-icon-btn" data-util-edit="' + esc(u.id) +
+        (podeGerir ?          '<button type="button" class="fc-icon-btn" data-util-edit="' + esc(u.id) +
           '" title="Editar telefone útil" aria-label="Editar telefone útil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span class="fc-rotulo">Editar</span></button>' +
           '<button type="button" class="fc-icon-btn fc-icon-btn--danger" data-util-del="' + esc(u.id) +
           '" title="Remover telefone útil" aria-label="Remover telefone útil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span class="fc-rotulo">Remover</span></button>' : '') +
@@ -1074,9 +1070,6 @@ function renderUteis() {
   };
   const novoUtil = $('btn-novo-util');
   if (novoUtil) novoUtil.onclick = () => abrirFormUtil(null);
-  c.querySelectorAll('[data-util-conf]').forEach(b => {
-    b.onclick = () => conferirUtil(b.getAttribute('data-util-conf'), b);
-  });
   c.querySelectorAll('[data-util-edit]').forEach(b => {
     b.onclick = () => abrirFormUtil(b.getAttribute('data-util-edit'));
   });
@@ -1698,20 +1691,6 @@ $('u-salvar').onclick = async () => {
   renderUteis();
   mostrarToast(criando ? 'Telefone criado.' : 'Telefone atualizado.');
 };
-async function conferirUtil(id, botao) {
-  if (!id) return;
-  if (botao) botao.disabled = true;
-  const r = await fetch('/api/uteis/' + encodeURIComponent(id) + '/conferir',
-    { method: 'POST', headers: auth(), body: '{}' });
-  if (!r.ok) {
-    if (botao) botao.disabled = false;
-    mostrarToast('Não foi possível conferir: ' + await r.text(), 'erro');
-    return;
-  }
-  await recarregarHierarquia(true);
-  renderUteis();
-  mostrarToast('Conferido hoje.');
-}
 async function excluirUtil(id) {
   if (!id || !confirm('Remover este telefone útil?')) return;
   const r = await fetch('/api/uteis/' + encodeURIComponent(id), { method: 'DELETE', headers: auth() });
