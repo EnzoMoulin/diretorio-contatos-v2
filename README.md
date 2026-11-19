@@ -344,10 +344,14 @@ com salt; hashes sha256 legados são convertidos no primeiro login.
 | GET | `/oauth/callback` | não | retorno do Google → sessão |
 | POST | `/api/logout` | token | encerra a sessão |
 | POST | `/api/login` | não | dev/testes `{usuario, senha}` → `{token}` (só `LOCAL_LOGIN=1`) |
-| POST | `/api/contatos` | `X-Admin-Token` | cria (só no seu escopo) |
+| POST | `/api/contatos` | `X-Admin-Token` | cria em `setor_id`, ou em `forum_id`/`comarca_id`/`unidade_id` (contato geral, resolvido no setor virtual) — só no seu escopo |
 | POST | `/api/contatos/<id>/conferir` | `X-Admin-Token` | marca o contato como conferido: grava autor e data e registra a ação no histórico (só no seu escopo) |
 | PUT | `/api/contatos/<id>` | `X-Admin-Token` | edita nome, cargo, telefone e e-mail (só no seu escopo) |
 | DELETE | `/api/contatos/<id>` | `X-Admin-Token` | remove (só no seu escopo) |
+| POST | `/api/uteis` | `X-Admin-Token` (admin) | cria telefone útil `{nome, tipo, valor}` |
+| PUT | `/api/uteis/<uid>` | `X-Admin-Token` (admin) | edita nome, tipo e valor |
+| DELETE | `/api/uteis/<uid>` | `X-Admin-Token` (admin) | remove |
+| POST | `/api/uteis/<uid>/conferir` | `X-Admin-Token` (admin) | marca como conferido hoje (autor e data no histórico) |
 | POST | `/api/pedidos` | token | solicita acesso (com local) |
 | GET | `/api/pedidos` | `X-Admin-Token` (admin) | pendentes (com local pedido) |
 | POST | `/api/pedidos/<id>/aprovar` | `X-Admin-Token` (admin) | aprova, cria usuário e concede escopo |

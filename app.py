@@ -809,6 +809,24 @@ def setor_gerais(con, forum_id=None, comarca_id=None):
     return sid
 
 
+def setor_unidade(con, unidade_id):
+    """Setor virtual com os contatos presos direto à unidade, criando se faltar.
+
+    A tela da Unidade mostra esses contatos em "Contatos desta Unidade" e
+    esconde o setor; o banco continua com todo contato preso a um setor.
+    """
+    setor = con.execute(
+        "SELECT id FROM setores WHERE virtual=1 AND unidade_id=?"
+        " ORDER BY id LIMIT 1", (unidade_id,)).fetchone()
+    if setor:
+        return setor[0]
+    sid = novo_id(con, "setores", "S")
+    con.execute(
+        "INSERT INTO setores (id, unidade_id, nome, ordem_num, virtual)"
+        " VALUES (?,?,?,NULL,1)", (sid, unidade_id, "Contatos Gerais"))
+    return sid
+
+
 def build_hierarquia(con):
     """Monta o JSON aninhado no formato do backend original (GAS)."""
     coms = [dict(r) for r in con.execute("SELECT * FROM comarcas")]
@@ -922,8 +940,10 @@ def build_hierarquia(con):
             "qtdUnidades": cont_sel(nos_m) + sum(f["qtdUnidades"] for f in foruns_pub),
             "qtdContatos": len(gerais_m) + sum(n["qtdContatos"] for n in nos_m) + sum(f["qtdContatos"] for f in foruns_pub),
             "contatos": gerais_m, "nos": nos_m, "foruns": foruns_pub})
-    uteis = [{"id": u["uid"], "nome": u["nome"], "tipo": u["tipo"], "valor": u["valor"]}
-             for u in con.execute("SELECT uid, nome, tipo, valor FROM uteis ORDER BY id").fetchall()]
+    uteis = [{"id": u["uid"], "nome": u["nome"], "tipo": u["tipo"], "valor": u["valor"],
+              "conferidoEm": u["conferido_em"] or ""}
+             for u in con.execute("SELECT uid, nome, tipo, valor, conferido_em"
+                                  " FROM uteis ORDER BY id").fetchall()]
     return {"comarcas": comarcas, "uteis": uteis}
 
 
@@ -1122,6 +1142,8 @@ def init_db():
         ("contatos", "vigente_desde", "ALTER TABLE contatos ADD COLUMN vigente_desde TEXT NOT NULL DEFAULT ''"),
         ("contatos", "conferido_em", "ALTER TABLE contatos ADD COLUMN conferido_em TEXT NOT NULL DEFAULT ''"),
         ("contatos", "conferido_por", "ALTER TABLE contatos ADD COLUMN conferido_por TEXT NOT NULL DEFAULT ''"),
+        ("uteis", "conferido_em", "ALTER TABLE uteis ADD COLUMN conferido_em TEXT NOT NULL DEFAULT ''"),
+        ("uteis", "conferido_por", "ALTER TABLE uteis ADD COLUMN conferido_por TEXT NOT NULL DEFAULT ''"),
     ]:
         try:
             nomes = {r[1] for r in con.execute(f"PRAGMA table_info({_tbl})").fetchall()}
@@ -2235,6 +2257,37 @@ class Handler(BaseHTTPRequestHandler):
             con.commit()
             con.close()
             return self._json({"ok": True})
+        if u.path == "/api/uteis":
+            uid = self._uid()
+            if not uid:
+                return self._json({"erro": "não autenticado"}, 403)
+            con = get_db()
+            if uid not in admin_ids(con):
+                con.close()
+                return self._json({"erro": "somente administrador"}, 403)
+            data = self._body()
+            nome = str(data.get("nome") or "").strip()
+            valor = str(data.get("valor") or "").strip()
+            if not nome or not valor:
+                con.close()
+                return self._json({"erro": "'nome' e 'valor' são obrigatórios"}, 400)
+            mx = 0
+            for (v,) in con.execute("SELECT uid FROM uteis").fetchall():
+                seq = str(v or "")[3:]
+                if seq.isdigit():
+                    mx = max(mx, int(seq))
+            nid = "UTL%04d" % (mx + 1)
+            con.execute(
+                "INSERT INTO uteis (uid, nome, tipo, valor, conferido_em, conferido_por)"
+                " VALUES (?,?,?,?,'','')",
+                (nid, nome, str(data.get("tipo") or "Telefone"), valor))
+            log(con, "criar-util", nid, f"criado: {nome}", uid)
+            con.commit()
+            invalidar_hierarquia()
+            row = con.execute("SELECT * FROM uteis WHERE uid=?", (nid,)).fetchone()
+            con.close()
+            return self._json({"id": row["uid"], "nome": row["nome"], "tipo": row["tipo"],
+                               "valor": row["valor"], "conferidoEm": row["conferido_em"]}, 201)
         if u.path == "/api/contatos":
             uid = self._uid()
             if not uid:
@@ -2267,11 +2320,20 @@ class Handler(BaseHTTPRequestHandler):
                         con.close()
                         return self._json({"erro": "sem acesso a este local"}, 403)
                     sid = setor_gerais(con, comarca_id=mid)
+                elif str(data.get("unidade_id") or "").strip():
+                    unid = str(data.get("unidade_id") or "").strip()
+                    if not con.execute("SELECT 1 FROM unidades WHERE id=?", (unid,)).fetchone():
+                        con.close()
+                        return self._json({"erro": "unidade não encontrada"}, 404)
+                    if not self._cobre(con, uid, "unidade", unid):
+                        con.close()
+                        return self._json({"erro": "sem acesso a este local"}, 403)
+                    sid = setor_unidade(con, unid)
                 else:
                     con.close()
                     return self._json(
-                        {"erro": "'nome' e ('setor_id' ou 'forum_id'/'comarca_id')"
-                                 " são obrigatórios"}, 400)
+                        {"erro": "'nome' e ('setor_id', 'forum_id', 'comarca_id' ou"
+                                 " 'unidade_id') são obrigatórios"}, 400)
             if not self._cobre(con, uid, "setor", sid):
                 con.close()
                 return self._json({"erro": "sem acesso a este local"}, 403)
@@ -2324,10 +2386,66 @@ class Handler(BaseHTTPRequestHandler):
             row = con.execute("SELECT * FROM contatos WHERE id=?", (cid,)).fetchone()
             con.close()
             return self._json(dict(row))
+        if len(partes) == 5 and partes[1:3] == ["api", "uteis"] and partes[4] == "conferir":
+            uid = self._uid()
+            if not uid:
+                return self._json({"erro": "não autenticado"}, 403)
+            uit = urllib.parse.unquote(partes[3]).strip()
+            con = get_db()
+            if uid not in admin_ids(con):
+                con.close()
+                return self._json({"erro": "somente administrador"}, 403)
+            row = con.execute("SELECT * FROM uteis WHERE uid=?", (uit,)).fetchone()
+            if not row:
+                con.close()
+                return self._json({"erro": "não encontrado"}, 404)
+            quem = con.execute("SELECT usuario FROM usuarios WHERE id=?", (uid,)).fetchone()
+            quando = time.strftime("%Y-%m-%d %H:%M")
+            con.execute("UPDATE uteis SET conferido_em=?, conferido_por=? WHERE uid=?",
+                        (quando, quem["usuario"] if quem else "", uit))
+            log(con, "conferir-util", uit, f"conferido: {row['nome']}", uid)
+            con.commit()
+            invalidar_hierarquia()
+            row = con.execute("SELECT * FROM uteis WHERE uid=?", (uit,)).fetchone()
+            con.close()
+            return self._json({"id": row["uid"], "conferidoEm": row["conferido_em"]})
         return self.send_error(404)
 
     def do_DELETE(self):
         parts = urllib.parse.urlparse(self.path).path.rstrip("/").split("/")
+        if len(parts) == 4 and parts[1] == "api" and parts[2] == "uteis":
+            uid = self._uid()
+            if not uid:
+                return self._json({"erro": "não autenticado"}, 403)
+            uit = urllib.parse.unquote(parts[3]).strip()
+            con = get_db()
+            if uid not in admin_ids(con):
+                con.close()
+                return self._json({"erro": "somente administrador"}, 403)
+            row = con.execute("SELECT * FROM uteis WHERE uid=?", (uit,)).fetchone()
+            if not row:
+                con.close()
+                return self._json({"erro": "não encontrado"}, 404)
+            if self.command == "PUT":
+                data = self._body()
+                nome = str(data.get("nome") or "").strip()
+                valor = str(data.get("valor") or "").strip()
+                if not nome or not valor:
+                    con.close()
+                    return self._json({"erro": "'nome' e 'valor' são obrigatórios"}, 400)
+                con.execute("UPDATE uteis SET nome=?, tipo=?, valor=? WHERE uid=?",
+                            (nome, str(data.get("tipo") or row["tipo"]), valor, uit))
+                log(con, "editar-util", uit, f"editado: {nome}", uid)
+                con.commit()
+                invalidar_hierarquia()
+                con.close()
+                return self._json({"ok": True})
+            con.execute("DELETE FROM uteis WHERE uid=?", (uit,))
+            log(con, "remover-util", uit, f"removido: {row['nome']}", uid)
+            con.commit()
+            invalidar_hierarquia()
+            con.close()
+            return self._json({"ok": True})
         if len(parts) == 4 and parts[1] == "api" and parts[2] == "contatos":
             uid = self._uid()
             if not uid:
