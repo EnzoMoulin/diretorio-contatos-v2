@@ -1238,7 +1238,7 @@ function fmtTipoContato(tipo) {
       if (estado.mapa) estado.mapa.remove();
       estado.mapa = L.map("map", { scrollWheelZoom: true, zoomSnap: 0.5, zoomDelta: 0.5 }).setView([-19.7, -40.5], 7.6);
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap"
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(estado.mapa);
       fetch(GEOJSON_URL).then(function (r) { return r.json(); }).then(function (data) {
         estado.geojson = L.geoJSON(data, {

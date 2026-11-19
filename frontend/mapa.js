@@ -42,7 +42,7 @@ async function initMapa(mapId, msgId, locs, onSelect) {
   _map = L.map(mapId, { zoomControl: true, attributionControl: true, scrollWheelZoom: true, zoomSnap: 0.5 })
     .setView([-19.6, -40.35], 8);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(_map);
+    { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(_map);
   const dens = {};
   (locs || []).forEach(l => { dens[norm(l.nome)] = { total: l.total || 0, foruns: l.foruns || 0 }; });
   try {
