@@ -199,11 +199,13 @@ if [ -z "$TOKEN" ]; then
   exit 1
 fi
 
-URL="http://127.0.0.1:$PORTA/admin#token=$TOKEN"
+# O OSM recusa Referer de IP literal (127.0.0.1) e devolve tile 418;
+# por isso as URLs de navegador usam localhost. curl interno segue em 127.0.0.1.
+URL="http://localhost:$PORTA/admin#token=$TOKEN"
 printf '%s\n' "$URL" > "$URLFILE"
 
 echo
-echo "público:  http://127.0.0.1:$PORTA/"
+echo "público:  http://localhost:$PORTA/"
 echo "admin:    $URL"
 echo "          (o token sai da barra sozinho e fica no localStorage: F5 mantém a sessão)"
 echo "log:      $LOG"
