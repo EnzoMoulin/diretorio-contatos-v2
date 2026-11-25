@@ -853,8 +853,8 @@ function vincularAcoes() {
   document.querySelectorAll('#lista [data-sol]').forEach(el => {
     el.onclick = (e) => {
       e.stopPropagation();
-      const h4 = el.closest('.fc-card') ? el.closest('.fc-card').querySelector('h4') : null;
-      abrirConf(el.dataset.sol, el.dataset.id, h4 ? h4.textContent.replace(/ ✓$/, '') : el.dataset.id);
+      const h = el.closest('.fc-card') ? el.closest('.fc-card').querySelector('h3, h4') : null;
+      abrirConf(el.dataset.sol, el.dataset.id, h ? h.textContent.replace(/ ✓$/, '') : el.dataset.id);
     };
   });
   document.querySelectorAll('#lista [data-solloc]').forEach(el => {
