@@ -1,8 +1,14 @@
 # Diretório de Contatos — evolução Python + SQLite
 
-[![Testes](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions/workflows/testes.yml/badge.svg)](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions)
+[![Testes](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions/workflows/testes.yml/badge.svg)](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions/workflows/testes.yml)
 [![Python 3.15](https://img.shields.io/badge/Python-3.15-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
 <!-- Manutenção: ao subir o PYTHON_VERSION no render.yaml, trocar esta série (3.15) aqui e em docs/cartilha-deploy.html. -->
+
+> **Status: repositório fechado em 12/11/2026.** Continua público como evidência do arco
+> v1→v2; a evolução acontece no [v3](https://github.com/EnzoMoulin/diretorio-contatos-v3).
+> As lacunas de evidência que restaram estão nas
+> [issues](https://github.com/EnzoMoulin/diretorio-contatos-v2/issues) — não há funcionalidade
+> nova prevista aqui.
 
 > Case real de estágio em tribunal estadual: o MVP original (Google Apps Script + Google
 > Sheets) validou o fluxo a custo zero no ecossistema Workspace do tribunal;
