@@ -46,8 +46,10 @@ limpeza do histórico, quando ele virou `seed_legado.json`).
 O v2 é a reescrita do backend em Python, com a mesma modelagem e a mesma
 experiência: projeto pessoal, sem marca institucional, sem nome de pessoa e
 com dados fictícios. As duas interfaces, a pública e a de gestão (`/admin`),
-partem das telas do v1; o `/admin` é a mesma aplicação, com as telas de gestão
-a mais. O que segue é o arco técnico: decisões, o que mudou e por quê.
+partem das telas do v1: o `public.js` é o script de navegação do v1 portado
+(mesma estrutura e mesmos nomes de função) e o `/admin` é a mesma aplicação,
+com as telas de gestão a mais. O `public.js` abre com o cabeçalho declarando
+essa origem. O que segue é o arco técnico: decisões, o que mudou e por quê.
 
 ### Fase 1 — MVP no ecossistema (Apps Script + Sheets)
 
@@ -302,7 +304,7 @@ checklist de validação estão na [cartilha de deploy](docs/cartilha-deploy.htm
 1. Abra a página pública `/` (sem login): clique no mapa, use a busca, favorite e imprima um contato.
 2. Navegue comarca → fórum → unidade → setor: a consulta é o produto, e a árvore abre no nível que você clicar.
 3. O `/admin` exige login Google, mas a gestão (painel, solicitações, usuários, registro) é restrita ao dono, e o demo é **somente leitura**: um pedido de acesso fica pendente, esperando aprovação manual, como em produção. As telas de gestão — painel, solicitações com pedido pendente, registro de alterações, usuários — estão nas capturas abaixo.
-4. Quer ver o fluxo inteiro em 43 segundos? O screencast silencioso, com legendas e gravado da aplicação rodando, está em [`docs/demo-fluxo.mp4`](docs/demo-fluxo.mp4): pedido do visitante → aprovação do dono → edição liberada → registro da alteração. Não é montagem de capturas: cada quadro é a tela real durante os cliques. O arquivo é conferível: na raiz do repositório, `sha256sum -c docs/demo-fluxo.sha256` responde `docs/demo-fluxo.mp4: OK` — `SUCESSO` se o sistema estiver em português. Qualquer outra resposta significa que o arquivo não é o que foi gravado.
+4. Quer ver o app em 37 segundos? O screencast silencioso, com legendas e gravado da aplicação rodando, está em [`docs/demo-fluxo.mp4`](docs/demo-fluxo.mp4): busca que leva ao setor, os quatro níveis da estrutura, o pedido de acesso que fica aguardando um Administrador, a trilha de alterações por mês e a fila de reconfirmação com a fonte de cada contato. Não é montagem de capturas: cada quadro é a tela real durante os cliques. O arquivo é conferível: na raiz do repositório, `sha256sum -c docs/demo-fluxo.sha256` responde `docs/demo-fluxo.mp4: OK` — `SUCESSO` se o sistema estiver em português. Qualquer outra resposta significa que o arquivo não é o que foi gravado.
 5. Para ver o fluxo ao vivo (login, aprovação, edição com registro), me chame no LinkedIn ([linkedin.com/in/enzodadaltomoulin](https://linkedin.com/in/enzodadaltomoulin)).
 
 Privacidade: o demo guarda o e-mail e o nome da sua conta Google só enquanto o servidor estiver ativo; o banco é recriado do seed a cada boot limpo, então esses dados somem no reinício.
@@ -382,10 +384,10 @@ técnico está documentado acima, em
 ![Painel](docs/img/admin-painel.png)
 ![Solicitações de acesso](docs/img/admin-solicitacoes.png)
 <sub>Captura de **Solicitações de acesso** com um pedido fictício
-(`camila.prado@exemplo.jus.br`, nível unidade) pendente — é o comportamento do
-demo público, que sobe com `SIMULACAO_AUTO_APROVAR=0`: o pedido espera a
-aprovação do dono, e só a aprovação concede edição. A imagem foi feita em
-ambiente local, com o login `admin` de teste.</sub>
+(usuário de avaliação `avaliador@exemplo.jus.br`, nível comarca) pendente — é o
+comportamento do demo público, que sobe com `SIMULACAO_AUTO_APROVAR=0`: o pedido
+espera a aprovação do dono, e só a aprovação concede edição. A imagem foi feita
+em ambiente local, com o login `admin` de teste.</sub>
 
 ![Registro de alterações](docs/img/admin-registro.png)
 
