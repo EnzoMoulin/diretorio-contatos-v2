@@ -1,8 +1,14 @@
 # Diretório de Contatos — evolução Python + SQLite
 
-[![Testes](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions/workflows/testes.yml/badge.svg)](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions)
+[![Testes](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions/workflows/testes.yml/badge.svg)](https://github.com/EnzoMoulin/diretorio-contatos-v2/actions/workflows/testes.yml)
 [![Python 3.15](https://img.shields.io/badge/Python-3.15-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
 <!-- Manutenção: ao subir o PYTHON_VERSION no render.yaml, trocar esta série (3.15) aqui e em docs/cartilha-deploy.html. -->
+
+> **Status: repositório fechado em 12/11/2026.** Continua público como evidência do arco
+> v1→v2; a evolução acontece no [v3](https://github.com/EnzoMoulin/diretorio-contatos-v3).
+> As lacunas de evidência que restaram estão nas
+> [issues](https://github.com/EnzoMoulin/diretorio-contatos-v2/issues) — não há funcionalidade
+> nova prevista aqui.
 
 > Case real de estágio em tribunal estadual: o MVP original (Google Apps Script + Google
 > Sheets) validou o fluxo a custo zero no ecossistema Workspace do tribunal;
@@ -19,6 +25,34 @@
 > (código institucional); o arco técnico está documentado abaixo, em
 > [Estudo de caso](#estudo-de-caso-v1--v2--v3).
 
+## Demonstração
+
+[![Prévia do screencast: busca, mapa e ficha do contato](docs/img/screencast.gif)](docs/demo-fluxo.mp4)
+
+<sub>**Prévia de 6 s.** O screencast completo tem **37 s**, sem áudio e com legendas,
+gravado no modo do deploy (`SIMULACAO_AUTO_APROVAR=0`): busca que leva ao setor, os quatro
+níveis da estrutura, o pedido de acesso que fica aguardando um Administrador, a trilha de
+alterações por mês e a fila de reconfirmação. Clique na prévia para abrir o `mp4`; o hash do
+arquivo está em `docs/demo-fluxo.sha256` e o CI o confere a cada push.</sub>
+
+### Capturas do v2
+
+Capturas de **24/11/2026**, no estado atual do código — não são do MVP em Apps Script.
+
+![Consulta no desktop](docs/img/desktop.png)
+![Consulta no celular, com menu gaveta](docs/img/mobile.png)
+
+#### Área administrativa (dono do demo)
+![Painel](docs/img/admin-painel.png)
+![Solicitações de acesso](docs/img/admin-solicitacoes.png)
+<sub>Captura de **Solicitações de acesso** com um pedido fictício
+(usuário de avaliação `avaliador@exemplo.jus.br`, nível comarca) pendente — é o
+comportamento do demo público, que sobe com `SIMULACAO_AUTO_APROVAR=0`: o pedido
+espera a aprovação do dono, e só a aprovação concede edição. A imagem foi feita
+em ambiente local, com o login `admin` de teste.</sub>
+
+![Registro de alterações](docs/img/admin-registro.png)
+
 ## Estudo de caso: v1 → v2 → v3
 Mesmo produto, três fases de maturidade — a interface e as regras de negócio
 são as mesmas; o que evolui é a fundação técnica. A tabela é o resumo; o arco
@@ -33,6 +67,10 @@ completo, com as decisões e o que cada fase custou, vem em seguida.
 | Testes | Sem testes automatizados | 94 casos (`unittest`, banco temporário) + fumaça Playwright + CI em duas pernas | Cobertura medida e testes de contrato |
 | Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Laravel + Blade/TALL num serviço Docker + Postgres gerenciado |
 
+> **Onde a v3 está (26/11/2026):** as telas de telefones, WhatsApp e e-mails com folha A4,
+> `/ramais`, a busca e a API de leitura já estão na `main`; o mapa, o backoffice e os itens de
+> operação continuam na fila.
+
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
 zero dentro do ecossistema onde os dados viviam; o v2 prova a mesma arquitetura
 sem dependência de fornecedor; o v3 endurece para escala.
@@ -46,8 +84,10 @@ limpeza do histórico, quando ele virou `seed_legado.json`).
 O v2 é a reescrita do backend em Python, com a mesma modelagem e a mesma
 experiência: projeto pessoal, sem marca institucional, sem nome de pessoa e
 com dados fictícios. As duas interfaces, a pública e a de gestão (`/admin`),
-partem das telas do v1; o `/admin` é a mesma aplicação, com as telas de gestão
-a mais. O que segue é o arco técnico: decisões, o que mudou e por quê.
+partem das telas do v1: o `public.js` é o script de navegação do v1 portado
+(mesma estrutura e mesmos nomes de função) e o `/admin` é a mesma aplicação,
+com as telas de gestão a mais. O `public.js` abre com o cabeçalho declarando
+essa origem. O que segue é o arco técnico: decisões, o que mudou e por quê.
 
 ### Fase 1 — MVP no ecossistema (Apps Script + Sheets)
 
@@ -301,8 +341,8 @@ checklist de validação estão na [cartilha de deploy](docs/cartilha-deploy.htm
 ## Como avaliar (2 minutos)
 1. Abra a página pública `/` (sem login): clique no mapa, use a busca, favorite e imprima um contato.
 2. Navegue comarca → fórum → unidade → setor: a consulta é o produto, e a árvore abre no nível que você clicar.
-3. O `/admin` exige login Google, mas a gestão (painel, solicitações, usuários, registro) é restrita ao dono, e o demo é **somente leitura**: um pedido de acesso fica pendente, esperando aprovação manual, como em produção. As telas de gestão — painel, solicitações com pedido pendente, registro de alterações, usuários — estão nas capturas abaixo.
-4. Quer ver o fluxo inteiro em 43 segundos? O screencast silencioso, com legendas e gravado da aplicação rodando, está em [`docs/demo-fluxo.mp4`](docs/demo-fluxo.mp4): pedido do visitante → aprovação do dono → edição liberada → registro da alteração. Não é montagem de capturas: cada quadro é a tela real durante os cliques. O arquivo é conferível: na raiz do repositório, `sha256sum -c docs/demo-fluxo.sha256` responde `docs/demo-fluxo.mp4: OK` — `SUCESSO` se o sistema estiver em português. Qualquer outra resposta significa que o arquivo não é o que foi gravado.
+3. O `/admin` exige login Google, mas a gestão (painel, solicitações, usuários, registro) é restrita ao dono, e o demo é **somente leitura**: um pedido de acesso fica pendente, esperando aprovação manual, como em produção. As telas de gestão — painel, solicitações com pedido pendente, registro de alterações, usuários — estão nas capturas do topo.
+4. Quer ver o app em 37 segundos? O [screencast](#demonstração) e as capturas estão no topo do README. O arquivo é conferível: na raiz do repositório, `sha256sum -c docs/demo-fluxo.sha256` responde `docs/demo-fluxo.mp4: OK` — `SUCESSO` se o sistema estiver em português. Qualquer outra resposta significa que o arquivo não é o que foi gravado.
 5. Para ver o fluxo ao vivo (login, aprovação, edição com registro), me chame no LinkedIn ([linkedin.com/in/enzodadaltomoulin](https://linkedin.com/in/enzodadaltomoulin)).
 
 Privacidade: o demo guarda o e-mail e o nome da sua conta Google só enquanto o servidor estiver ativo; o banco é recriado do seed a cada boot limpo, então esses dados somem no reinício.
@@ -374,21 +414,6 @@ hierarquia, auditoria). Repositório privado (código institucional) — o arco
 técnico está documentado acima, em
 [Estudo de caso](#estudo-de-caso-v1--v2--v3).
 
-## Screenshots
-![Consulta no desktop](docs/img/desktop.png)
-![Consulta no celular, com menu gaveta](docs/img/mobile.png)
-
-### Área administrativa (dono do demo)
-![Painel](docs/img/admin-painel.png)
-![Solicitações de acesso](docs/img/admin-solicitacoes.png)
-<sub>Captura de **Solicitações de acesso** com um pedido fictício
-(`camila.prado@exemplo.jus.br`, nível unidade) pendente — é o comportamento do
-demo público, que sobe com `SIMULACAO_AUTO_APROVAR=0`: o pedido espera a
-aprovação do dono, e só a aprovação concede edição. A imagem foi feita em
-ambiente local, com o login `admin` de teste.</sub>
-
-![Registro de alterações](docs/img/admin-registro.png)
-
 ## Experiência de uso (detalhes)
 - **Favoritos** (aba na sidebar + estrela em cada contato, com contador): salvos no navegador, em ordem A–Z, com filtro próprio, impressão, exportação CSV, download de todos em um `.vcf` e limpeza com confirmação
 - **Baixar contato (.vcf)**: cada contato gera o cartão para importar na agenda do celular
@@ -414,5 +439,5 @@ docs/demo-fluxo.mp4    screencast do fluxo completo (com o .sha256)
 ```
 
 ## Licença
-© Enzo Moulin — todos os direitos reservados. Projeto de portfólio: sem licença
+© Enzo Francisco Costa Dadalto Moulin — todos os direitos reservados. Projeto de portfólio: sem licença
 de uso, cópia ou redistribuição. Os termos completos estão em [`LICENSE`](LICENSE).
