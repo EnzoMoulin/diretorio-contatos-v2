@@ -439,5 +439,5 @@ docs/demo-fluxo.mp4    screencast do fluxo completo (com o .sha256)
 ```
 
 ## Licença
-© Enzo Moulin — todos os direitos reservados. Projeto de portfólio: sem licença
+© Enzo Dadalto Moulin — todos os direitos reservados. Projeto de portfólio: sem licença
 de uso, cópia ou redistribuição. Os termos completos estão em [`LICENSE`](LICENSE).
