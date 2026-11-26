@@ -67,6 +67,10 @@ completo, com as decisões e o que cada fase custou, vem em seguida.
 | Testes | Sem testes automatizados | 94 casos (`unittest`, banco temporário) + fumaça Playwright + CI em duas pernas | Cobertura medida e testes de contrato |
 | Hospedagem | Apps Script Web App publicado (`/exec`) | Render free — web service único, disco efêmero | Laravel + Blade/TALL num serviço Docker + Postgres gerenciado |
 
+> **Onde a v3 está (26/11/2026):** as telas de telefones, WhatsApp e e-mails com folha A4,
+> `/ramais`, a busca e a API de leitura já estão na `main`; o mapa, o backoffice e os itens de
+> operação continuam na fila.
+
 Por que três fases em vez de reescrever direto: o v1 validou o produto a custo
 zero dentro do ecossistema onde os dados viviam; o v2 prova a mesma arquitetura
 sem dependência de fornecedor; o v3 endurece para escala.
