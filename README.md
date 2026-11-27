@@ -11,9 +11,10 @@ Python stdlib + SQLite, com busca FTS5 no servidor, API REST, 94 casos de teste
 é o de um tribunal estadual; o modelo — consulta aberta, escrita restrita por
 nível — é o de qualquer rede com filiais, campi ou secretarias.
 
-> **Status: repositório fechado em 12/11/2026.** Continua público como evidência do arco
-> v1→v2; a evolução acontece no [v3](https://github.com/EnzoMoulin/diretorio-contatos-v3).
-> As lacunas de evidência que restaram estão nas
+> **Status: repositório fechado em 12/11/2026 — fase 2 de um produto só.** Continua público como
+> evidência do arco v1→v2 e da declaração de que a interface parte da do v1; a evolução acontece no
+> [v3](https://github.com/EnzoMoulin/diretorio-contatos-v3). Não é um projeto concorrente: é a mesma
+> aplicação na fase Python. As lacunas de evidência que restaram estão nas
 > [issues](https://github.com/EnzoMoulin/diretorio-contatos-v2/issues) — não há funcionalidade
 > nova prevista aqui.
 
