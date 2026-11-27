@@ -4,6 +4,13 @@
 [![Python 3.15](https://img.shields.io/badge/Python-3.15-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
 <!-- Manutenção: ao subir o PYTHON_VERSION no render.yaml, trocar esta série (3.15) aqui e em docs/cartilha-deploy.html. -->
 
+**O que este repositório é, em engenharia:** um diretório com quatro níveis
+hierárquicos e 856 nós, servindo 1.807 contatos na base de demonstração, em
+Python stdlib + SQLite, com busca FTS5 no servidor, API REST, 94 casos de teste
+(`unittest`), fumaça em navegador real (Playwright) e CI em duas pernas. O domínio
+é o de um tribunal estadual; o modelo — consulta aberta, escrita restrita por
+nível — é o de qualquer rede com filiais, campi ou secretarias.
+
 > **Status: repositório fechado em 12/11/2026.** Continua público como evidência do arco
 > v1→v2; a evolução acontece no [v3](https://github.com/EnzoMoulin/diretorio-contatos-v3).
 > As lacunas de evidência que restaram estão nas
